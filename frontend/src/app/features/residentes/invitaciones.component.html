@@ -1,0 +1,181 @@
+<section class="r">
+  <header class="r-head">
+    <div><h1>Invitaciones pendientes</h1><p>Invitaciones esperando a que los residentes las acepten</p></div>
+    <button type="button" class="r-close" (click)="volver()" aria-label="Cerrar">✕</button>
+  </header>
+
+  <div class="r-body">
+    <div class="r-toolbar">
+      <div class="r-search">
+        <span>⌕</span>
+        <input type="search" placeholder="Buscar residentes…"
+          [value]="busqueda()" (input)="busqueda.set($any($event.target).value)" />
+      </div>
+      <button type="button" class="u-icon-btn" (click)="refrescar()" aria-label="Refrescar">⟳</button>
+      <span class="imp-count">{{ pendientes().length }} invitaciones</span>
+
+      @if (seleccion().size > 0) {
+        <button type="button" class="btn btn--ghost r-invite" [disabled]="guardando()" (click)="reenviarSeleccionadas()">
+          ↗ Reenviar {{ seleccion().size }} seleccionada(s)
+        </button>
+        <button type="button" class="btn r-invite u-btn--danger" [disabled]="guardando()" (click)="eliminarSeleccionadas()">
+          🗑 Eliminar ({{ seleccion().size }})
+        </button>
+      }
+
+      <button type="button" class="btn btn--ghost r-invite" (click)="reenviarModal.set(true)"
+        [disabled]="pendientes().length === 0">↗ Reenviar invitaciones</button>
+      <button type="button" class="btn btn--primary r-invite" (click)="invitarAbierto.set(true)">+ Invitar residente</button>
+      <button type="button" class="u-icon-btn" (click)="ayuda.set(true)" title="Más información">?</button>
+    </div>
+
+    @if (pendientes().length) {
+      <div class="r-tablewrap">
+        <table class="r-table">
+          <thead><tr>
+            <th class="r-check"><input type="checkbox" [checked]="todasSel()" (change)="toggleTodas()" /></th>
+            <th>Nombre</th><th>Contacto</th><th>Unidad</th><th>Tipo</th><th>Última invitación</th><th>Estado</th>
+          </tr></thead>
+          <tbody>
+            @for (i of visibles(); track i.id) {
+              <tr class="r-row-click" [class.is-sel]="seleccion().has(i.id)" (click)="detalle.set(i)">
+                <td class="r-check" (click)="$event.stopPropagation()">
+                  <input type="checkbox" [checked]="seleccion().has(i.id)" (change)="toggleUna(i.id)" />
+                </td>
+                <td><strong>{{ i.nombre || '—' }}</strong></td>
+                <td>✉ {{ i.email }}</td>
+                <td>{{ i.unidadNombre || '—' }}</td>
+                <td><span class="r-tag">{{ i.rol }}</span></td>
+                <td>{{ fecha(i.creadoUtc) }}</td>
+                <td><span class="r-pill r-pill--pendiente">⏱ Pendiente</span></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <div class="r-empty">
+        <div class="r-empty__icon">✉️</div>
+        <h2>Sin invitaciones pendientes</h2>
+        <p>Cuando invites residentes, vas a poder seguir el estado de cada invitación acá.</p>
+        <button type="button" class="btn btn--primary" (click)="invitarAbierto.set(true)">Invitar residente</button>
+      </div>
+    }
+  </div>
+</section>
+
+<!-- Detalle de invitación -->
+@if (detalle(); as i) {
+  <div class="u-modal-overlay" (click)="detalle.set(null)">
+    <div class="u-modal" (click)="$event.stopPropagation()">
+      <button type="button" class="u-modal-x" (click)="detalle.set(null)">✕</button>
+      <div class="inv-det__top">
+        <span class="inv-det__avatar">✉</span>
+        <div><strong>{{ i.nombre || i.email }}</strong><p>✉ {{ i.email }}</p></div>
+      </div>
+      <hr />
+      <div class="inv-det__row">
+        <div><span class="inv-det__label">Estado de invitación</span><span class="r-pill r-pill--pendiente">Pendiente</span></div>
+        <button type="button" class="btn btn--ghost u-btn" (click)="abrirEditar(i)">✎ Editar invitación</button>
+      </div>
+      <div class="inv-det__row">
+        <div><span class="inv-det__label">Última notificación</span><span>{{ fechaHora(i.creadoUtc) }}</span></div>
+        <button type="button" class="btn btn--ghost u-btn" (click)="reenviar(i)">↗ Reenviar invitación</button>
+      </div>
+      <div class="inv-det__row">
+        <div><span class="inv-det__label">Unidad</span>
+          <span>🏠 {{ i.unidadNombre || 'Sin unidad' }} <span class="r-tag">{{ i.rol }}</span></span>
+        </div>
+      </div>
+      <div class="u-modal__actions">
+        <button type="button" class="btn u-btn u-btn--danger-outline" (click)="eliminar(i)">🗑 Eliminar invitación</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Editar invitación -->
+@if (editar(); as i) {
+  <div class="u-modal-overlay" (click)="editar.set(null)">
+    <div class="u-modal" (click)="$event.stopPropagation()">
+      <h2>Editar invitación</h2>
+      <p class="u-hint">Actualizá los detalles de la invitación. Los cambios se guardan al confirmar.</p>
+      <form [formGroup]="formEditar" (ngSubmit)="guardarEditar()">
+        <div class="field">
+          <label for="e-nombre">Nombre</label>
+          <input id="e-nombre" formControlName="nombre" />
+        </div>
+        <div class="field">
+          <label for="e-email">Correo electrónico</label>
+          <input id="e-email" type="email" formControlName="email" />
+          @if (formEditar.controls.email.touched && formEditar.controls.email.invalid) {
+            <small class="field__error">Se requiere un correo electrónico válido.</small>
+          }
+        </div>
+        <div class="u-row">
+          <div class="field">
+            <label for="e-unidad">Unidad</label>
+            <select id="e-unidad" formControlName="unidadId">
+              <option value="">Seleccioná una unidad</option>
+              @for (u of unidades(); track u.id) { <option [value]="u.id">{{ u.nombre }}</option> }
+            </select>
+          </div>
+          <div class="field">
+            <label for="e-rol">Rol en la unidad</label>
+            <select id="e-rol" [value]="i.rol" disabled>
+              <option [value]="i.rol">{{ i.rol }}</option>
+            </select>
+          </div>
+        </div>
+        @if (error()) { <p class="u-alert">{{ error() }}</p> }
+        <div class="u-modal__actions">
+          <button type="button" class="btn btn--ghost u-btn" (click)="editar.set(null)">Cancelar</button>
+          <button type="submit" class="btn btn--primary u-btn" [disabled]="guardando()">
+            {{ guardando() ? 'Guardando…' : 'Guardar' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- Reenviar todas -->
+@if (reenviarModal()) {
+  <div class="u-modal-overlay" (click)="reenviarModal.set(false)">
+    <div class="u-modal" (click)="$event.stopPropagation()">
+      <h2>↗ Reenviar invitaciones</h2>
+      <p class="u-hint">Se enviará un correo de invitación a los residentes pendientes que tengan email registrado.</p>
+      <h4 class="imp-h4">Qué sucederá</h4>
+      <ul class="inv-will">
+        <li>Se enviará un correo de invitación a cada uno de los {{ pendientes().length }} invitados pendientes con email.</li>
+        <li>El correo incluye instrucciones para crear su cuenta.</li>
+        <li>Al registrarse, cada residente será asignado automáticamente a su unidad designada.</li>
+      </ul>
+      <div class="imp-done">Es seguro reenviar: no se crean duplicados ni se afectan cuentas existentes.</div>
+      <div class="u-modal__actions">
+        <button type="button" class="btn btn--ghost u-btn" (click)="reenviarModal.set(false)">Cancelar</button>
+        <button type="button" class="btn btn--primary u-btn" [disabled]="guardando()" (click)="reenviarTodas()">
+          {{ guardando() ? 'Enviando…' : 'Enviar ' + pendientes().length + ' invitaciones' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (invitarAbierto()) {
+  <app-invitar-residente (cerrar)="invitarAbierto.set(false)" (hecho)="onInvitado()" />
+}
+
+@if (ayuda()) {
+  <app-ayuda-panel titulo="Invitaciones pendientes" (cerrar)="ayuda.set(false)">
+    <p>Acá seguís las invitaciones que enviaste y que todavía no fueron aceptadas.</p>
+    <h4>Qué podés hacer</h4>
+    <ul>
+      <li><strong>Editar</strong> una invitación pendiente (nombre, correo, unidad).</li>
+      <li><strong>Reenviar</strong> una invitación puntual o todas las pendientes a la vez.</li>
+      <li><strong>Eliminar</strong> una invitación que ya no corresponde.</li>
+    </ul>
+    <p>Cuando el residente acepta, aparece en el Directorio y — si la invitación tenía unidad —
+      queda vinculado automáticamente.</p>
+  </app-ayuda-panel>
+}

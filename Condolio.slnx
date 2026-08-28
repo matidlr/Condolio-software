@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Condolio.Api/Condolio.Api.csproj" />
+    <Project Path="src/Condolio.Application/Condolio.Application.csproj" />
+    <Project Path="src/Condolio.Domain/Condolio.Domain.csproj" />
+    <Project Path="src/Condolio.Infrastructure/Condolio.Infrastructure.csproj" />
+  </Folder>
+</Solution>

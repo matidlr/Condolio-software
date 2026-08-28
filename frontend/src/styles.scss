@@ -1,0 +1,120 @@
+/* ===== Condolio · estilos globales y tokens de diseño ===== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Marca */
+  --c-navy-900: #0f1b2d;
+  --c-navy-800: #16273c;
+  --c-navy-700: #1f3049;
+  --c-slate-700: #3c4a60;
+  --c-slate-600: #48566d;
+  --c-slate-500: #64748b;
+
+  --c-primary: #3f4d63;
+  --c-primary-hover: #33405333;
+
+  /* Neutros */
+  --c-bg: #f1f3f6;
+  --c-surface: #ffffff;
+  --c-border: #e2e6ec;
+  --c-text: #1f2937;
+  --c-text-muted: #6b7280;
+  --c-text-soft: #9aa1ab;
+
+  --c-danger: #dc2626;
+  --c-success: #16a34a;
+
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --shadow-card: 0 10px 40px rgba(15, 27, 45, 0.12);
+  --shadow-sm: 0 1px 2px rgba(15, 27, 45, 0.06);
+
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--font);
+  color: var(--c-text);
+  background: var(--c-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a { color: inherit; }
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* Utilidades de formulario reutilizables */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.field > label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--c-text);
+}
+
+.field > input {
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  background: #f3f6fb;
+  font-size: 0.95rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.field > input:focus {
+  outline: none;
+  border-color: var(--c-slate-500);
+  box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.15);
+  background: #fff;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 46px;
+  padding: 0 20px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.btn--primary {
+  width: 100%;
+  background: var(--c-primary);
+  color: #fff;
+}
+
+.btn--primary:hover { background: var(--c-slate-700); }
+.btn--primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.btn--ghost {
+  background: #fff;
+  border: 1px solid var(--c-border);
+  color: var(--c-text);
+  width: 100%;
+}
+
+.btn--ghost:hover { background: #f7f9fc; }

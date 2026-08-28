@@ -1,0 +1,35 @@
+<div class="adj">
+  @if (editable() && adjuntos().length < max) {
+    <label class="adj-drop" (dragover)="$event.preventDefault()" (drop)="onDrop($event)">
+      <input type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif,application/pdf"
+        (change)="onFile($event)" hidden />
+      <span class="adj-drop__icon">↑</span>
+      <span>{{ subiendo() ? 'Subiendo…' : 'Arrastrá archivos o hacé clic para adjuntar' }}</span>
+      <span class="adj-drop__hint">Imágenes o PDF — máximo {{ max }}</span>
+    </label>
+  }
+
+  @if (error()) { <p class="adj-error">{{ error() }}</p> }
+
+  @if (adjuntos().length) {
+    <div class="adj-grid">
+      @for (a of adjuntos(); track a.id) {
+        <figure class="adj-item">
+          <button type="button" class="adj-thumb" (click)="abrir(a)" [title]="a.nombreArchivo">
+            @if (a.esImagen && urls()[a.id]) {
+              <img [src]="urls()[a.id]" [alt]="a.nombreArchivo" />
+            } @else if (a.esImagen) {
+              <span class="adj-loading">…</span>
+            } @else {
+              <span class="adj-pdf">PDF</span>
+            }
+          </button>
+          <figcaption>{{ a.nombreArchivo }}</figcaption>
+          @if (editable()) {
+            <button type="button" class="adj-del" (click)="eliminar(a)" aria-label="Eliminar adjunto">×</button>
+          }
+        </figure>
+      }
+    </div>
+  }
+</div>

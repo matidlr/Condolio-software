@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Condolio.Domain\Condolio.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

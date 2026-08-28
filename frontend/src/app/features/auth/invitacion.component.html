@@ -1,0 +1,65 @@
+<div class="auth">
+  <aside class="auth__brand">
+    <div class="auth__brand-inner">
+      <h1>Sumate a tu comunidad</h1>
+      <p class="auth__tagline">Activá tu acceso al portal de residentes de Condolio.</p>
+    </div>
+  </aside>
+
+  <main class="auth__form-wrap">
+    <div class="auth__card">
+      @if (cargando()) {
+        <p>Cargando invitación…</p>
+      } @else if (!invitacion() || !invitacion()!.valida) {
+        <h2 class="auth__title">Invitación no disponible</h2>
+        <p class="auth__subtitle">{{ invitacion()?.motivo ?? error() ?? 'La invitación no es válida.' }}</p>
+        <a class="btn btn--ghost" routerLink="/login">Ir al inicio de sesión</a>
+      } @else {
+        <h2 class="auth__title">Te invitaron a {{ invitacion()!.consorcioNombre }}</h2>
+        <p class="auth__subtitle">
+          Activá tu cuenta para <strong>{{ invitacion()!.email }}</strong>
+          @if (invitacion()!.unidadNombre) {
+            — unidad {{ invitacion()!.unidadNombre }} ({{ invitacion()!.rol }})
+          }
+        </p>
+
+        <form [formGroup]="form" (ngSubmit)="aceptar()" novalidate>
+          <div class="auth__row">
+            <div class="field">
+              <label for="nombre">Nombre</label>
+              <input id="nombre" formControlName="nombre" autocomplete="given-name" />
+            </div>
+            <div class="field">
+              <label for="apellido">Apellido</label>
+              <input id="apellido" formControlName="apellido" autocomplete="family-name" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="telefono">Teléfono <small>(opcional)</small></label>
+            <input id="telefono" formControlName="telefono" autocomplete="tel" />
+          </div>
+          <div class="field">
+            <label for="password">Contraseña</label>
+            <input id="password" type="password" formControlName="password" autocomplete="new-password" />
+            @if (form.controls.password.touched && form.controls.password.invalid) {
+              <small class="field__error">Mínimo 8 caracteres.</small>
+            }
+          </div>
+          <div class="field">
+            <label for="confirm">Confirmar contraseña</label>
+            <input id="confirm" type="password" formControlName="confirm" autocomplete="new-password" />
+            @if (form.hasError('distintas') && form.controls.confirm.touched) {
+              <small class="field__error">Las contraseñas no coinciden.</small>
+            }
+          </div>
+
+          @if (error()) { <p class="auth__alert">{{ error() }}</p> }
+
+          <button type="submit" class="btn btn--primary" [disabled]="enviando()">
+            {{ enviando() ? 'Activando…' : 'Activar mi cuenta' }}
+          </button>
+        </form>
+      }
+    </div>
+  </main>
+</div>

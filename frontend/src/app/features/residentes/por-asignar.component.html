@@ -1,0 +1,78 @@
+<section class="r">
+  <header class="r-head">
+    <div><h1>Residentes por asignar</h1><p>Residentes que aún no fueron asignados a una unidad</p></div>
+    <button type="button" class="r-close" (click)="volver()" aria-label="Cerrar">✕</button>
+  </header>
+
+  <div class="r-body">
+    <div class="r-toolbar">
+      <div class="r-search">
+        <span>⌕</span>
+        <input type="search" placeholder="Buscar residentes…"
+          [value]="busqueda()" (input)="busqueda.set($any($event.target).value)" />
+      </div>
+      <button type="button" class="u-icon-btn" (click)="refrescar()" aria-label="Refrescar">⟳</button>
+      <button type="button" class="u-icon-btn" style="margin-left:auto" (click)="ayuda.set(true)" title="Más información">?</button>
+    </div>
+
+    @if (residentes().length) {
+      <div class="r-tablewrap">
+        <table class="r-table">
+          <thead><tr><th>Residente</th><th>Correo</th><th></th></tr></thead>
+          <tbody>
+            @for (r of visibles(); track r.usuarioId) {
+              <tr>
+                <td class="r-person">
+                  <span class="r-avatar">{{ iniciales(r) }}</span>
+                  <span>{{ r.nombre }} {{ r.apellido }}</span>
+                </td>
+                <td>{{ r.email }}</td>
+                <td><span class="r-tag">Sin unidad</span></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else if (cargando()) {
+      <p class="r-loading">Cargando…</p>
+    } @else {
+      <div class="r-empty">
+        <div class="r-empty__icon">🏢</div>
+        <h2>Todos los residentes asignados</h2>
+        <p>¡Buen trabajo! Todos tus residentes están asignados a unidades. Los residentes por asignar
+          aparecerán acá cuando necesiten ser vinculados con sus unidades.</p>
+        <div class="r-empty__cards">
+          <div><h3>Asignaciones flexibles</h3><p>Gestioná las relaciones residente-unidad desde la vista de detalles del residente.</p></div>
+          <div><h3>Múltiples unidades</h3><p>Un residente puede estar asignado a más de una unidad si posee o administra varias propiedades.</p></div>
+        </div>
+      </div>
+    }
+  </div>
+</section>
+
+@if (ayuda()) {
+  <app-ayuda-panel titulo="Residentes por asignar" (cerrar)="ayuda.set(false)">
+    <p>Esta sección muestra los residentes que aceptaron su invitación y crearon una cuenta, pero
+      todavía no fueron asignados a una unidad. Son personas que forman parte de tu comunidad pero
+      necesitan ser vinculadas a su propiedad específica.</p>
+    <h4>¿Por qué un residente está sin asignar?</h4>
+    <ul>
+      <li>Fue invitado sin especificar una unidad.</li>
+      <li>Su asignación de unidad fue removida pero permanece en la comunidad.</li>
+      <li>Es miembro de la junta o personal que no vive en una unidad.</li>
+    </ul>
+    <h4>Qué podés hacer</h4>
+    <ol>
+      <li><strong>Asignar una unidad</strong> — desde la ficha de la unidad, en la pestaña Residentes.</li>
+      <li><strong>Ver su perfil</strong> — información de contacto y estado de cuenta.</li>
+      <li><strong>Administrar roles</strong> — incluso sin unidad podés asignar roles.</li>
+      <li><strong>Eliminar de la comunidad</strong> — si ya no pertenece.</li>
+    </ol>
+    <h4>Consejos</h4>
+    <ul>
+      <li>Revisá esta lista regularmente para que todos los residentes estén bien asignados.</li>
+      <li>Los residentes necesitan una unidad para recibir comunicaciones y facturas específicas.</li>
+      <li>Un residente puede estar en varias unidades si posee o alquila más de una.</li>
+    </ul>
+  </app-ayuda-panel>
+}

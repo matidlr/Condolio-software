@@ -1,0 +1,172 @@
+<div class="u-modal-overlay" (click)="cerrar.emit()">
+  <div class="u-modal u-modal--wide" (click)="$event.stopPropagation()">
+    <h2>Invitar residente</h2>
+    <p class="u-hint">Enviá una invitación para agregar un nuevo residente a la comunidad.</p>
+
+    <div class="u-modal-tabs">
+      <button type="button" [class.is-active]="tab() === 'agregar'" (click)="irTab('agregar')">Agregar residente</button>
+      <button type="button" [class.is-active]="tab() === 'importar'" (click)="irTab('importar')">Importar residentes</button>
+    </div>
+
+    @if (tab() === 'agregar') {
+      <div class="r-invite-grid">
+        <form [formGroup]="form" (ngSubmit)="enviarInvitacion()">
+          <div class="field">
+            <label for="i-nombre">Nombre <small>(opcional)</small></label>
+            <input id="i-nombre" formControlName="nombre" placeholder="Juan Pérez" />
+          </div>
+          <div class="field">
+            <label for="i-email">Correo electrónico *</label>
+            <input id="i-email" type="email" formControlName="email" placeholder="juan@ejemplo.com" />
+          </div>
+          <div class="field">
+            <label for="i-unidad">Unidad</label>
+            <select id="i-unidad" [value]="unidadIdSel()" (change)="onUnidad($any($event.target).value)">
+              <option value="">Seleccionar unidad</option>
+              @for (u of unidades(); track u.id) { <option [value]="u.id">{{ u.nombre }}</option> }
+            </select>
+          </div>
+          @if (unidadSeleccionada()) {
+            <div class="field">
+              <label for="i-rol">Rol en la unidad</label>
+              <select id="i-rol" formControlName="rol">
+                <option value="Propietario">Propietario</option>
+                <option value="Inquilino">Inquilino</option>
+                <option value="Gestor">Gestor</option>
+              </select>
+            </div>
+          }
+          @if (error()) { <p class="u-alert">{{ error() }}</p> }
+          <div class="u-modal__actions">
+            <button type="button" class="btn btn--ghost u-btn" (click)="cerrar.emit()">Cancelar</button>
+            <button type="submit" class="btn btn--primary u-btn" [disabled]="guardando() || form.invalid">
+              {{ guardando() ? 'Enviando…' : 'Enviar invitación' }}
+            </button>
+          </div>
+        </form>
+        <aside class="f-help">
+          <dl>
+            <dt>¿Qué sucede después?</dt><dd>La invitación se envía por email.</dd>
+            <dt>Asignación de unidad</dt>
+            <dd>
+              @if (unidadSeleccionada(); as u) {
+                El residente será asignado a la unidad {{ u.nombre }} después de aceptar la invitación.
+              } @else { Podés asignar una unidad ahora o más tarde desde la lista de residentes. }
+            </dd>
+            <dt>Acceso y permisos</dt><dd>Cuando aceptan, tienen acceso a la comunidad, comunicados y reservas de amenities.</dd>
+          </dl>
+        </aside>
+      </div>
+    } @else {
+      <ol class="imp-steps">
+        <li [class.is-done]="impPaso() > 1" [class.is-active]="impPaso() === 1"><span>1</span> Subir</li>
+        <li [class.is-done]="impPaso() > 2" [class.is-active]="impPaso() === 2"><span>2</span> Revisar</li>
+        <li [class.is-active]="impPaso() === 3"><span>3</span> Notificar</li>
+      </ol>
+
+      @if (impPaso() === 1) {
+        <label class="imp-drop">
+          <input type="file" accept=".csv,text/csv" (change)="onArchivo($event)" hidden />
+          <span class="imp-drop__icon">↑</span>
+          <span>Arrastrá un archivo o hacé clic para seleccionar</span>
+          <span class="imp-drop__hint">Subí un archivo con la lista de residentes a invitar · CSV · Máx 10 MB</span>
+        </label>
+        @if (error()) { <p class="u-alert">{{ error() }}</p> }
+        <div class="u-modal__actions">
+          <button type="button" class="btn btn--ghost u-btn" (click)="descargarPlantilla()">Descargar plantilla CSV</button>
+          <button type="button" class="btn btn--ghost u-btn" (click)="cerrar.emit()">Cancelar</button>
+        </div>
+      }
+
+      @if (impPaso() === 2) {
+        <div class="imp-rev-top">
+          <div class="r-search">
+            <span>⌕</span>
+            <input type="search" placeholder="Buscar contactos…"
+              [value]="impBusqueda()" (input)="impBusqueda.set($any($event.target).value)" />
+          </div>
+          <span class="imp-count">{{ impSel().size }} de {{ impFilas().length }} seleccionados</span>
+        </div>
+        <div class="imp-grid">
+          <table>
+            <thead><tr><th></th><th>Resultado</th><th>Nombre</th><th>Email</th><th>Teléfono</th><th>Unidad</th><th>Rol</th><th></th></tr></thead>
+            <tbody>
+              @for (f of impVisibles(); track f.key) {
+                <tr [class.is-blocked]="filaValida(f)">
+                  <td><input type="checkbox" [checked]="impSel().has(f.key)" (change)="toggleFila(f.key)" /></td>
+                  <td>
+                    @if (filaValida(f); as motivo) {
+                      <span class="imp-badge imp-badge--err">Bloqueado</span><small>{{ motivo }}</small>
+                    } @else { <span class="imp-badge imp-badge--ok">✓ Nuevo</span> }
+                  </td>
+                  <td><input [value]="f.nombre" (input)="editarFila(f.key, 'nombre', $any($event.target).value)" /></td>
+                  <td><input [value]="f.email" (input)="editarFila(f.key, 'email', $any($event.target).value)" /></td>
+                  <td><input [value]="f.telefono" (input)="editarFila(f.key, 'telefono', $any($event.target).value)" placeholder="Opcional" /></td>
+                  <td><select [value]="f.unidad" (change)="editarFila(f.key, 'unidad', $any($event.target).value)">
+                    <option value="">Sin unidad</option>
+                    @for (u of unidades(); track u.id) { <option [value]="u.nombre">{{ u.nombre }}</option> }
+                  </select></td>
+                  <td><select [value]="f.rol" (change)="editarFila(f.key, 'rol', $any($event.target).value)">
+                    <option value="Propietario">Propietario</option>
+                    <option value="Inquilino">Inquilino</option>
+                    <option value="Gestor">Gestor</option>
+                  </select></td>
+                  <td><button type="button" class="imp-del" (click)="quitarFila(f.key)">🗑</button></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (error()) { <p class="u-alert">{{ error() }}</p> }
+        <div class="u-modal__actions">
+          <button type="button" class="btn btn--ghost u-btn" (click)="impPaso.set(1)">← Volver</button>
+          <button type="button" class="btn btn--ghost u-btn" (click)="cerrar.emit()">Cancelar</button>
+          <button type="button" class="btn btn--primary u-btn"
+            [disabled]="impSeleccionadasValidas().length === 0" (click)="impPaso.set(3)">Siguiente →</button>
+        </div>
+      }
+
+      @if (impPaso() === 3 && !impResultado()) {
+        <div class="imp-box">Se importarán {{ impSeleccionadasValidas().length }} residentes.</div>
+        <h4 class="imp-h4">Opciones de notificación</h4>
+        <label class="imp-radio" [class.is-active]="!impNotificar()">
+          <input type="radio" name="n" [checked]="!impNotificar()" (change)="impNotificar.set(false)" />
+          <div><strong>No notificar ahora</strong>
+            <p>Los residentes se agregan a la lista de invitados pero no reciben notificación. Podés enviar las invitaciones después.</p></div>
+        </label>
+        <label class="imp-radio" [class.is-active]="impNotificar()">
+          <input type="radio" name="n" [checked]="impNotificar()" (change)="impNotificar.set(true)" />
+          <div><strong>Notificar a todos</strong>
+            <p>Se enviará un email de invitación a todos los residentes importados.</p></div>
+        </label>
+        @if (error()) { <p class="u-alert">{{ error() }}</p> }
+        <div class="u-modal__actions">
+          <button type="button" class="btn btn--ghost u-btn" (click)="impPaso.set(2)">← Volver</button>
+          <button type="button" class="btn btn--ghost u-btn" (click)="cerrar.emit()">Cancelar</button>
+          <button type="button" class="btn btn--primary u-btn" [disabled]="guardando()" (click)="confirmarImport()">
+            {{ guardando() ? 'Importando…' : 'Importar ' + impSeleccionadasValidas().length + ' residentes' }}
+          </button>
+        </div>
+      }
+
+      @if (impPaso() === 3 && impResultado(); as res) {
+        <div class="imp-done">
+          <p class="imp-done__title">✓ Importación completada</p>
+          <p class="imp-done__sub">
+            @if (res.fallidas === 0) { Todos los contactos fueron importados correctamente. }
+            @else { {{ res.fallidas }} contacto(s) no se pudieron importar. }
+          </p>
+        </div>
+        <div class="imp-num"><span>👥</span><strong>{{ res.enviadas }}</strong><em>Invitados nuevos</em></div>
+        @if (res.fallidas > 0) {
+          <ul class="imp-fails">
+            @for (f of res.filas; track f.email) { @if (!f.ok) { <li>{{ f.email }} — {{ f.motivo }}</li> } }
+          </ul>
+        }
+        <div class="u-modal__actions">
+          <button type="button" class="btn btn--primary u-btn" (click)="cerrar.emit()">Cerrar</button>
+        </div>
+      }
+    }
+  </div>
+</div>

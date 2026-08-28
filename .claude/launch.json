@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "condolio-api",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "E:/.NET/Condolio/src/Condolio.Api"],
+      "port": 5222
+    },
+    {
+      "name": "condolio-web",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "cd /d E:\\.NET\\Condolio\\frontend && npm start"],
+      "port": 4200
+    }
+  ]
+}

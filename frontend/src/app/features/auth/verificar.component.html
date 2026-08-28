@@ -1,0 +1,37 @@
+<div class="auth">
+  <aside class="auth__brand">
+    <div class="auth__brand-inner">
+      <h1>Verificá tu correo</h1>
+      <p class="auth__tagline">Te enviamos un código de 4 dígitos para confirmar tu cuenta.</p>
+    </div>
+  </aside>
+
+  <main class="auth__form-wrap">
+    <div class="auth__card">
+      <div class="ver-icon">✉</div>
+      <h2 class="auth__title">Verificá tu correo electrónico</h2>
+      <p class="auth__subtitle">
+        Enviamos un código de verificación de 4 dígitos a<br />
+        <strong>{{ email() }}</strong>
+      </p>
+
+      <div class="ver-boxes" (paste)="onPaste($event)">
+        @for (d of digitos(); track $index; let i = $index) {
+          <input inputmode="numeric" maxlength="1" [value]="d"
+            (input)="onInput(i, $event)" (keydown)="onKeydown(i, $event)" />
+        }
+      </div>
+
+      @if (error()) { <p class="auth__alert">{{ error() }}</p> }
+      @if (reenviado()) { <p class="ver-ok">Te reenviamos el código.</p> }
+
+      <button type="button" class="btn btn--primary" [disabled]="verificando() || codigo().length !== 4"
+        (click)="verificar()">
+        {{ verificando() ? 'Verificando…' : 'Verificar correo' }}
+      </button>
+
+      <button type="button" class="ver-link" (click)="reenviar()">Reenviar código</button>
+      <p class="auth__legal"><a routerLink="/login">Volver al inicio de sesión</a></p>
+    </div>
+  </main>
+</div>

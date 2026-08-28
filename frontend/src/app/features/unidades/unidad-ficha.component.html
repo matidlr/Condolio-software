@@ -1,0 +1,714 @@
+@if (!unidad()) {
+  @if (cargando()) {
+    <p class="f-loading">Cargando…</p>
+  } @else {
+    <div class="f-error">
+      <p>{{ error() ?? 'No encontramos la unidad.' }}</p>
+      <button type="button" class="btn btn--ghost" (click)="volver()">Volver a Unidades</button>
+    </div>
+  }
+}
+
+@if (unidad(); as u) {
+  <section class="f">
+    <!-- Encabezado -->
+    <header class="f-head">
+      <button type="button" class="f-back" (click)="volver()" aria-label="Volver">←</button>
+      <div class="f-title">
+        <div class="f-title__row">
+          <h1>{{ u.nombre }}</h1>
+          @if (u.necesitaAtencion) {
+            <span class="f-badge f-badge--warn"><i></i> Atención</span>
+          }
+        </div>
+        <p>{{ u.tipo }}</p>
+      </div>
+      <div class="f-nav">
+        <button type="button" (click)="irA(anterior())" [disabled]="!anterior()" aria-label="Anterior">‹</button>
+        <span>{{ u.nombre }}</span>
+        <button type="button" (click)="irA(siguiente())" [disabled]="!siguiente()" aria-label="Siguiente">›</button>
+      </div>
+      <div class="f-menu">
+        <button type="button" class="f-kebab" (click)="menuUnidadAbierto.set(!menuUnidadAbierto())"
+          aria-label="Más opciones">⋮</button>
+        @if (menuUnidadAbierto()) {
+          <div class="f-menu__dropdown">
+            <button type="button" class="is-danger" (click)="abrirEliminarUnidad()">🗑 Eliminar unidad</button>
+          </div>
+        }
+      </div>
+    </header>
+
+    <!-- Tabs -->
+    <nav class="f-tabs" role="tablist">
+      @for (t of tabs; track t.id) {
+        <button
+          type="button" role="tab"
+          [class.is-active]="tab() === t.id"
+          (click)="tab.set(t.id)"
+        >{{ t.label }}</button>
+      }
+    </nav>
+
+    <!-- ===== Resumen ===== -->
+    @if (tab() === 'resumen') {
+      <div class="f-stats">
+        <div class="f-stat">
+          <span class="f-stat__label">Ocupación</span>
+          <span class="f-chip" [class.f-chip--muted]="u.ocupacionEfectiva === 'Vacante'">{{ u.ocupacionEfectiva }}</span>
+        </div>
+        <div class="f-stat">
+          <span class="f-stat__label">Cuota de expensas</span>
+          <strong>{{ u.cuotaMantenimiento != null ? money(u.cuotaMantenimiento) + '/mes' : 'Sin configurar' }}</strong>
+        </div>
+        <div class="f-stat">
+          <span class="f-stat__label">Residentes</span>
+          <strong>{{ u.residentes }}</strong>
+        </div>
+        <div class="f-stat f-stat--link">
+          <span class="f-stat__label">Saldo</span>
+          <strong>{{ money(u.saldo) }}</strong>
+        </div>
+      </div>
+
+      <div class="f-grid">
+        <article class="f-card">
+          <h3>Estado de pagos</h3>
+          <div class="f-empty">
+            <p class="f-empty__title">Sin cargos registrados</p>
+            <p>Los cargos aparecerán acá cuando los registres.</p>
+          </div>
+        </article>
+
+        <article class="f-card">
+          <h3>Reservas</h3>
+          <div class="f-empty">
+            <p class="f-empty__title">Sin reservas activas</p>
+            <p>Las próximas reservas aparecerán acá.</p>
+          </div>
+        </article>
+
+        <article class="f-card">
+          <h3>Acciones rápidas</h3>
+          <div class="f-actions">
+            <button type="button" class="btn btn--ghost" disabled>+ Crear cargo <small>pronto</small></button>
+            <button type="button" class="btn btn--ghost" disabled>Reportar incidencia <small>pronto</small></button>
+          </div>
+        </article>
+
+        <article class="f-card">
+          <h3>Incidencias activas</h3>
+          <div class="f-empty">
+            <p class="f-empty__title">Sin incidencias abiertas</p>
+            <p>Esta unidad está al día.</p>
+          </div>
+        </article>
+
+        <article class="f-card">
+          <h3>Actividad reciente</h3>
+          <div class="f-empty">
+            <p class="f-empty__title">Sin actividad</p>
+            <p>Cuando haya movimientos en esta unidad aparecerán acá.</p>
+          </div>
+        </article>
+      </div>
+    }
+
+    <!-- ===== Detalles ===== -->
+    @if (tab() === 'detalles') {
+      <form class="f-detalles" [formGroup]="form" (ngSubmit)="guardarDetalles()">
+        <div class="f-detalles__cols">
+          <div class="f-col">
+            <h3>Información general</h3>
+            <div class="field">
+              <label for="d-nombre">Nombre de la unidad *</label>
+              <input id="d-nombre" formControlName="nombre" />
+            </div>
+            <div class="field">
+              <label for="d-tipo">Tipo *</label>
+              <select id="d-tipo" formControlName="tipo">
+                @for (t of tipos; track t) { <option [value]="t">{{ t }}</option> }
+              </select>
+            </div>
+            <div class="field">
+              <label for="d-piso">Piso</label>
+              <input id="d-piso" type="number" formControlName="piso" />
+            </div>
+            <div class="field">
+              <label for="d-area">Área (m²)</label>
+              <input id="d-area" type="number" step="0.01" formControlName="areaM2" />
+            </div>
+            <div class="field">
+              <label for="d-coef">% Indiviso</label>
+              <input id="d-coef" type="number" step="0.000001" formControlName="coeficiente" placeholder="ej., 12.5" />
+            </div>
+            <div class="field">
+              <label for="d-seccion">Sección</label>
+              <input id="d-seccion" formControlName="seccion" placeholder="Torre A / Sin sección" />
+            </div>
+          </div>
+
+          <div class="f-col">
+            <h3>Cuota</h3>
+            <div class="field">
+              <label for="d-cuota">Cuota de mantenimiento</label>
+              <input id="d-cuota" type="number" step="0.01" formControlName="cuotaMantenimiento" placeholder="0.00" />
+            </div>
+            <label class="f-check">
+              <input type="checkbox" formControlName="facturable" />
+              <span>Facturable</span>
+            </label>
+            @if (form.controls.cuotaMantenimiento.value) {
+              <div class="f-nextcharge">
+                <span>Próximo cobro</span>
+                <strong>{{ proximoCobro() }} · {{ money(form.controls.cuotaMantenimiento.value) }}</strong>
+              </div>
+            }
+          </div>
+
+          <aside class="f-help">
+            <h4>Cómo llenar los detalles</h4>
+            <p class="f-help__sub">Guía rápida de cada campo</p>
+            <dl>
+              <dt>Nombre</dt><dd>Cómo verán los residentes esta unidad (ej.: "1A", "Depto 301").</dd>
+              <dt>Tipo</dt><dd>Determina si aplica el campo de piso y otras opciones.</dd>
+              <dt>Piso</dt><dd>Solo para departamentos y unidades dentro de un edificio.</dd>
+              <dt>Área (m²)</dt><dd>Informativo; ayuda a sugerir el indiviso de la unidad.</dd>
+              <dt>Indiviso</dt><dd>Porcentaje de propiedad usado en cálculos de prorrateo.</dd>
+              <dt>Sección</dt><dd>Agrupa unidades por torre o sección.</dd>
+              <dt>Cuota de mantenimiento</dt><dd>Monto recurrente que se cobra a esta unidad según el calendario del consorcio.</dd>
+            </dl>
+          </aside>
+        </div>
+
+        @if (error()) { <p class="f-alert">{{ error() }}</p> }
+        @if (guardadoOk()) { <p class="f-ok">Cambios guardados.</p> }
+
+        <div class="f-detalles__actions">
+          <button type="submit" class="btn btn--primary" [disabled]="guardando()">
+            {{ guardando() ? 'Guardando…' : 'Guardar cambios' }}
+          </button>
+        </div>
+      </form>
+    }
+
+    <!-- ===== Residentes ===== -->
+    @if (tab() === 'residentes') {
+      <div class="r">
+        <h3>Residentes</h3>
+
+        <div class="r-ocupacion">
+          <label for="r-oc">Tipo de ocupación</label>
+          <div class="r-ocupacion__row">
+            <select id="r-oc"
+              (change)="ocupacionPendiente.set($any($event.target).value)">
+              @for (o of ocupaciones; track o.value) {
+                <option [value]="o.value" [selected]="o.value === ocupacionPendiente()">{{ o.label }}</option>
+              }
+            </select>
+            @if (ocupacionCambio()) {
+              <button type="button" class="btn btn--primary r-confirm" (click)="confirmarOcupacion()">
+                ✓ Confirmar
+              </button>
+            }
+          </div>
+        </div>
+
+        <div class="r-cols" [class.r-cols--dos]="mostrarInquilinos()">
+          <!-- Propietarios -->
+          <section class="r-group">
+            <header>
+              <h4>Propietarios</h4>
+              <button type="button" class="r-add" (click)="abrirPersona('Propietario')">+ Agregar</button>
+            </header>
+            @if (propietarios().length) {
+              @for (p of propietarios(); track p.id) {
+                <article class="r-person">
+                  <span class="r-avatar">{{ iniciales(p) }}</span>
+                  <div class="r-person__info">
+                    <span class="r-person__name">
+                      {{ p.nombre }} {{ p.apellido }}
+                      @if (p.esContactoPrincipal) { <span class="r-star" title="Contacto principal">★</span> }
+                    </span>
+                    @if (p.email) { <span class="r-person__mail">✉ {{ p.email }}</span> }
+                  </div>
+                  <div class="r-person__actions">
+                    <button type="button" [class.is-on]="p.esContactoPrincipal"
+                      title="Marcar como contacto principal" (click)="marcarPrincipal(p)">★</button>
+                    <button type="button" title="Mover a inquilinos" (click)="cambiarRol(p)">⇄</button>
+                    <button type="button" class="is-danger" title="Quitar" (click)="eliminarPersona(p)">✕</button>
+                  </div>
+                </article>
+              }
+            } @else {
+              <div class="r-empty">No hay propietarios asignados</div>
+            }
+          </section>
+
+          <!-- Inquilinos -->
+          @if (mostrarInquilinos()) {
+            <section class="r-group">
+              <header>
+                <h4>Inquilinos</h4>
+                <button type="button" class="r-add" (click)="abrirPersona('Inquilino')">+ Agregar</button>
+              </header>
+              @if (inquilinos().length) {
+                @for (p of inquilinos(); track p.id) {
+                  <article class="r-person">
+                    <span class="r-avatar">{{ iniciales(p) }}</span>
+                    <div class="r-person__info">
+                      <span class="r-person__name">
+                        {{ p.nombre }} {{ p.apellido }}
+                        @if (p.esContactoPrincipal) { <span class="r-star">★</span> }
+                      </span>
+                      @if (p.email) { <span class="r-person__mail">✉ {{ p.email }}</span> }
+                    </div>
+                    <div class="r-person__actions">
+                      <button type="button" [class.is-on]="p.esContactoPrincipal"
+                        title="Marcar como contacto principal" (click)="marcarPrincipal(p)">★</button>
+                      <button type="button" title="Mover a propietarios" (click)="cambiarRol(p)">⇄</button>
+                      <button type="button" class="is-danger" title="Quitar" (click)="eliminarPersona(p)">✕</button>
+                    </div>
+                  </article>
+                }
+              } @else {
+                <div class="r-empty">No hay inquilinos asignados</div>
+              }
+            </section>
+          }
+        </div>
+
+        @if (mostrarInquilinos()) {
+          <div class="r-toggle">
+            <div>
+              <strong>Inquilinos pueden ver finanzas</strong>
+              <p>Permite que los inquilinos de esta unidad vean su saldo y suban comprobantes de pago,
+                por ejemplo cuando el inquilino paga la cuota de mantenimiento.</p>
+            </div>
+            <button type="button" class="r-switch" [class.is-on]="u.inquilinosVenFinanzas"
+              (click)="toggleInquilinosFinanzas()" role="switch"
+              [attr.aria-checked]="u.inquilinosVenFinanzas"><span></span></button>
+          </div>
+        }
+
+        <!-- Gestores -->
+        <section class="r-group">
+          <header>
+            <h4>Gestores de unidad</h4>
+            <button type="button" class="r-add" (click)="abrirPersona('Gestor')">+ Agregar</button>
+          </header>
+          @if (gestores().length) {
+            @for (p of gestores(); track p.id) {
+              <article class="r-person">
+                <span class="r-avatar">{{ iniciales(p) }}</span>
+                <div class="r-person__info">
+                  <span class="r-person__name">{{ p.nombre }} {{ p.apellido }}</span>
+                  @if (p.email) { <span class="r-person__mail">✉ {{ p.email }}</span> }
+                </div>
+                <div class="r-person__actions">
+                  <button type="button" class="is-danger" title="Quitar" (click)="eliminarPersona(p)">✕</button>
+                </div>
+              </article>
+            }
+          } @else {
+            <div class="r-empty">No hay gestores de unidad asignados</div>
+          }
+        </section>
+      </div>
+    }
+
+    <!-- ===== Notas ===== -->
+    @if (tab() === 'notas') {
+      <div class="n">
+        <div class="n-main">
+          <header class="n-head">
+            <div>
+              <h3>Escribí una nota</h3>
+              <p>Apuntá lo importante para esta unidad</p>
+            </div>
+            <button type="button" class="btn btn--primary n-add" (click)="abrirNota(null)">+ Agregar nota</button>
+          </header>
+
+          @if (notas().length) {
+            <ul class="n-list">
+              @for (nota of notas(); track nota.id) {
+                <li class="n-item">
+                  <span class="r-avatar">{{ (nota.autor[0] || '?').toUpperCase() }}</span>
+                  <div class="n-item__body">
+                    <div class="n-item__meta">
+                      <strong>{{ nota.autor }}</strong>
+                      <span>{{ hace(nota.creadoUtc) }}{{ nota.actualizadoUtc ? ' · editada' : '' }}</span>
+                    </div>
+                    <p>{{ nota.texto }}</p>
+                  </div>
+                  <div class="n-item__actions">
+                    <button type="button" title="Editar" (click)="abrirNota(nota)">✎</button>
+                    <button type="button" class="is-danger" title="Eliminar" (click)="eliminarNota(nota)">🗑</button>
+                  </div>
+                </li>
+              }
+            </ul>
+          } @else {
+            <div class="n-empty">
+              <p class="f-empty__title">Aún no hay notas</p>
+              <p>Apuntá lo importante para esta unidad.</p>
+            </div>
+          }
+        </div>
+
+        <aside class="f-help n-help">
+          <h4>¿Para qué sirven las notas?</h4>
+          <p class="f-help__sub">Un espacio compartido para guardar contexto sobre esta unidad.
+            Todo el equipo administrativo puede verlas y agregar las suyas.</p>
+          <dl>
+            <dt>Mantenimiento</dt><dd>Aire acondicionado revisado el 15/10.</dd>
+            <dt>Entregas</dt><dd>Instrucciones de paquetes: dejar en portería.</dd>
+            <dt>Acceso</dt><dd>Código de portón cambiado a 5678.</dd>
+            <dt>General</dt><dd>El inquilino prefiere comunicaciones a la mañana.</dd>
+          </dl>
+        </aside>
+      </div>
+    }
+
+    <!-- ===== Actividad ===== -->
+    @if (tab() === 'actividad') {
+      <div class="act">
+        <h3>Actividad</h3>
+        @if (actividad().length) {
+          <ul class="act-timeline">
+            @for (a of actividad(); track a.id) {
+              <li>
+                <span class="act-dot"></span>
+                <div class="act-body">
+                  <strong>{{ a.titulo }}</strong>
+                  <p>{{ a.actor }}{{ a.detalle ? ': ' + a.detalle : '' }}</p>
+                  <span class="act-time">{{ fechaHora(a.creadoUtc) }}</span>
+                </div>
+              </li>
+            }
+          </ul>
+        } @else {
+          <div class="n-empty">
+            <p class="f-empty__title">Sin actividad</p>
+            <p>Cuando haya movimientos en esta unidad aparecerán acá.</p>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- ===== Incidencias ===== -->
+    @if (tab() === 'incidencias') {
+      <div class="n">
+        <div class="n-main">
+          <header class="n-head">
+            <div>
+              <h3>Incidencias</h3>
+              <p>Registro confidencial de eventos de la unidad</p>
+            </div>
+            <button type="button" class="btn btn--primary n-add" (click)="abrirIncidencia(null)">+ Registrar incidencia</button>
+          </header>
+
+          @if (incidencias().length) {
+            <ul class="inc-list">
+              @for (inc of incidencias(); track inc.id) {
+                <li class="inc-item inc-item--click" [class]="'inc-item--' + inc.severidad.toLowerCase()"
+                  (click)="verIncidencia(inc)">
+                  <div class="inc-item__top">
+                    <span class="inc-sev" [class]="'inc-sev--' + inc.severidad.toLowerCase()">
+                      {{ inc.severidad === 'Critica' ? 'Crítica' : inc.severidad }}
+                    </span>
+                    <span class="inc-cat">{{ labelCategoria[inc.categoria] }}</span>
+                    @if (inc.escaladaUtc) { <span class="inc-esc">Escalada a ticket</span> }
+                    <span class="inc-right">
+                      {{ fecha(inc.fechaEvento) }} · {{ inc.autor }}
+                    </span>
+                    <span class="inc-actions" (click)="$event.stopPropagation()">
+                      <button type="button" title="Editar" (click)="abrirIncidencia(inc)">✎</button>
+                      <button type="button" class="is-danger" title="Eliminar" (click)="eliminarIncidencia(inc)">🗑</button>
+                    </span>
+                  </div>
+                  <strong class="inc-title">{{ inc.titulo || labelCategoria[inc.categoria] }}</strong>
+                  <p class="inc-desc">{{ inc.descripcion }}</p>
+                  @if (inc.etiquetas.length) {
+                    <div class="inc-tags">
+                      @for (t of inc.etiquetas; track t) { <span>{{ t }}</span> }
+                    </div>
+                  }
+                </li>
+              }
+            </ul>
+          } @else {
+            <div class="n-empty">
+              <p class="f-empty__title">Sin incidencias registradas</p>
+              <p>Registrá el primer evento para esta unidad.</p>
+            </div>
+          }
+        </div>
+
+        <aside class="f-help n-help">
+          <h4>¿Qué es una incidencia?</h4>
+          <p class="f-help__sub">Un registro confidencial de cualquier evento de la unidad que valga
+            la pena recordar: quejas verbales, advertencias, contexto de disputas y observaciones.</p>
+          <dl>
+            <dt>Cuándo registrar</dt><dd>Quejas de ruido, faltas con mascotas o visitas, daños menores,
+              contexto útil para futuras disputas.</dd>
+            <dt>Privacidad</dt><dd>Solo administradores y staff pueden verlas. Nunca son visibles para los residentes.</dd>
+            <dt>Buenas prácticas</dt><dd>Sé específico con fecha, hora y partes involucradas. Vinculá cargos o tickets relacionados.</dd>
+          </dl>
+        </aside>
+      </div>
+    }
+  </section>
+
+  <!-- Modal: detalle de incidencia -->
+  @if (incidenciaDetalle(); as d) {
+    <div class="u-modal-overlay" (click)="cerrarIncidenciaDetalle()">
+      <div class="u-modal u-modal--wide" (click)="$event.stopPropagation()">
+        <h2>{{ d.incidencia.titulo || labelCategoria[d.incidencia.categoria] }}</h2>
+        <div class="idet-meta">
+          <span class="inc-sev" [class]="'inc-sev--' + d.incidencia.severidad.toLowerCase()">
+            {{ d.incidencia.severidad === 'Critica' ? 'Crítica' : d.incidencia.severidad }}
+          </span>
+          <span class="inc-cat">{{ labelCategoria[d.incidencia.categoria] }}</span>
+          <span>{{ fecha(d.incidencia.fechaEvento) }}</span>
+          @if (d.incidencia.escaladaUtc) { <span class="inc-esc">Escalada a ticket</span> }
+        </div>
+        <p class="idet-registrada">
+          {{ d.incidencia.autor }} registró esta incidencia · {{ fechaHora(d.incidencia.creadoUtc) }}
+        </p>
+
+        <div class="idet-desc">{{ d.incidencia.descripcion }}</div>
+
+        @if (d.incidencia.etiquetas.length) {
+          <div class="inc-tags idet-tags">
+            @for (t of d.incidencia.etiquetas; track t) { <span>{{ t }}</span> }
+          </div>
+        }
+
+        <div class="idet-adj">
+          <h4>Adjuntos</h4>
+          <app-adjuntos [ownerTipo]="'Incidencia'" [ownerId]="d.incidencia.id" />
+        </div>
+
+        <div class="idet-cols">
+          <div>
+            <h4>Historial ({{ d.historial.length }})</h4>
+            <ul class="idet-hist">
+              @for (h of d.historial; track $index) {
+                <li>
+                  <strong>{{ h.autor }}</strong>
+                  <span>{{ h.tipo === 'comentario' ? h.texto : h.texto }}</span>
+                  <em>{{ fechaHora(h.fechaUtc) }}</em>
+                </li>
+              }
+            </ul>
+          </div>
+          <div>
+            <h4>Agregar nota</h4>
+            <form [formGroup]="formComentario" (ngSubmit)="agregarComentario()">
+              <textarea rows="4" formControlName="texto" placeholder="Agregar nota"></textarea>
+              <button type="submit" class="btn btn--primary u-btn" [disabled]="guardando() || formComentario.invalid">
+                Agregar
+              </button>
+            </form>
+          </div>
+        </div>
+
+        @if (error()) { <p class="f-alert">{{ error() }}</p> }
+
+        <div class="u-modal__actions idet-actions">
+          <button type="button" class="btn btn--ghost u-btn" (click)="editarDesdeDetalle()">Editar</button>
+          <button type="button" class="btn btn--ghost u-btn" [disabled]="!!d.incidencia.escaladaUtc"
+            (click)="escalarIncidencia()">Escalar a ticket</button>
+          <button type="button" class="btn u-btn idet-del" (click)="eliminarIncidencia(d.incidencia)">Eliminar</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Modal: eliminar unidad -->
+  @if (eliminarUnidadModal()) {
+    <div class="u-modal-overlay" (click)="eliminarUnidadModal.set(false)">
+      <div class="u-modal" (click)="$event.stopPropagation()">
+        <h2>¿Eliminar unidad?</h2>
+        <p class="u-hint">Esta acción eliminará permanentemente la unidad y todos sus datos asociados.</p>
+        <div class="f-alert">
+          Esto eliminará la unidad, sus residentes, notas, incidencias y toda su actividad. No se puede deshacer.
+        </div>
+        <div class="field">
+          <label for="del-txt">Escribí <strong>ELIMINAR</strong> para confirmar</label>
+          <input id="del-txt" [value]="confirmarEliminarTexto()"
+            (input)="confirmarEliminarTexto.set($any($event.target).value)" placeholder="ELIMINAR" />
+        </div>
+        <div class="u-modal__actions">
+          <button type="button" class="btn btn--ghost u-btn" (click)="eliminarUnidadModal.set(false)">Cancelar</button>
+          <button type="button" class="btn u-btn idet-del"
+            [disabled]="confirmarEliminarTexto().trim().toUpperCase() !== 'ELIMINAR'"
+            (click)="eliminarUnidad()">Eliminar</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Modal: marcar desocupada -->
+  @if (desocuparModal()) {
+    <div class="u-modal-overlay" (click)="desocuparModal.set(false)">
+      <div class="u-modal" (click)="$event.stopPropagation()">
+        <h2>¿Marcar unidad como desocupada?</h2>
+        <p class="u-hint">Esto quitará a todos los propietarios e inquilinos de esta unidad. Esta acción no se puede deshacer.</p>
+        <div class="u-modal__actions">
+          <button type="button" class="btn btn--ghost u-btn" (click)="desocuparModal.set(false); ocupacionPendiente.set(unidad()!.ocupacion)">Cancelar</button>
+          <button type="button" class="btn u-btn idet-del" (click)="aplicarOcupacion()">Sí, marcar como desocupada</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Modal: incidencia (crear/editar) -->
+  @if (incidenciaModal(); as im) {
+    <div class="u-modal-overlay" (click)="cerrarIncidencia()">
+      <div class="u-modal u-modal--wide" (click)="$event.stopPropagation()">
+        <h2>{{ im.incidencia ? 'Editar incidencia' : 'Registrar incidencia' }}</h2>
+
+        @if (!im.incidencia) {
+          <div class="inc-templates">
+            <span>Plantilla</span>
+            <div>
+              @for (p of plantillas; track p.label) {
+                <button type="button" (click)="aplicarPlantilla(p)">{{ p.label }}</button>
+              }
+            </div>
+          </div>
+        }
+
+        <form [formGroup]="formIncidencia" (ngSubmit)="guardarIncidencia()">
+          <div class="u-row3">
+            <div class="field">
+              <label for="i-cat">Categoría</label>
+              <select id="i-cat" formControlName="categoria">
+                @for (c of categorias; track c.value) { <option [value]="c.value">{{ c.label }}</option> }
+              </select>
+            </div>
+            <div class="field">
+              <label for="i-sev">Severidad</label>
+              <select id="i-sev" formControlName="severidad">
+                @for (s of severidades; track s.value) { <option [value]="s.value">{{ s.label }}</option> }
+              </select>
+            </div>
+            <div class="field">
+              <label for="i-fecha">Fecha del evento</label>
+              <input id="i-fecha" type="date" formControlName="fechaEvento" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="i-tit">Título (opcional)</label>
+            <input id="i-tit" formControlName="titulo" placeholder="Resumen breve" />
+          </div>
+          <div class="field">
+            <label for="i-desc">Descripción</label>
+            <textarea id="i-desc" rows="4" formControlName="descripcion"
+              placeholder="Describí lo ocurrido con el detalle suficiente para futura referencia"></textarea>
+          </div>
+          <div class="field">
+            <label for="i-tags">Etiquetas</label>
+            <div class="i-tags-input">
+              <input id="i-tags" [value]="etiquetaInput()"
+                (input)="etiquetaInput.set($any($event.target).value)"
+                (keydown.enter)="$event.preventDefault(); agregarEtiquetas()"
+                placeholder="Agregá etiquetas separadas por coma" />
+              <button type="button" (click)="agregarEtiquetas()" aria-label="Agregar etiqueta">+</button>
+            </div>
+            @if (etiquetasChips().length) {
+              <div class="i-tags-chips">
+                @for (t of etiquetasChips(); track t) {
+                  <span>{{ t }} <button type="button" (click)="quitarEtiqueta(t)" aria-label="Quitar">×</button></span>
+                }
+              </div>
+            }
+          </div>
+
+          @if (error()) { <p class="f-alert">{{ error() }}</p> }
+
+          <div class="u-modal__actions">
+            <button type="button" class="btn btn--ghost u-btn" (click)="cerrarIncidencia()">Cancelar</button>
+            <button type="submit" class="btn btn--primary u-btn" [disabled]="guardando() || formIncidencia.invalid">
+              {{ guardando() ? 'Guardando…' : 'Guardar' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Modal: nota -->
+  @if (notaModal(); as nm) {
+    <div class="u-modal-overlay" (click)="cerrarNota()">
+      <div class="u-modal" (click)="$event.stopPropagation()">
+        <h2>{{ nm.nota ? 'Editar nota' : 'Nueva nota' }}</h2>
+        <p class="u-hint">Apuntá algo importante sobre esta unidad. Todo el equipo administrativo podrá verlo.</p>
+        <form [formGroup]="formNota" (ngSubmit)="guardarNota()">
+          <div class="field">
+            <textarea rows="6" formControlName="texto" placeholder="Escribí una nota sobre esta unidad…"></textarea>
+          </div>
+
+          @if (nm.nota) {
+            <div class="idet-adj">
+              <h4>Adjuntos</h4>
+              <app-adjuntos [ownerTipo]="'Nota'" [ownerId]="nm.nota.id" />
+            </div>
+          } @else {
+            <p class="u-hint">Podés adjuntar archivos después de guardar la nota.</p>
+          }
+
+          @if (error()) { <p class="f-alert">{{ error() }}</p> }
+          <div class="u-modal__actions">
+            <button type="button" class="btn btn--ghost u-btn" (click)="cerrarNota()">Cancelar</button>
+            <button type="submit" class="btn btn--primary u-btn" [disabled]="guardando() || formNota.invalid">
+              {{ guardando() ? 'Guardando…' : (nm.nota ? 'Listo' : 'Agregar nota') }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Modal: agregar persona -->
+  @if (personaModal(); as modal) {
+    <div class="u-modal-overlay" (click)="cerrarPersona()">
+      <div class="u-modal" (click)="$event.stopPropagation()">
+        <h2>{{ tituloModal() }}</h2>
+        <p class="u-hint">Ingresá los datos de la persona. No se envía ninguna notificación.</p>
+
+        <form [formGroup]="formPersona" (ngSubmit)="agregarPersona()">
+          <div class="field">
+            <label for="p-nombre">Nombre completo *</label>
+            <input id="p-nombre" formControlName="nombreCompleto" placeholder="Nombre y apellido" />
+          </div>
+          <div class="field">
+            <label for="p-email">Correo</label>
+            <input id="p-email" type="email" formControlName="email" placeholder="correo@ejemplo.com" />
+          </div>
+          <div class="field">
+            <label for="p-tel">Teléfono</label>
+            <input id="p-tel" formControlName="telefono" placeholder="+54 11 1234 5678" />
+          </div>
+          @if (modal.rol !== 'Gestor') {
+            <label class="f-check">
+              <input type="checkbox" formControlName="esContactoPrincipal" />
+              <span>Marcar como contacto principal</span>
+            </label>
+          }
+
+          @if (error()) { <p class="f-alert">{{ error() }}</p> }
+
+          <div class="u-modal__actions">
+            <button type="button" class="btn btn--ghost u-btn" (click)="cerrarPersona()">Cancelar</button>
+            <button type="submit" class="btn btn--primary u-btn" [disabled]="guardando()">
+              {{ guardando() ? 'Agregando…' : tituloModal() }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+}

@@ -1,0 +1,105 @@
+import { Component, computed, inject, signal } from '@angular/core';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { AuthService } from '../core/services/auth.service';
+import { ConsorcioService } from '../core/services/consorcio.service';
+
+interface NavHijo {
+  label: string;
+  ruta: string;
+  disponible: boolean;
+  badge?: number;
+}
+
+interface NavItem {
+  label: string;
+  ruta?: string;
+  icon: keyof typeof ICONOS;
+  disponible: boolean;
+  hijos?: NavHijo[];
+}
+
+const ICONOS = {
+  grid: '<path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/>',
+  building: '<rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2"/>',
+  users: '<circle cx="9" cy="8" r="3"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5M16 6a3 3 0 0 1 0 6"/>',
+  receipt: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/>',
+  wallet: '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M16 14h2"/>',
+  chat: '<path d="M4 5h16v11H9l-5 4z"/>',
+  folder: '<path d="M3 6h6l2 2h10v11H3z"/>',
+} as const;
+
+@Component({
+  selector: 'app-admin-shell',
+  standalone: true,
+  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  templateUrl: './admin-shell.component.html',
+  styleUrl: './admin-shell.component.scss',
+})
+export class AdminShellComponent {
+  private auth = inject(AuthService);
+  private router = inject(Router);
+  private sanitizer = inject(DomSanitizer);
+  consorcios = inject(ConsorcioService);
+
+  colapsado = signal(false);
+  menuAbierto = signal(false);
+
+  nombre = this.auth.nombre;
+  iniciales = computed(() =>
+    this.nombre().split(' ').map((p) => p[0] ?? '').slice(0, 2).join('').toUpperCase() || 'AD',
+  );
+
+  readonly nav: NavItem[] = [
+    { label: 'Panel', ruta: '/panel/inicio', icon: 'grid', disponible: true },
+    { label: 'Unidades', ruta: '/panel/unidades', icon: 'building', disponible: true },
+    {
+      label: 'Residentes', icon: 'users', disponible: true,
+      hijos: [
+        { label: 'Directorio', ruta: '/panel/residentes/directorio', disponible: true },
+        { label: 'Por asignar', ruta: '/panel/residentes/por-asignar', disponible: true },
+        { label: 'Invitaciones', ruta: '/panel/residentes/invitaciones', disponible: true },
+      ],
+    },
+    { label: 'Expensas', ruta: '/panel/expensas', icon: 'receipt', disponible: false },
+    { label: 'Gastos', ruta: '/panel/gastos', icon: 'wallet', disponible: false },
+    { label: 'Reclamos', ruta: '/panel/reclamos', icon: 'chat', disponible: false },
+    { label: 'Documentos', ruta: '/panel/documentos', icon: 'folder', disponible: false },
+  ];
+
+  gruposAbiertos = signal<Set<string>>(new Set());
+
+  toggleGrupo(label: string): void {
+    const s = new Set(this.gruposAbiertos());
+    s.has(label) ? s.delete(label) : s.add(label);
+    this.gruposAbiertos.set(s);
+  }
+
+  private iconoCache = new Map<string, SafeHtml>();
+
+  icono(nombre: keyof typeof ICONOS): SafeHtml {
+    if (!this.iconoCache.has(nombre)) {
+      const svg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+        stroke-linecap="round" stroke-linejoin="round">${ICONOS[nombre]}</svg>`;
+      this.iconoCache.set(nombre, this.sanitizer.bypassSecurityTrustHtml(svg));
+    }
+    return this.iconoCache.get(nombre)!;
+  }
+
+  ngOnInit(): void {
+    this.consorcios.cargar().subscribe();
+  }
+
+  cambiarConsorcio(id: string): void {
+    this.consorcios.setActivo(id);
+    const url = this.router.url;
+    this.router
+      .navigateByUrl('/panel', { skipLocationChange: true })
+      .then(() => this.router.navigateByUrl(url));
+  }
+
+  logout(): void {
+    this.auth.logout();
+    this.router.navigate(['/login']);
+  }
+}

@@ -1,0 +1,248 @@
+<header class="lp-header">
+  <div class="lp-container lp-header__inner">
+    <a class="lp-logo" routerLink="/">
+      <span class="lp-logo__mark">C</span>
+      Condolio
+    </a>
+
+    <nav class="lp-nav">
+      <a href="#producto">Producto</a>
+      <a href="#precios">Precios</a>
+      <a href="#faq">Preguntas</a>
+      <a class="lp-nav__link" routerLink="/login">Iniciar Sesión</a>
+      <a class="btn btn--primary lp-nav__cta" routerLink="/login">Probá 2 meses gratis</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- Hero -->
+  <section class="lp-hero">
+    <div class="lp-container">
+      <p class="lp-eyebrow">Software para consorcios</p>
+      <h1>Condolio. Una nueva era en la administración de consorcios.</h1>
+      <p class="lp-lead">
+        Expensas, control de acceso y comunicación con los residentes en una sola plataforma.
+        Empezá con <strong>2 meses gratis</strong>, sin tarjeta.
+      </p>
+      <div class="lp-hero__cta">
+        <a class="btn btn--primary" routerLink="/login">Comenzá gratis</a>
+        <a class="btn btn--ghost" href="#producto">Ver cómo funciona</a>
+      </div>
+
+      <div class="lp-hero__mock" aria-hidden="true">
+        <div class="lp-mock lp-mock--admin"><span>Panel del administrador</span></div>
+        <div class="lp-mock lp-mock--res"><span>App del residente</span></div>
+        <div class="lp-mock lp-mock--seg"><span>App de portería</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Feed de actividad -->
+  <section class="lp-feed">
+    <div class="lp-container">
+      <ul>
+        <li>Pago recibido · Unidad 3°B</li>
+        <li>Encomienda registrada · Unidad 1°A</li>
+        <li>Reserva confirmada · SUM</li>
+        <li>Expensa publicada · Período 08/2026</li>
+        <li>Reclamo resuelto · Ascensor</li>
+        <li>Acceso autorizado · Proveedor</li>
+        <li>Visita preregistrada · Unidad 5°C</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Tres experiencias -->
+  <section id="producto" class="lp-section">
+    <div class="lp-container">
+      <h2>Una plataforma, tres experiencias</h2>
+      <div class="lp-exp">
+        @for (e of experiencias; track e.rol) {
+          <article class="lp-exp__card">
+            <span class="lp-exp__chip">{{ e.chip }}</span>
+            <h3>{{ e.rol }}</h3>
+            <p>{{ e.texto }}</p>
+          </article>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- 01 Residente -->
+  <section class="lp-section lp-section--alt">
+    <div class="lp-container">
+      <p class="lp-section__num">01 · Residente</p>
+      <h2>La vida del residente, en una sola app</h2>
+      <div class="lp-cards">
+        @for (c of residente; track c.n) {
+          <article class="lp-card">
+            <span class="lp-card__num">{{ c.n }}</span>
+            <h3>{{ c.titulo }}</h3>
+            <ul>
+              @for (i of c.items; track i) { <li>{{ i }}</li> }
+            </ul>
+          </article>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 Administrador -->
+  <section class="lp-section">
+    <div class="lp-container">
+      <p class="lp-section__num">02 · Administrador</p>
+      <h2>Y del otro lado, vos tenés el control</h2>
+      <div class="lp-cards">
+        @for (c of administrador; track c.n) {
+          <article class="lp-card">
+            <span class="lp-card__num">{{ c.n }}</span>
+            <h3>{{ c.titulo }}</h3>
+            <ul>
+              @for (i of c.items; track i) { <li>{{ i }}</li> }
+            </ul>
+          </article>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 Portería -->
+  <section class="lp-section lp-section--alt">
+    <div class="lp-container">
+      <p class="lp-section__num">03 · Portería</p>
+      <h2>Y en la entrada, todo queda registrado</h2>
+      <div class="lp-cards">
+        @for (c of porteria; track c.n) {
+          <article class="lp-card">
+            <span class="lp-card__num">{{ c.n }}</span>
+            <h3>{{ c.titulo }}</h3>
+            <ul>
+              @for (i of c.items; track i) { <li>{{ i }}</li> }
+            </ul>
+          </article>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Puesta en marcha -->
+  <section class="lp-section">
+    <div class="lp-container">
+      <h2>De cero a consorcio operando en 5 minutos</h2>
+      <ol class="lp-steps">
+        @for (p of pasos; track p.n) {
+          <li>
+            <span class="lp-step__num">{{ p.n }}</span>
+            <h3>{{ p.titulo }}</h3>
+            <p>{{ p.texto }}</p>
+          </li>
+        }
+      </ol>
+      <p class="lp-steps__done">Listo. Tu consorcio ya opera en Condolio.</p>
+    </div>
+  </section>
+
+  <!-- Precios -->
+  <section id="precios" class="lp-section lp-section--alt">
+    <div class="lp-container lp-pricing">
+      <div class="lp-pricing__intro">
+        <h2>Una sola tarifa. Sin sorpresas.</h2>
+        <p class="lp-price">
+          <strong>$900</strong> <span>+ IVA por unidad / mes</span>
+        </p>
+        <ul class="lp-pricing__list">
+          <li>Todas las funciones incluidas</li>
+          <li>2 meses gratis, sin tarjeta</li>
+          <li>Sin contrato forzoso</li>
+          <li>Plan anual: pagás 10 meses, usás 12</li>
+        </ul>
+      </div>
+
+      <div class="lp-calc">
+        <label for="calc-unidades">¿Cuántas unidades administrás?</label>
+        <input
+          id="calc-unidades"
+          type="range" min="10" max="500" step="5"
+          [value]="unidades()"
+          (input)="setUnidades($any($event.target).value)"
+        />
+        <div class="lp-calc__val">{{ unidades() }} unidades</div>
+        <div class="lp-calc__result">
+          <div><span>Por mes</span><strong>{{ mensual() }}</strong></div>
+          <div><span>Por año</span><strong>{{ anual() }}</strong></div>
+        </div>
+        <a class="btn btn--primary" routerLink="/login">Comenzá tu prueba gratis</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Seguridad -->
+  <section class="lp-section">
+    <div class="lp-container">
+      <h2>Seguridad y cumplimiento</h2>
+      <div class="lp-trust">
+        <div><h3>Cifrado SSL/TLS</h3><p>Datos protegidos en tránsito y en reposo.</p></div>
+        <div><h3>Ley 25.326</h3><p>Cumplimiento de la Ley de Protección de Datos Personales.</p></div>
+        <div><h3>Backups diarios</h3><p>Copias automáticas con recuperación ante fallas.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" class="lp-section lp-section--alt">
+    <div class="lp-container">
+      <h2>Preguntas frecuentes</h2>
+      <div class="lp-faq">
+        @for (f of faqs; track f.q) {
+          <details>
+            <summary>{{ f.q }}</summary>
+            <p>{{ f.a }}</p>
+          </details>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA final -->
+  <section class="lp-cta">
+    <div class="lp-container">
+      <h2>Hacelo vos mismo — 2 meses gratis</h2>
+      <p>Configuralo en 5 minutos.</p>
+      <a class="btn btn--primary" routerLink="/login">Comenzá tu prueba gratis</a>
+    </div>
+  </section>
+</main>
+
+<footer class="lp-footer">
+  <div class="lp-container lp-footer__grid">
+    <div>
+      <a class="lp-logo lp-logo--footer" routerLink="/"><span class="lp-logo__mark">C</span> Condolio</a>
+      <p class="lp-footer__tag">Software para administración de consorcios.</p>
+    </div>
+    <div>
+      <h4>Soluciones</h4>
+      <a routerLink="/login">Administración de unidades</a>
+      <a routerLink="/login">Gestión de residentes</a>
+      <a routerLink="/login">Cobro y finanzas</a>
+      <a routerLink="/login">Control de acceso QR</a>
+      <a routerLink="/login">Amenities</a>
+    </div>
+    <div>
+      <h4>Producto</h4>
+      <a href="#precios">Precios</a>
+      <a href="#producto">Cómo funciona</a>
+      <a href="#faq">Preguntas frecuentes</a>
+    </div>
+    <div>
+      <h4>Cuenta</h4>
+      <a routerLink="/login">Iniciar Sesión</a>
+      <a routerLink="/login">Crear Cuenta</a>
+    </div>
+  </div>
+  <div class="lp-container lp-footer__legal">
+    <span>© {{ anio }} Condolio</span>
+    <a routerLink="/privacidad">Política de Privacidad</a>
+    <a routerLink="/terminos">Términos</a>
+  </div>
+</footer>

@@ -1,0 +1,98 @@
+<section class="r">
+  <header class="r-head">
+    <div>
+      <h1>Residentes</h1>
+      <p>Gestionar miembros de la comunidad e invitaciones</p>
+    </div>
+    <button type="button" class="r-close" (click)="cerrar()" aria-label="Cerrar">✕</button>
+  </header>
+
+  <div class="r-body">
+    @if (data(); as d) {
+      <div class="r-toolbar">
+        <div class="r-search">
+          <span>⌕</span>
+          <input type="search" placeholder="Buscar residentes…"
+            [value]="busqueda()" (input)="busqueda.set($any($event.target).value)" />
+        </div>
+        <button type="button" class="u-icon-btn" (click)="refrescar()" aria-label="Refrescar">⟳</button>
+
+        <div class="r-tabs">
+          <button type="button" [class.is-active]="filtro() === 'Todos'" (click)="filtro.set('Todos')">Todos <b>{{ d.total }}</b></button>
+          <button type="button" [class.is-active]="filtro() === 'Propietario'" (click)="filtro.set('Propietario')">Propietarios <b>{{ d.propietarios }}</b></button>
+          <button type="button" [class.is-active]="filtro() === 'Inquilino'" (click)="filtro.set('Inquilino')">Inquilinos <b>{{ d.inquilinos }}</b></button>
+          <button type="button" [class.is-active]="filtro() === 'Gestor'" (click)="filtro.set('Gestor')">Gestores <b>{{ d.gestores }}</b></button>
+        </div>
+
+        <button type="button" class="btn btn--primary r-invite" (click)="invitarAbierto.set(true)">+ Invitar residente</button>
+        <button type="button" class="u-icon-btn" (click)="ayuda.set(true)" title="Más información">?</button>
+      </div>
+
+      @if (d.total === 0) {
+        <div class="r-empty">
+          <div class="r-empty__icon">👥</div>
+          <h2>Directorio general</h2>
+          <p>Acá aparecerán todos los propietarios de las unidades y, si hay propiedades alquiladas,
+            también los inquilinos. Invitá residentes para empezar a construir tu comunidad.</p>
+          <button type="button" class="btn btn--primary" (click)="invitarAbierto.set(true)">Invitar a tu primer residente</button>
+
+          <div class="r-empty__cards">
+            <div><h3>Proceso de invitación fácil</h3><p>Enviá invitaciones individuales o importá varios residentes con un CSV.</p></div>
+            <div><h3>Notificaciones automáticas</h3><p>Los residentes reciben la invitación por correo con instrucciones para unirse.</p></div>
+          </div>
+        </div>
+      } @else {
+        <div class="r-tablewrap">
+          <table class="r-table">
+            <thead><tr><th>Residente</th><th>Unidad</th><th>Rol</th><th>Contacto</th><th>Acceso</th></tr></thead>
+            <tbody>
+              @for (r of visibles(); track r.id) {
+                <tr>
+                  <td class="r-person">
+                    <span class="r-avatar">{{ iniciales(r) }}</span>
+                    <span>
+                      {{ r.nombre }} {{ r.apellido }}
+                      @if (r.esContactoPrincipal) { <b class="r-star" title="Contacto principal">★</b> }
+                    </span>
+                  </td>
+                  <td>{{ r.unidadNombre }}</td>
+                  <td>{{ r.rol }}</td>
+                  <td>{{ r.email || r.telefono || '—' }}</td>
+                  <td>{{ r.tieneAcceso ? 'Con acceso' : 'Sin acceso' }}</td>
+                </tr>
+              } @empty {
+                <tr><td colspan="5" class="r-empty-row">No hay residentes que coincidan.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    } @else if (cargando()) {
+      <p class="r-loading">Cargando…</p>
+    } @else {
+      <p class="u-alert">{{ error() }}</p>
+    }
+  </div>
+</section>
+
+@if (invitarAbierto()) {
+  <app-invitar-residente (cerrar)="invitarAbierto.set(false)" (hecho)="onInvitado()" />
+}
+
+@if (ayuda()) {
+  <app-ayuda-panel titulo="Directorio de residentes" (cerrar)="ayuda.set(false)">
+    <p>Acá ves a todos los propietarios de unidades y, si hay propiedades alquiladas, también los
+      inquilinos y los gestores de unidad.</p>
+    <h4>Qué podés hacer</h4>
+    <ul>
+      <li>Filtrar por tipo: Propietarios, Inquilinos, Gestores.</li>
+      <li>Buscar por nombre, correo o unidad.</li>
+      <li>Invitar nuevos residentes de a uno o importando un CSV.</li>
+    </ul>
+    <h4>Secciones relacionadas</h4>
+    <ul>
+      <li>Por asignar — residentes que aceptaron pero todavía no están vinculados a una unidad.</li>
+      <li>Invitaciones — invitaciones enviadas que aún no fueron aceptadas.</li>
+    </ul>
+  </app-ayuda-panel>
+}

@@ -1,0 +1,87 @@
+<div class="shell" [class.shell--collapsed]="colapsado()">
+  <aside class="shell__sidebar">
+    <a class="shell__logo" routerLink="/panel/inicio">
+      <span class="shell__logo-mark">C</span>
+      <span class="shell__logo-text">Condolio</span>
+    </a>
+
+    <nav class="shell__nav">
+      @for (item of nav; track item.label) {
+        @if (item.hijos) {
+          <button type="button" class="shell__nav-item shell__nav-group"
+            [class.is-open]="gruposAbiertos().has(item.label)" (click)="toggleGrupo(item.label)">
+            <span class="shell__nav-icon" [innerHTML]="icono(item.icon)"></span>
+            <span class="shell__nav-label">{{ item.label }}</span>
+            <span class="shell__chevron">{{ gruposAbiertos().has(item.label) ? '⌄' : '›' }}</span>
+          </button>
+          @if (gruposAbiertos().has(item.label)) {
+            <div class="shell__subnav">
+              @for (h of item.hijos; track h.ruta) {
+                @if (h.disponible) {
+                  <a class="shell__subitem" [routerLink]="h.ruta" routerLinkActive="is-active">
+                    {{ h.label }}
+                    @if (h.badge) { <span class="shell__badge">{{ h.badge }}</span> }
+                  </a>
+                } @else {
+                  <span class="shell__subitem is-disabled">
+                    {{ h.label }} <span class="shell__soon">pronto</span>
+                  </span>
+                }
+              }
+            </div>
+          }
+        } @else if (item.disponible) {
+          <a class="shell__nav-item" [routerLink]="item.ruta" routerLinkActive="is-active">
+            <span class="shell__nav-icon" [innerHTML]="icono(item.icon)"></span>
+            <span class="shell__nav-label">{{ item.label }}</span>
+          </a>
+        } @else {
+          <span class="shell__nav-item is-disabled" title="Próximamente">
+            <span class="shell__nav-icon" [innerHTML]="icono(item.icon)"></span>
+            <span class="shell__nav-label">{{ item.label }}</span>
+            <span class="shell__soon">pronto</span>
+          </span>
+        }
+      }
+    </nav>
+
+    <button class="shell__collapse" (click)="colapsado.set(!colapsado())" type="button"
+      [attr.aria-label]="colapsado() ? 'Expandir menú' : 'Contraer menú'">
+      {{ colapsado() ? '›' : '‹' }}
+    </button>
+  </aside>
+
+  <div class="shell__main">
+    <header class="shell__topbar">
+      <div class="shell__consorcio">
+        @if (consorcios.consorcios().length) {
+          <label for="cons">Consorcio</label>
+          <select id="cons" [value]="consorcios.activoId()"
+            (change)="cambiarConsorcio($any($event.target).value)">
+            @for (c of consorcios.consorcios(); track c.id) {
+              <option [value]="c.id">{{ c.nombre }}</option>
+            }
+          </select>
+        } @else {
+          <span class="shell__consorcio-empty">Sin consorcios todavía</span>
+        }
+      </div>
+
+      <div class="shell__user" (click)="menuAbierto.set(!menuAbierto())">
+        <span class="shell__avatar">{{ iniciales() }}</span>
+        <span class="shell__user-name">{{ nombre() }}</span>
+        <span class="shell__caret">▾</span>
+
+        @if (menuAbierto()) {
+          <div class="shell__menu">
+            <button type="button" (click)="logout()">Cerrar sesión</button>
+          </div>
+        }
+      </div>
+    </header>
+
+    <main class="shell__content">
+      <router-outlet />
+    </main>
+  </div>
+</div>

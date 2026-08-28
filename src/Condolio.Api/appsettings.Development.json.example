@@ -1,0 +1,26 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.EntityFrameworkCore.Database.Command": "Warning"
+    }
+  },
+  "ConnectionStrings": {
+    "Default": "Server=localhost;Port=3306;Database=condolio;User=condolio;Password=condolio_pw;"
+  },
+  "Jwt": {
+    "SecretKey": "cambiá-esto-por-una-clave-larga-y-aleatoria-de-al-menos-32-caracteres"
+  },
+  "SuperAdmin": {
+    "Password": "elegí-una-contraseña"
+  },
+  "Smtp": {
+    "Host": "",
+    "Port": 587,
+    "User": "",
+    "Password": "",
+    "From": "no-reply@condolio.app",
+    "FromNombre": "Condolio",
+    "EnableSsl": true
+  }
+}

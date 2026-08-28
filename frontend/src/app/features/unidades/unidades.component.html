@@ -1,0 +1,512 @@
+@if (consorcios.consorcios().length === 0) {
+  <!-- Sin consorcio: alta rápida -->
+  <div class="u-empty">
+    <h1>Creá tu primer consorcio</h1>
+    <p>Cargá los datos del edificio para empezar a agregar unidades.</p>
+    <form [formGroup]="formConsorcio" (ngSubmit)="crearConsorcio()" class="u-empty__form">
+      <div class="field">
+        <label for="c-nombre">Nombre del consorcio</label>
+        <input id="c-nombre" formControlName="nombre" placeholder="Edificio Rivadavia 1200" />
+      </div>
+      <div class="field">
+        <label for="c-dir">Dirección</label>
+        <input id="c-dir" formControlName="direccion" placeholder="Av. Rivadavia 1200" />
+      </div>
+      <div class="u-row">
+        <div class="field"><label for="c-loc">Localidad</label><input id="c-loc" formControlName="localidad" /></div>
+        <div class="field"><label for="c-prov">Provincia</label><input id="c-prov" formControlName="provincia" /></div>
+      </div>
+      @if (error()) { <p class="u-alert">{{ error() }}</p> }
+      <button type="submit" class="btn btn--primary" [disabled]="guardando()">
+        {{ guardando() ? 'Creando…' : 'Crear consorcio' }}
+      </button>
+    </form>
+  </div>
+} @else {
+  <section class="u">
+    <!-- Encabezado -->
+    <header class="u-head">
+      <div>
+        <h1>Unidades ({{ unidades().length }})</h1>
+        <p>Gestionar unidades de propiedad y asignaciones</p>
+      </div>
+    </header>
+
+    <div class="u-body">
+      @if (faltanCuotas()) {
+        <div class="u-warn">
+          Algunas unidades no tienen cuotas de mantenimiento configuradas. Configurá las cuotas para
+          todas las unidades para garantizar una facturación correcta.
+        </div>
+      }
+
+      <!-- Toolbar -->
+      <div class="u-toolbar">
+        <div class="u-search">
+          <span class="u-search__icon">⌕</span>
+          <input
+            type="search"
+            placeholder="Buscar unidades…"
+            [value]="busqueda()"
+            (input)="busqueda.set($any($event.target).value)"
+          />
+        </div>
+
+        <div class="u-dropdown">
+          <button type="button" class="u-filter" (click)="menuFiltro.set(!menuFiltro())">
+            ⑂ {{ etiquetaFiltro() }} ▾
+          </button>
+          @if (menuFiltro()) {
+            <div class="u-menu">
+              <span class="u-menu__title">Filtrar por</span>
+              @for (f of filtros; track f.value) {
+                <button type="button" [class.is-active]="filtro() === f.value"
+                  (click)="filtro.set(f.value); menuFiltro.set(false)">
+                  {{ f.label }} @if (filtro() === f.value) { <span>✓</span> }
+                </button>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="u-toolbar__right">
+          <div class="u-dropdown">
+            <button type="button" class="btn btn--ghost u-btn" (click)="menuOpciones.set(!menuOpciones())">Opciones ▾</button>
+            @if (menuOpciones()) {
+              <div class="u-menu u-menu--right">
+                <button type="button" (click)="abrirNueva(); menuOpciones.set(false)">+ Crear unidad individual</button>
+                <button type="button" (click)="abrirVarias(); menuOpciones.set(false)">≣ Agregar varias</button>
+                <button type="button" (click)="abrirImportar()">⇅ Importar / Exportar</button>
+                <button type="button" (click)="abrirMasivo()">✎ Edición masiva</button>
+              </div>
+            }
+          </div>
+          <button type="button" class="btn btn--primary u-btn" (click)="abrirNueva()">Agregar unidad</button>
+          <button type="button" class="u-icon-btn" (click)="refrescar()" aria-label="Refrescar">⟳</button>
+        </div>
+      </div>
+
+      @if (error() && modo() === 'cerrado') { <p class="u-alert">{{ error() }}</p> }
+
+      <!-- Tabla -->
+      <div class="u-tablewrap">
+        <table class="u-table">
+          <thead>
+            <tr>
+              <th class="u-check">
+                <input type="checkbox" [checked]="todasSeleccionadas()" (change)="toggleTodas()" />
+              </th>
+              <th (click)="ordenarPor('nombre')">Nombre <span class="u-sort">⇅</span></th>
+              <th (click)="ordenarPor('piso')">Piso <span class="u-sort">⇅</span></th>
+              <th (click)="ordenarPor('cuotaMantenimiento')">Cuota de Mantenimiento <span class="u-sort">⇅</span></th>
+              <th (click)="ordenarPor('propietarios')">Propietarios <span class="u-sort">⇅</span></th>
+              <th (click)="ordenarPor('inquilinos')">Inquilinos <span class="u-sort">⇅</span></th>
+              <th (click)="ordenarPor('gestores')">Gestores <span class="u-sort">⇅</span></th>
+              <th class="u-actions-col"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (u of visibles(); track u.id) {
+              <tr class="u-clickable" [class.is-selected]="seleccion().has(u.id)" (click)="abrirFicha(u)">
+                <td class="u-check" (click)="$event.stopPropagation()">
+                  <input type="checkbox" [checked]="seleccion().has(u.id)" (change)="toggleUna(u.id)" />
+                </td>
+                <td class="u-name">{{ u.nombre }}</td>
+                <td>{{ u.piso }}</td>
+                <td>
+                  @if (u.cuotaMantenimiento != null) {
+                    ${{ u.cuotaMantenimiento.toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}
+                  } @else {
+                    <span class="u-missing">Sin configurar</span>
+                  }
+                </td>
+                <td class="u-people">
+                  @for (p of u.propietarios; track p.nombre) {
+                    <span>@if (p.esContactoPrincipal) { <b class="u-star">★</b> }{{ p.nombre }}</span>
+                  } @empty { <span class="u-dash">—</span> }
+                </td>
+                <td class="u-people">
+                  @for (p of u.inquilinos; track p.nombre) {
+                    <span>@if (p.esContactoPrincipal) { <b class="u-star">★</b> }{{ p.nombre }}</span>
+                  } @empty { <span class="u-dash">—</span> }
+                </td>
+                <td class="u-people">
+                  @for (p of u.gestores; track p.nombre) { <span>{{ p.nombre }}</span> }
+                  @empty { <span class="u-dash">—</span> }
+                </td>
+                <td class="u-actions-col" (click)="$event.stopPropagation()">
+                  <button type="button" class="u-link" (click)="editar(u)">Editar</button>
+                  <button type="button" class="u-link u-link--danger" (click)="eliminar(u)">Eliminar</button>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="8" class="u-empty-row">
+                  @if (cargando()) { Cargando… }
+                  @else { No hay unidades que coincidan. <button type="button" class="u-link" (click)="abrirNueva()">Agregar la primera</button> }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Modal: una unidad -->
+  @if (modo() === 'una') {
+    <div class="u-modal-overlay" (click)="cerrarModal()">
+      <div class="u-modal u-modal--wide" (click)="$event.stopPropagation()">
+        <h2>{{ editando() ? 'Editar unidad' : 'Crear nueva unidad' }}</h2>
+        <p class="u-hint">
+          {{ editando() ? 'Actualizá la información y las cuotas de la unidad.'
+            : 'Agregá una unidad con su información básica y configuración de cuotas.' }}
+        </p>
+
+        <div class="auth__tabs u-modal-tabs">
+          <button type="button" [class.is-active]="tabModal() === 'info'" (click)="tabModal.set('info')">Info</button>
+          <button type="button" [class.is-active]="tabModal() === 'cuota'" (click)="tabModal.set('cuota')">Cuota</button>
+        </div>
+
+        <form [formGroup]="formUnidad" (ngSubmit)="guardarUnidad()">
+          <div class="u-crear">
+            <div class="u-crear__form" [hidden]="tabModal() !== 'info'">
+              <div class="field">
+                <label for="u-nombre">Nombre de la unidad *</label>
+                <input id="u-nombre" formControlName="nombre" placeholder="ej. 101, A-1, Local 3" />
+              </div>
+              <div class="field">
+                <label for="u-tipo">Tipo *</label>
+                <select id="u-tipo" formControlName="tipo">
+                  @for (t of tipos; track t) { <option [value]="t">{{ t }}</option> }
+                </select>
+              </div>
+              <div class="u-row">
+                <div class="field">
+                  <label for="u-piso">Piso</label>
+                  <input id="u-piso" type="number" formControlName="piso" />
+                </div>
+                <div class="field">
+                  <label for="u-area">Área (m²)</label>
+                  <input id="u-area" type="number" step="0.01" formControlName="areaM2" />
+                </div>
+              </div>
+              <div class="u-row">
+                <div class="field">
+                  <label for="u-coef">% Indiviso</label>
+                  <input id="u-coef" type="number" step="0.000001" formControlName="coeficiente" placeholder="ej. 12.5" />
+                </div>
+                <div class="field">
+                  <label for="u-seccion">Sección</label>
+                  <input id="u-seccion" formControlName="seccion" placeholder="Torre A / Sin sección" />
+                </div>
+              </div>
+            </div>
+
+            <div class="u-crear__form" [hidden]="tabModal() !== 'cuota'">
+              <div class="field">
+                <label for="u-cuota">Cuota de mantenimiento</label>
+                <input id="u-cuota" type="number" step="0.01" formControlName="cuotaMantenimiento" placeholder="0.00" />
+              </div>
+              <label class="u-checkfield">
+                <input type="checkbox" formControlName="facturable" />
+                <span>Facturable (cuenta para la facturación del consorcio)</span>
+              </label>
+            </div>
+
+            <aside class="u-crear__help">
+              @if (tabModal() === 'info') {
+                <dl>
+                  <dt>Nombre</dt><dd>Identificador claro y único: números (101), letras (A) o combinaciones (A-101).</dd>
+                  <dt>Tipo</dt><dd>Determina si aplica el campo de piso y otras opciones.</dd>
+                  <dt>Piso</dt><dd>Solo para departamentos y unidades dentro de un edificio.</dd>
+                  <dt>Área (m²)</dt><dd>Informativo; ayuda a sugerir el indiviso.</dd>
+                  <dt>Sección</dt><dd>Agrupa unidades por torre o bloque.</dd>
+                </dl>
+              } @else {
+                <dl>
+                  <dt>Cuota de mantenimiento</dt><dd>Monto recurrente que se cobra a esta unidad según el calendario del consorcio.</dd>
+                  <dt>Facturable</dt><dd>Si está desmarcada, la unidad no suma a la facturación ni a la suscripción.</dd>
+                </dl>
+              }
+            </aside>
+          </div>
+
+          @if (error()) { <p class="u-alert">{{ error() }}</p> }
+
+          <div class="u-modal__actions">
+            <button type="button" class="btn btn--ghost u-btn" (click)="cerrarModal()">Cancelar</button>
+            <button type="submit" class="btn btn--primary u-btn" [disabled]="guardando() || formUnidad.invalid">
+              {{ guardando() ? 'Guardando…' : (editando() ? 'Guardar' : 'Crear') }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Modal: varias unidades -->
+  @if (modo() === 'varias') {
+    <div class="u-modal-overlay" (click)="cerrarModal()">
+      <div class="u-modal" (click)="$event.stopPropagation()">
+        <h2>Agregar varias unidades</h2>
+        <p class="u-hint">Una unidad por línea. Opcional: <code>nombre, piso, cuota</code></p>
+        <form [formGroup]="formLote" (ngSubmit)="guardarLote()">
+          <div class="field">
+            <label for="l-tipo">Tipo</label>
+            <select id="l-tipo" formControlName="tipo">
+              @for (t of tipos; track t) { <option [value]="t">{{ t }}</option> }
+            </select>
+          </div>
+          <div class="field">
+            <label for="l-texto">Unidades</label>
+            <textarea id="l-texto" rows="8" formControlName="texto"
+              placeholder="1A, 1, 25000&#10;1B, 1, 25000&#10;2A, 2"></textarea>
+          </div>
+
+          @if (error()) { <p class="u-alert">{{ error() }}</p> }
+
+          <div class="u-modal__actions">
+            <button type="button" class="btn btn--ghost u-btn" (click)="cerrarModal()">Cancelar</button>
+            <button type="submit" class="btn btn--primary u-btn" [disabled]="guardando()">
+              {{ guardando() ? 'Agregando…' : 'Agregar' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Modal: importar / exportar -->
+  @if (modo() === 'importar') {
+    <div class="u-modal-overlay" (click)="cerrarModal()">
+      <div class="u-modal u-modal--wide" (click)="$event.stopPropagation()">
+        <h2>Importar / Exportar unidades</h2>
+
+        <div class="u-modal-tabs">
+          <button type="button" [class.is-active]="ieTab() === 'importar'" (click)="ieTab.set('importar')">Importar</button>
+          <button type="button" [class.is-active]="ieTab() === 'exportar'" (click)="ieTab.set('exportar')">Exportar</button>
+        </div>
+
+        <!-- ===== Importar ===== -->
+        @if (ieTab() === 'importar') {
+          @if (!importPreview() && !importConfirmar()) {
+            <div class="u-ie">
+              <div>
+                <h3>Cómo funciona</h3>
+                <ol class="u-ie__steps">
+                  <li><strong>Descargá la plantilla</strong> CSV con el formato correcto.
+                    <button type="button" class="btn btn--ghost u-btn" (click)="descargarPlantilla()">Descargar plantilla</button>
+                  </li>
+                  <li><strong>Editá en Excel/Sheets</strong>: agregá, quitá o modificá unidades y cuotas.</li>
+                  <li><strong>Subí el archivo</strong>. Es un reemplazo completo, no una fusión.
+                    <label class="btn btn--primary u-btn">
+                      Seleccionar archivo CSV
+                      <input type="file" accept=".csv,text/csv" (change)="importarCsv($event)" hidden />
+                    </label>
+                  </li>
+                </ol>
+              </div>
+              <div class="u-ie__warn">
+                <strong>Advertencia crítica</strong>
+                Importar reemplaza todas las unidades. Las existentes y sus datos (residentes, notas,
+                incidencias, pagos) se eliminan permanentemente.
+              </div>
+            </div>
+          }
+
+          @if (importPreview(); as prev) {
+            @if (!importConfirmar()) {
+              <h3>Resumen de la importación</h3>
+              <div class="u-sum">
+                <div class="u-sum__card u-sum__card--new"><span>+ Nuevas</span><strong>{{ resumen().nuevas }}</strong></div>
+                <div class="u-sum__card u-sum__card--upd"><span>↻ Actualizadas</span><strong>{{ resumen().actualizadas }}</strong></div>
+                <div class="u-sum__card u-sum__card--del"><span>🗑 A quitar</span><strong>{{ resumen().aQuitar }}</strong></div>
+                <div class="u-sum__card"><span>Total después</span><strong>{{ resumen().totalDespues }}</strong></div>
+              </div>
+
+              <div class="u-preview">
+                <table>
+                  <thead><tr><th>Estado</th><th>Nombre</th><th>Cuota</th><th>% Indiviso</th><th>Piso</th><th>Cambios</th></tr></thead>
+                  <tbody>
+                    @for (r of prev; track r.nombre) {
+                      <tr>
+                        <td><span class="u-pill" [class]="'u-pill--' + r.status">
+                          {{ r.status === 'new' ? 'Nueva' : r.status === 'remove' ? 'A quitar' : 'Actualizada' }}
+                        </span></td>
+                        <td><strong>{{ r.nombre }}</strong></td>
+                        <td>{{ r.cuota != null ? ('$' + r.cuota) : '—' }}</td>
+                        <td>{{ r.indiviso != null ? (r.indiviso + '%') : '—' }}</td>
+                        <td>{{ r.piso }}</td>
+                        <td class="u-preview__ch">{{ r.cambios.join(' · ') }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+
+              @if (error()) { <p class="u-alert">{{ error() }}</p> }
+
+              <div class="u-modal__actions">
+                <button type="button" class="btn btn--ghost u-btn" (click)="importPreview.set(null); importFilas.set([])">Cancelar</button>
+                <button type="button" class="btn btn--primary u-btn" (click)="importConfirmar.set(true)">
+                  Importar {{ importFilas().length }} unidad{{ importFilas().length === 1 ? '' : 'es' }}
+                </button>
+              </div>
+            } @else {
+              <!-- Confirmación -->
+              @if (unidades().length > 0) {
+                <div class="u-ie__warn u-ie__warn--big">
+                  <strong>¡Acción destructiva!</strong>
+                  Esto ELIMINARÁ TODAS las unidades existentes y TODOS los datos asociados
+                  (transacciones, saldos, residentes, accesos, visitas). Solo permanecerán las
+                  unidades de tu archivo CSV.
+                </div>
+                <p>Unidades actuales que serán eliminadas: <strong>{{ unidades().length }}</strong></p>
+                <p>Nuevas unidades que serán creadas: <strong>{{ importFilas().length }}</strong></p>
+                <label class="u-checkfield">
+                  <input type="checkbox" [checked]="importEntiendo()" (change)="importEntiendo.set($any($event.target).checked)" />
+                  <span>Entiendo que esto es irreversible y eliminará todos los datos de las unidades existentes.</span>
+                </label>
+              } @else {
+                <p>Se van a agregar <strong>{{ importFilas().length }}</strong> unidades al consorcio.</p>
+              }
+
+              @if (error()) { <p class="u-alert">{{ error() }}</p> }
+
+              <div class="u-modal__actions">
+                <button type="button" class="btn btn--ghost u-btn" (click)="importConfirmar.set(false)">Cancelar</button>
+                <button type="button" class="btn u-btn u-btn--danger"
+                  [disabled]="guardando() || (unidades().length > 0 && !importEntiendo())"
+                  (click)="confirmarImport()">
+                  {{ guardando() ? 'Importando…'
+                    : unidades().length > 0
+                      ? 'Sí, reemplazar todas las unidades'
+                      : 'Agregar ' + importFilas().length + ' unidades al consorcio' }}
+                </button>
+              </div>
+            }
+          }
+        }
+
+        <!-- ===== Exportar ===== -->
+        @if (ieTab() === 'exportar') {
+          <h3>Qué incluye la exportación</h3>
+          <p>Descargá todas las unidades existentes con sus cuotas mensuales en un CSV que abrís en Excel o Google Sheets.</p>
+          <div class="u-ie__box">
+            <strong>El archivo CSV contiene:</strong>
+            <ul>
+              <li><b>Nombre</b> — el identificador único de cada unidad</li>
+              <li><b>Cuota mensual</b> — el monto de la cuota de mantenimiento recurrente</li>
+              <li><b>% Indiviso</b>, <b>Saldo inicial</b> y <b>Piso</b></li>
+            </ul>
+          </div>
+          <p class="u-ie__note">Las unidades se ordenan alfabéticamente por nombre en el archivo exportado.</p>
+          <p>Se exportarán <strong>{{ unidades().length }}</strong> unidades.</p>
+
+          <div class="u-modal__actions">
+            <button type="button" class="btn btn--ghost u-btn" (click)="cerrarModal()">Cancelar</button>
+            <button type="button" class="btn btn--primary u-btn" (click)="exportarCsv()">Descargar CSV</button>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Modal: edición masiva -->
+  @if (modo() === 'masivo') {
+    <div class="u-modal-overlay" (click)="cerrarModal()">
+      <div class="u-modal u-modal--full" (click)="$event.stopPropagation()">
+        <div class="u-masivo__head">
+          <div>
+            <h2>✎ Edición masiva de unidades</h2>
+            <p class="u-hint">Editá varias unidades a la vez. Usá Tab para navegar entre celdas.</p>
+          </div>
+          <div class="u-cols u-dropdown">
+            <button type="button" class="btn btn--ghost u-btn" (click)="menuColumnas.set(!menuColumnas())">☷ Columnas</button>
+            @if (menuColumnas()) {
+              <div class="u-menu u-menu--right">
+                @for (c of colsMasivas; track c.key) {
+                  <button type="button" (click)="toggleCol(c.key)">
+                    <span>{{ c.label }}</span>
+                    @if (colVisible(c.key)) { <span>✓</span> }
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="u-masivo__grid">
+          <table>
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Cuota de mantenimiento</th>
+                @if (colVisible('tipo')) { <th>Tipo</th> }
+                @if (colVisible('piso')) { <th>Piso</th> }
+                @if (colVisible('area')) { <th>Área (m²)</th> }
+                @if (colVisible('indiviso')) { <th>% Indiviso</th> }
+                @if (colVisible('ocupacion')) { <th>Tipo de ocupación</th> }
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (f of masivoFilas(); track f.id) {
+                <tr [class.is-dirty]="filaSucia(f)">
+                  <td><input [class.celda-dirty]="celdaSucia(f, 'nombre')" [value]="f.nombre"
+                    (input)="editarCelda(f.id, 'nombre', $any($event.target).value)" /></td>
+                  <td><input type="number" step="0.01" [class.celda-dirty]="celdaSucia(f, 'cuotaMantenimiento')"
+                    [value]="f.cuotaMantenimiento ?? ''"
+                    (input)="editarCelda(f.id, 'cuotaMantenimiento', $any($event.target).value)" /></td>
+                  @if (colVisible('tipo')) {
+                    <td><select [class.celda-dirty]="celdaSucia(f, 'tipo')" [value]="f.tipo"
+                      (change)="editarCelda(f.id, 'tipo', $any($event.target).value)">
+                      @for (t of tipos; track t) { <option [value]="t">{{ t }}</option> }
+                    </select></td>
+                  }
+                  @if (colVisible('piso')) {
+                    <td><input type="number" [class.celda-dirty]="celdaSucia(f, 'piso')" [value]="f.piso"
+                      (input)="editarCelda(f.id, 'piso', $any($event.target).value)" /></td>
+                  }
+                  @if (colVisible('area')) {
+                    <td><input type="number" step="0.01" [class.celda-dirty]="celdaSucia(f, 'areaM2')"
+                      [value]="f.areaM2 ?? ''"
+                      (input)="editarCelda(f.id, 'areaM2', $any($event.target).value)" /></td>
+                  }
+                  @if (colVisible('indiviso')) {
+                    <td><input type="number" step="0.000001" [class.celda-dirty]="celdaSucia(f, 'coeficiente')"
+                      [value]="f.coeficiente ?? ''"
+                      (input)="editarCelda(f.id, 'coeficiente', $any($event.target).value)" /></td>
+                  }
+                  @if (colVisible('ocupacion')) {
+                    <td><select [class.celda-dirty]="celdaSucia(f, 'ocupacion')" [value]="f.ocupacion"
+                      (change)="editarCelda(f.id, 'ocupacion', $any($event.target).value)">
+                      @for (o of ocupaciones; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+                    </select></td>
+                  }
+                  <td>@if (filaSucia(f)) { <span class="u-pill u-pill--updated">Modificado</span> }</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        @if (error()) { <p class="u-alert">{{ error() }}</p> }
+
+        <div class="u-masivo__foot">
+          <span [class.u-masivo__count]="masivoCambios() > 0">
+            {{ masivoCambios() === 0 ? 'Sin cambios' : masivoCambios() + ' unidad(es) modificada(s)' }}
+          </span>
+          <div class="u-modal__actions">
+            <button type="button" class="btn btn--ghost u-btn" (click)="cerrarModal()">Cancelar</button>
+            <button type="button" class="btn btn--primary u-btn"
+              [disabled]="guardando() || masivoCambios() === 0" (click)="guardarMasivo()">
+              {{ guardando() ? 'Guardando…' : 'Guardar cambios' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+}
