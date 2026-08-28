@@ -2,7 +2,9 @@ using Condolio.Application.Common;
 using Condolio.Application.Residentes;
 using Condolio.Domain.Residentes;
 using Condolio.Domain.Unidades;
+using Condolio.Infrastructure.Identity;
 using Condolio.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
@@ -13,13 +15,16 @@ public class ResidenteService : IResidenteService
     private readonly CondolioDbContext _db;
     private readonly ITenantContext _tenant;
     private readonly IEmailSender _email;
+    private readonly UserManager<ApplicationUser> _users;
     private readonly string _frontendUrl;
 
-    public ResidenteService(CondolioDbContext db, ITenantContext tenant, IEmailSender email, IConfiguration config)
+    public ResidenteService(CondolioDbContext db, ITenantContext tenant, IEmailSender email,
+        UserManager<ApplicationUser> users, IConfiguration config)
     {
         _db = db;
         _tenant = tenant;
         _email = email;
+        _users = users;
         _frontendUrl = (config["Frontend:BaseUrl"] ?? "http://localhost:4200").TrimEnd('/');
     }
 
@@ -49,6 +54,79 @@ public class ResidenteService : IResidenteService
             residentes.Count(r => r.Rol == RolUnidad.Inquilino),
             residentes.Count(r => r.Rol == RolUnidad.Gestor),
             totalUnidades - unidadesConPropietario));
+    }
+
+    public async Task<Result<PersonaDetalleDto>> PersonaDetalleAsync(Guid consorcioId, Guid personaId, CancellationToken ct = default)
+    {
+        var base_ = await _db.UnidadPersonas
+            .FirstOrDefaultAsync(p => p.Id == personaId && p.Unidad.ConsorcioId == consorcioId, ct);
+        if (base_ is null) return Result<PersonaDetalleDto>.Fail("Residente no encontrado.");
+
+        var email = base_.Email;
+        // Todas las asignaciones de esta persona (por email) en el consorcio.
+        var personas = string.IsNullOrWhiteSpace(email)
+            ? new List<Domain.Unidades.UnidadPersona> { base_ }
+            : await _db.UnidadPersonas
+                .Include(p => p.Unidad)
+                .Where(p => p.Unidad.ConsorcioId == consorcioId && p.Email == email)
+                .ToListAsync(ct);
+
+        var unidades = personas
+            .OrderBy(p => p.Unidad.Piso).ThenBy(p => p.Unidad.Nombre)
+            .Select(p => new PersonaUnidadRefDto(p.Id, p.UnidadId, p.Unidad.Nombre, p.Rol, p.EsContactoPrincipal))
+            .ToList();
+
+        var user = string.IsNullOrWhiteSpace(email) ? null
+            : await _db.Users.FirstOrDefaultAsync(u => u.Email == email, ct);
+        var roles = user is null ? Array.Empty<string>() : (await _users.GetRolesAsync(user)).ToArray();
+
+        return Result<PersonaDetalleDto>.Ok(new PersonaDetalleDto(
+            base_.Nombre, base_.Apellido, email ?? "",
+            personas.Select(p => p.Telefono).FirstOrDefault(t => !string.IsNullOrWhiteSpace(t)),
+            unidades, roles,
+            user is not null,
+            user?.EmailConfirmed ?? false,
+            !(user?.LockoutEnd > DateTimeOffset.UtcNow),
+            personas.Min(p => p.CreadoUtc)));
+    }
+
+    public async Task<Result> ActualizarContactoAsync(Guid consorcioId, Guid personaId, ActualizarPersonaContactoDto dto, CancellationToken ct = default)
+    {
+        var persona = await _db.UnidadPersonas
+            .FirstOrDefaultAsync(p => p.Id == personaId && p.Unidad.ConsorcioId == consorcioId, ct);
+        if (persona is null) return Result.Fail("Residente no encontrado.");
+        if (string.IsNullOrWhiteSpace(dto.Nombre)) return Result.Fail("El nombre es obligatorio.");
+
+        var email = persona.Email;
+        var tel = string.IsNullOrWhiteSpace(dto.Telefono) ? null : dto.Telefono.Trim();
+
+        // Aplica a todas las asignaciones de la misma persona.
+        var todas = string.IsNullOrWhiteSpace(email)
+            ? new List<Domain.Unidades.UnidadPersona> { persona }
+            : await _db.UnidadPersonas.Where(p => p.Unidad.ConsorcioId == consorcioId && p.Email == email).ToListAsync(ct);
+        foreach (var p in todas)
+        {
+            p.Nombre = dto.Nombre.Trim();
+            p.Apellido = dto.Apellido.Trim();
+            p.Telefono = tel;
+        }
+        await _db.SaveChangesAsync(ct);
+        return Result.Ok();
+    }
+
+    public async Task<Result> RemoverDeComunidadAsync(Guid consorcioId, Guid personaId, CancellationToken ct = default)
+    {
+        var persona = await _db.UnidadPersonas
+            .FirstOrDefaultAsync(p => p.Id == personaId && p.Unidad.ConsorcioId == consorcioId, ct);
+        if (persona is null) return Result.Fail("Residente no encontrado.");
+
+        var email = persona.Email;
+        var todas = string.IsNullOrWhiteSpace(email)
+            ? new List<Domain.Unidades.UnidadPersona> { persona }
+            : await _db.UnidadPersonas.Where(p => p.Unidad.ConsorcioId == consorcioId && p.Email == email).ToListAsync(ct);
+        _db.UnidadPersonas.RemoveRange(todas);
+        await _db.SaveChangesAsync(ct);
+        return Result.Ok();
     }
 
     public async Task<Result<IReadOnlyList<InvitacionDto>>> InvitacionesAsync(Guid consorcioId, CancellationToken ct = default)
@@ -267,14 +345,25 @@ public class ResidenteService : IResidenteService
 
     private Task EnviarEmail(Invitacion inv, string consorcioNombre, CancellationToken ct)
     {
-        var link = $"{_frontendUrl}/invitacion/{inv.Token}";
+        var sitio = _frontendUrl.Replace("https://", "").Replace("http://", "").TrimEnd('/');
+        var saludo = inv.Nombre is null ? "Hola" : $"Hola {inv.Nombre}";
         var cuerpo = $"""
-            <p>Hola{(inv.Nombre is null ? "" : $" {inv.Nombre}")},</p>
-            <p>Te invitaron a unirte a la comunidad de <b>{consorcioNombre}</b> en Condolio.</p>
-            <p><a href="{link}">Aceptar invitación</a></p>
-            <p>El enlace vence el {inv.ExpiraUtc:dd/MM/yyyy}.</p>
+            <div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;color:#1f2937">
+              <p style="font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin:0 0 4px">Invitación de tu comunidad</p>
+              <h1 style="font-size:22px;margin:0 0 16px">Tu acceso a la app ya está listo</h1>
+              <p style="line-height:1.55">{saludo}, la administración de <b>{consorcioNombre}</b> te invita a Condolio — la app
+                donde vas a ver tus cuotas y pagos, los comunicados de la comunidad y las reservas de amenidades.</p>
+              <h2 style="font-size:16px;margin:24px 0 8px">Cómo entrar</h2>
+              <ol style="line-height:1.7;padding-left:20px">
+                <li>Ingresá al sitio <a href="{_frontendUrl}" style="color:#2563eb">{sitio}</a></li>
+                <li>Creá tu cuenta con el correo <b>{inv.Email}</b> — es el que registró la administración.</li>
+                <li>Listo. Vas a quedar conectado a <b>{consorcioNombre}</b> automáticamente.</li>
+              </ol>
+              <p style="font-size:13px;color:#6b7280;margin-top:24px">Esta invitación vence el {inv.ExpiraUtc:dd/MM/yyyy}.</p>
+              <p style="font-size:13px;color:#6b7280">— El equipo de Condolio</p>
+            </div>
             """;
-        return _email.EnviarAsync(inv.Email, $"Invitación a {consorcioNombre}", cuerpo, ct);
+        return _email.EnviarAsync(inv.Email, $"Invitación de {consorcioNombre}", cuerpo, ct);
     }
 
     private static InvitacionDto Mapear(Invitacion i, string? unidadNombre) => new(

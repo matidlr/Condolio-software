@@ -25,6 +25,22 @@ public record DirectorioDto(
 
 public record ResidenteSinUnidadDto(string UsuarioId, string Nombre, string Apellido, string Email);
 
+public record PersonaUnidadRefDto(Guid PersonaId, Guid UnidadId, string UnidadNombre, RolUnidad Rol, bool EsContactoPrincipal);
+
+public record PersonaDetalleDto(
+    string Nombre,
+    string Apellido,
+    string Email,
+    string? Telefono,
+    IReadOnlyList<PersonaUnidadRefDto> Unidades,
+    IReadOnlyList<string> Roles,
+    bool TieneCuenta,
+    bool CorreoVerificado,
+    bool Activo,
+    DateTime MiembroDesdeUtc);
+
+public record ActualizarPersonaContactoDto(string Nombre, string Apellido, string? Telefono);
+
 public record InvitacionDto(
     Guid Id,
     string Email,
@@ -66,6 +82,9 @@ public record InvitarLoteResultado(int Enviadas, int Fallidas, IReadOnlyList<Inv
 public interface IResidenteService
 {
     Task<Result<DirectorioDto>> DirectorioAsync(Guid consorcioId, CancellationToken ct = default);
+    Task<Result<PersonaDetalleDto>> PersonaDetalleAsync(Guid consorcioId, Guid personaId, CancellationToken ct = default);
+    Task<Result> ActualizarContactoAsync(Guid consorcioId, Guid personaId, ActualizarPersonaContactoDto dto, CancellationToken ct = default);
+    Task<Result> RemoverDeComunidadAsync(Guid consorcioId, Guid personaId, CancellationToken ct = default);
     Task<Result<IReadOnlyList<InvitacionDto>>> InvitacionesAsync(Guid consorcioId, CancellationToken ct = default);
     Task<Result<InvitacionDto>> InvitarAsync(Guid consorcioId, CrearInvitacionDto dto, CancellationToken ct = default);
     Task<Result<InvitacionDto>> EditarInvitacionAsync(Guid consorcioId, Guid invitacionId, CrearInvitacionDto dto, CancellationToken ct = default);

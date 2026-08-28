@@ -44,10 +44,12 @@
       } @else {
         <div class="r-tablewrap">
           <table class="r-table">
-            <thead><tr><th>Residente</th><th>Unidad</th><th>Rol</th><th>Contacto</th><th>Acceso</th></tr></thead>
+            <thead><tr>
+              <th>Nombre</th><th>Correo</th><th>Teléfono</th><th>Unidad</th><th>Tipo</th><th>Roles</th><th>Estado</th>
+            </tr></thead>
             <tbody>
               @for (r of visibles(); track r.id) {
-                <tr>
+                <tr class="r-row-click" (click)="abrirDetalle(r)">
                   <td class="r-person">
                     <span class="r-avatar">{{ iniciales(r) }}</span>
                     <span>
@@ -55,13 +57,18 @@
                       @if (r.esContactoPrincipal) { <b class="r-star" title="Contacto principal">★</b> }
                     </span>
                   </td>
+                  <td>{{ r.email || '—' }}</td>
+                  <td>{{ r.telefono || '—' }}</td>
                   <td>{{ r.unidadNombre }}</td>
-                  <td>{{ r.rol }}</td>
-                  <td>{{ r.email || r.telefono || '—' }}</td>
-                  <td>{{ r.tieneAcceso ? 'Con acceso' : 'Sin acceso' }}</td>
+                  <td><span class="r-tag r-tag--tipo">{{ r.rol }}</span></td>
+                  <td><span class="r-tag r-tag--rol">Residente</span></td>
+                  <td>
+                    @if (r.tieneAcceso) { <span class="r-estado r-estado--ok">✓ Con cuenta</span> }
+                    @else { <span class="r-estado">Sin cuenta</span> }
+                  </td>
                 </tr>
               } @empty {
-                <tr><td colspan="5" class="r-empty-row">No hay residentes que coincidan.</td></tr>
+                <tr><td colspan="7" class="r-empty-row">No hay residentes que coincidan.</td></tr>
               }
             </tbody>
           </table>
@@ -77,6 +84,97 @@
 
 @if (invitarAbierto()) {
   <app-invitar-residente (cerrar)="invitarAbierto.set(false)" (hecho)="onInvitado()" />
+}
+
+<!-- Detalle del residente -->
+@if (detalle(); as d) {
+  <div class="u-modal-overlay" (click)="cerrarDetalle()">
+    <div class="u-modal rd" (click)="$event.stopPropagation()">
+      <button type="button" class="u-modal-x" (click)="cerrarDetalle()">✕</button>
+
+      <div class="rd-top">
+        <span class="rd-avatar">{{ iniciales(d) }}</span>
+        <div>
+          <strong>{{ d.nombre }} {{ d.apellido }}</strong>
+          <p>✉ {{ d.email }}</p>
+          <p class="rd-muted">☎ {{ d.telefono || 'Sin teléfono' }}</p>
+        </div>
+      </div>
+
+      <div class="rd-card">
+        <header><h4>Teléfono</h4>
+          @if (!editandoTel()) {
+            <button type="button" class="r-add" (click)="editandoTel.set(true); telNuevo.set(d.telefono ?? '')">
+              {{ d.telefono ? '✎ Editar' : '+ Agregar teléfono' }}
+            </button>
+          }
+        </header>
+        @if (editandoTel()) {
+          <div class="rd-inline">
+            <input [ngModel]="telNuevo()" (ngModelChange)="telNuevo.set($event)" placeholder="+54 11 1234 5678" />
+            <button type="button" class="btn btn--primary u-btn" (click)="guardarTelefono()">Guardar</button>
+            <button type="button" class="btn btn--ghost u-btn" (click)="editandoTel.set(false)">Cancelar</button>
+          </div>
+        } @else {
+          <p class="rd-muted">{{ d.telefono || 'Sin teléfono' }}</p>
+        }
+      </div>
+
+      <div class="rd-card">
+        <header><h4>Unidades</h4>
+          @if (unidadesDisponibles().length && !agregandoUnidad()) {
+            <button type="button" class="r-add" (click)="agregandoUnidad.set(true)">+ Agregar a unidad</button>
+          }
+        </header>
+        @if (agregandoUnidad()) {
+          <div class="rd-inline">
+            <select [ngModel]="nuevaUnidadId()" (ngModelChange)="nuevaUnidadId.set($event)">
+              <option value="">Elegí una unidad</option>
+              @for (u of unidadesDisponibles(); track u.id) { <option [value]="u.id">{{ u.nombre }}</option> }
+            </select>
+            <select [ngModel]="nuevaUnidadRol()" (ngModelChange)="nuevaUnidadRol.set($event)">
+              <option value="Propietario">Propietario</option>
+              <option value="Inquilino">Inquilino</option>
+              <option value="Gestor">Gestor</option>
+            </select>
+            <button type="button" class="btn btn--primary u-btn" [disabled]="!nuevaUnidadId()" (click)="agregarAUnidad()">Agregar</button>
+            <button type="button" class="btn btn--ghost u-btn" (click)="agregandoUnidad.set(false)">Cancelar</button>
+          </div>
+        }
+        @for (u of d.unidades; track u.personaId) {
+          <div class="rd-unidad">
+            <span>{{ u.unidadNombre }}</span>
+            <select [ngModel]="u.rol" (ngModelChange)="cambiarRolUnidad(u, $event)">
+              <option value="Propietario">Propietario</option>
+              <option value="Inquilino">Inquilino</option>
+              <option value="Gestor">Gestor</option>
+            </select>
+            @if (u.esContactoPrincipal) { <span class="r-star" title="Contacto principal">★</span> }
+            <button type="button" class="rd-x" (click)="quitarDeUnidad(u)" aria-label="Quitar">✕</button>
+          </div>
+        } @empty { <p class="rd-muted">Sin unidades asignadas.</p> }
+      </div>
+
+      <div class="rd-card">
+        <header><h4>Roles</h4></header>
+        @for (rol of d.roles; track rol) { <span class="r-tag r-tag--rol">{{ rol }}</span> }
+        @if (!d.roles.length) { <p class="rd-muted">Sin cuenta todavía.</p> }
+      </div>
+
+      <div class="rd-card">
+        <header><h4>Información de cuenta</h4></header>
+        <dl class="rd-info">
+          <div><dt>Estado</dt><dd><span class="r-estado" [class.r-estado--ok]="d.activo">{{ d.activo ? 'Activo' : 'Inactivo' }}</span></dd></div>
+          <div><dt>Correo</dt><dd [class.rd-warn]="!d.correoVerificado">{{ d.correoVerificado ? '✓ Verificado' : '⏱ No verificado' }}</dd></div>
+          <div><dt>Miembro desde</dt><dd>{{ fecha(d.miembroDesdeUtc) }}</dd></div>
+        </dl>
+      </div>
+
+      <div class="u-modal__actions">
+        <button type="button" class="btn u-btn u-btn--danger-outline" (click)="removerDeComunidad()">👥 Remover de comunidad</button>
+      </div>
+    </div>
+  </div>
 }
 
 @if (ayuda()) {

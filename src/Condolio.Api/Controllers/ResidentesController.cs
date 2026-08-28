@@ -18,6 +18,18 @@ public class ResidentesController : ApiControllerBase
     public async Task<IActionResult> Directorio(Guid consorcioId, CancellationToken ct) =>
         ToResult(await _residentes.DirectorioAsync(consorcioId, ct));
 
+    [HttpGet("persona/{personaId:guid}")]
+    public async Task<IActionResult> PersonaDetalle(Guid consorcioId, Guid personaId, CancellationToken ct) =>
+        ToResult(await _residentes.PersonaDetalleAsync(consorcioId, personaId, ct));
+
+    [HttpPut("persona/{personaId:guid}/contacto")]
+    public async Task<IActionResult> ActualizarContacto(Guid consorcioId, Guid personaId, ActualizarPersonaContactoDto dto, CancellationToken ct) =>
+        ToResult(await _residentes.ActualizarContactoAsync(consorcioId, personaId, dto, ct));
+
+    [HttpDelete("persona/{personaId:guid}")]
+    public async Task<IActionResult> RemoverDeComunidad(Guid consorcioId, Guid personaId, CancellationToken ct) =>
+        ToResult(await _residentes.RemoverDeComunidadAsync(consorcioId, personaId, ct));
+
     [HttpGet("invitaciones")]
     public async Task<IActionResult> Invitaciones(Guid consorcioId, CancellationToken ct) =>
         ToResult(await _residentes.InvitacionesAsync(consorcioId, ct));

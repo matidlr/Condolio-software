@@ -49,3 +49,24 @@ export interface ResidenteSinUnidad {
   apellido: string;
   email: string;
 }
+
+export interface PersonaUnidadRef {
+  personaId: string;
+  unidadId: string;
+  unidadNombre: string;
+  rol: RolUnidad;
+  esContactoPrincipal: boolean;
+}
+
+export interface PersonaDetalle {
+  nombre: string;
+  apellido: string;
+  email: string;
+  telefono?: string | null;
+  unidades: PersonaUnidadRef[];
+  roles: string[];
+  tieneCuenta: boolean;
+  correoVerificado: boolean;
+  activo: boolean;
+  miembroDesdeUtc: string;
+}

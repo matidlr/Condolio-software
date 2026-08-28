@@ -386,6 +386,53 @@
 }
 .u-btn--danger-outline:hover { background: #fbdada; }
 
+/* Tipo / rol / estado tags en la tabla */
+.r-tag--tipo { background: #e6edf7; color: var(--c-slate-700); }
+.r-tag--rol { background: #22324a; color: #fff; }
+.r-estado { font-size: 0.78rem; color: var(--c-text-muted); }
+.r-estado--ok { color: #16a34a; font-weight: 600; }
+
+/* Detalle del residente */
+.rd { max-width: 460px; }
+.rd-top { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 6px; }
+.rd-avatar {
+  display: grid; place-items: center;
+  width: 46px; height: 46px; border-radius: 50%;
+  background: #eceff3; color: var(--c-text-muted); font-weight: 700;
+}
+.rd-top strong { font-size: 1.05rem; }
+.rd-top p { margin: 2px 0 0; font-size: 0.85rem; color: var(--c-text-muted); }
+.rd-muted { color: var(--c-text-soft); font-size: 0.85rem; margin: 0; }
+
+.rd-card {
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-top: 12px;
+  background: var(--c-bg);
+}
+.rd-card header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.rd-card h4 { margin: 0; font-size: 0.85rem; }
+
+.rd-inline { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.rd-inline input, .rd-inline select {
+  flex: 1; min-width: 110px; height: 34px;
+  padding: 0 8px; border: 1px solid var(--c-border); border-radius: 6px; background: #fff; font-size: 0.85rem;
+}
+.rd-inline .u-btn { height: 34px; }
+
+.rd-unidad { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--c-border); }
+.rd-unidad:first-of-type { border-top: none; }
+.rd-unidad > span:first-child { font-weight: 600; min-width: 46px; }
+.rd-unidad select { height: 30px; border: 1px solid var(--c-border); border-radius: 6px; background: #fff; font-size: 0.82rem; }
+.rd-x { margin-left: auto; border: 1px solid #f0b4b4; background: #fdecec; color: var(--c-danger); border-radius: 6px; width: 26px; height: 26px; }
+
+.rd-info { margin: 0; }
+.rd-info > div { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.85rem; }
+.rd-info dt { color: var(--c-text-soft); }
+.rd-info dd { margin: 0; }
+.rd-warn { color: #a06b00; }
+
 @media (max-width: 760px) {
   .r-invite-grid { grid-template-columns: 1fr; }
   .r-empty__cards { grid-template-columns: 1fr; }

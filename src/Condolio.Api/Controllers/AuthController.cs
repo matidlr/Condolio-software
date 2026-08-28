@@ -90,9 +90,21 @@ public class AuthController : ControllerBase
     {
         var codigo = Random.Shared.Next(0, 10000).ToString("D4");
         user.CodigoVerificacion = codigo;
-        user.CodigoVerificacionExpiraUtc = DateTime.UtcNow.AddMinutes(30);
-        await _email.EnviarAsync(user.Email!, "Tu código de verificación de Condolio",
-            $"<p>Tu código de verificación es <b style=\"font-size:1.3em\">{codigo}</b>.</p><p>Vence en 30 minutos.</p>");
+        user.CodigoVerificacionExpiraUtc = DateTime.UtcNow.AddHours(24);
+        var saludo = string.IsNullOrWhiteSpace(user.Nombre) ? "Hola" : $"Hola {user.Nombre}";
+        var cuerpo = $"""
+            <div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;color:#1f2937">
+              <h1 style="font-size:22px;margin:0 0 16px">Verificá tu dirección de correo</h1>
+              <p>{saludo},</p>
+              <p>Usá el código de verificación a continuación para completar el registro de tu cuenta.</p>
+              <p style="font-size:34px;font-weight:700;letter-spacing:.25em;margin:24px 0;text-align:center">{codigo}</p>
+              <p style="font-size:14px;color:#6b7280">Este código expira en 24 horas.</p>
+              <p style="font-size:14px;color:#6b7280">Ingresá este código en la aplicación para verificar tu correo electrónico.
+                Si no solicitaste este código, podés ignorar este correo.</p>
+              <p style="font-size:13px;color:#6b7280;margin-top:24px">— El equipo de Condolio</p>
+            </div>
+            """;
+        await _email.EnviarAsync(user.Email!, "Verificá tu dirección de correo", cuerpo);
     }
 
     /// <summary>
