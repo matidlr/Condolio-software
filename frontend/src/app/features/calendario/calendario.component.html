@@ -1,0 +1,163 @@
+<section class="cal">
+  <header class="cal-head">
+    <h1>Calendario comunitario</h1>
+    <p>Gestioná eventos y actividades de la comunidad</p>
+  </header>
+
+  <div class="cal-panel">
+    <div class="cal-toolbar">
+      <div class="cal-nav">
+        <button type="button" (click)="moverMes(-1)">‹</button>
+        <button type="button" class="cal-today" (click)="hoy()">Hoy</button>
+        <button type="button" (click)="moverMes(1)">›</button>
+        <b>{{ mesLabel() }}</b>
+      </div>
+
+      <div class="cal-tabs">
+        <button type="button" [class.is-active]="vista() === 'calendario'" (click)="vista.set('calendario')">🗓 Calendario</button>
+        <button type="button" [class.is-active]="vista() === 'lista'" (click)="vista.set('lista')">☰ Lista</button>
+      </div>
+
+      @if (vista() === 'lista') {
+        <div class="cal-search">
+          <span>⌕</span>
+          <input type="search" placeholder="Buscar eventos…"
+            [value]="busqueda()" (input)="busqueda.set($any($event.target).value)" />
+        </div>
+      }
+      <button type="button" class="u-icon-btn" (click)="recargar()" aria-label="Refrescar">⟳</button>
+      <button type="button" class="btn btn--primary" (click)="abrirNuevo()">+ Crear evento</button>
+    </div>
+
+    @if (cargando()) {
+      <p class="cal-loading">Cargando…</p>
+    } @else if (vista() === 'calendario') {
+      <div class="cal-grid">
+        @for (d of ['LUN','MAR','MIÉ','JUE','VIE','SÁB','DOM']; track d) { <div class="cal-dow">{{ d }}</div> }
+        @for (c of grilla(); track c.fecha) {
+          <div class="cal-cell" [class.is-out]="c.otroMes" [class.is-today]="c.hoy" (click)="abrirNuevo(c.fecha)">
+            <span class="cal-cell__num">{{ c.dia }}</span>
+            @for (e of c.eventos.slice(0, 3); track e.id) {
+              <button type="button" class="cal-ev" [style.background]="meta[e.categoria].color + '22'"
+                [style.color]="meta[e.categoria].color" (click)="$event.stopPropagation(); editar(e)">
+                {{ e.todoElDia ? '' : hora(e.inicioUtc) + ' ' }}{{ e.titulo }}
+              </button>
+            }
+            @if (c.eventos.length > 3) { <span class="cal-more">+{{ c.eventos.length - 3 }} más</span> }
+          </div>
+        }
+      </div>
+    } @else {
+      @if (visibles().length === 0) {
+        <div class="cal-empty">
+          <div class="cal-empty__ic">🗓</div>
+          <h2>No hay eventos</h2>
+          <p>Creá el primer evento del calendario comunitario.</p>
+          <button type="button" class="btn btn--primary" (click)="abrirNuevo()">+ Crear evento</button>
+        </div>
+      } @else {
+        <div class="cal-tablewrap">
+          <table class="cal-table">
+            <thead><tr><th>Título</th><th>Fecha de inicio</th><th>Ubicación</th><th>Comunidad</th><th></th></tr></thead>
+            <tbody>
+              @for (e of visibles(); track e.id) {
+                <tr>
+                  <td><b>{{ e.titulo }}</b></td>
+                  <td>
+                    {{ e.inicioUtc | date:'d MMM y' }}{{ e.todoElDia ? '' : ', ' + hora(e.inicioUtc) }}
+                    @if (!e.todoElDia) { – {{ hora(e.finUtc) }} }
+                  </td>
+                  <td>{{ e.ubicacion ? '📍 ' + e.ubicacion : '—' }}</td>
+                  <td>{{ e.notificoComunidad ? '✓ Notificada' : 'Sin notificación' }}</td>
+                  <td class="cal-table__acc" (click)="$event.stopPropagation()">
+                    <button type="button" class="cal-kebab" (click)="menu.set(menu() === e.id ? null : e.id)">⋮</button>
+                    @if (menu() === e.id) {
+                      <div class="cal-menu">
+                        <button type="button" (click)="editar(e); menu.set(null)">✎ Editar</button>
+                        <button type="button" class="cal-menu__del" (click)="eliminar(e); menu.set(null)">🗑 Eliminar</button>
+                      </div>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+  </div>
+</section>
+
+@if (modalAbierto()) {
+  <div class="cal-overlay" (click)="modalAbierto.set(false)">
+    <div class="cal-modal" (click)="$event.stopPropagation()">
+      <header>
+        <div>
+          <h3>{{ editId() ? 'Editar evento' : 'Crear evento' }}</h3>
+          <p>{{ editId() ? 'Modificá los datos del evento.' : 'Agregá un nuevo evento al calendario comunitario.' }}</p>
+        </div>
+        <button type="button" (click)="modalAbierto.set(false)">✕</button>
+      </header>
+
+      <div class="cal-modal__body">
+        <label class="cal-label">Título <span class="cal-req">*</span></label>
+        <input class="cal-input" placeholder="Torneo de fútbol entre vecinos"
+          [ngModel]="fTitulo()" (ngModelChange)="fTitulo.set($event)" />
+
+        <label class="cal-label" style="margin-top:12px">Categoría</label>
+        <select class="cal-input" [ngModel]="fCategoria()" (ngModelChange)="fCategoria.set($event)">
+          @for (c of categorias; track c.value) { <option [value]="c.value">{{ c.label }}</option> }
+        </select>
+
+        <label class="cal-toggle">
+          <span>Evento de todo el día</span>
+          <input type="checkbox" [ngModel]="fTodoElDia()" (ngModelChange)="fTodoElDia.set($event)" />
+        </label>
+
+        <div class="cal-grid2">
+          <div>
+            <label class="cal-label">Fecha de inicio <span class="cal-req">*</span></label>
+            <input type="date" class="cal-input" [ngModel]="fFechaIni()" (ngModelChange)="fFechaIni.set($event)" />
+          </div>
+          @if (!fTodoElDia()) {
+            <div>
+              <label class="cal-label">Hora de inicio <span class="cal-req">*</span></label>
+              <input type="time" class="cal-input" [ngModel]="fHoraIni()" (ngModelChange)="fHoraIni.set($event)" />
+            </div>
+          }
+        </div>
+        <div class="cal-grid2">
+          <div>
+            <label class="cal-label">Fecha de fin <span class="cal-req">*</span></label>
+            <input type="date" class="cal-input" [ngModel]="fFechaFin()" (ngModelChange)="fFechaFin.set($event)" />
+          </div>
+          @if (!fTodoElDia()) {
+            <div>
+              <label class="cal-label">Hora de fin <span class="cal-req">*</span></label>
+              <input type="time" class="cal-input" [ngModel]="fHoraFin()" (ngModelChange)="fHoraFin.set($event)" />
+            </div>
+          }
+        </div>
+
+        <label class="cal-label" style="margin-top:12px">Ubicación</label>
+        <input class="cal-input" placeholder="Ubicación" [ngModel]="fUbicacion()" (ngModelChange)="fUbicacion.set($event)" />
+
+        <label class="cal-label" style="margin-top:12px">Descripción</label>
+        <textarea rows="3" class="cal-input" placeholder="Descripción"
+          [ngModel]="fDesc()" (ngModelChange)="fDesc.set($event)"></textarea>
+
+        <label class="cal-toggle">
+          <span>Notificar a la comunidad <small>(publica un anuncio)</small></span>
+          <input type="checkbox" [ngModel]="fNotificar()" (ngModelChange)="fNotificar.set($event)" />
+        </label>
+      </div>
+
+      <footer>
+        <button type="button" class="btn btn--ghost" (click)="modalAbierto.set(false)">Cancelar</button>
+        <button type="button" class="btn btn--primary" [disabled]="!puedeGuardar()" (click)="guardar()">
+          {{ guardando() ? 'Guardando…' : (editId() ? 'Guardar' : 'Crear') }}
+        </button>
+      </footer>
+    </div>
+  </div>
+}

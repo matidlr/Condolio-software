@@ -2,6 +2,7 @@ using Condolio.Application.Common;
 using Condolio.Domain.Amenidades;
 using Condolio.Domain.Archivos;
 using Condolio.Domain.Billing;
+using Condolio.Domain.Calendario;
 using Condolio.Domain.Comunicaciones;
 using Condolio.Domain.Common;
 using Condolio.Domain.Consorcios;
@@ -49,6 +50,7 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Anuncio> Anuncios => Set<Anuncio>();
     public DbSet<AnuncioComentario> AnuncioComentarios => Set<AnuncioComentario>();
     public DbSet<AnuncioLike> AnuncioLikes => Set<AnuncioLike>();
+    public DbSet<EventoCalendario> EventosCalendario => Set<EventoCalendario>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -252,6 +254,17 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.UsuarioId).HasMaxLength(450);
             e.Property(x => x.UsuarioNombre).HasMaxLength(200);
             e.HasIndex(x => new { x.AnuncioId, x.UsuarioId }).IsUnique();
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
+        });
+
+        builder.Entity<EventoCalendario>(e =>
+        {
+            e.Property(x => x.Titulo).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Descripcion).HasMaxLength(4000);
+            e.Property(x => x.Ubicacion).HasMaxLength(200);
+            e.Property(x => x.CreadoPorUsuarioId).HasMaxLength(450);
+            e.Property(x => x.CreadoPorNombre).HasMaxLength(200);
+            e.HasIndex(x => new { x.AdministradorId, x.ConsorcioId, x.InicioUtc });
             e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
         });
     }

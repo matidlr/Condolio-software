@@ -99,6 +99,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/anuncios/anuncios.component').then((m) => m.AnunciosComponent),
       },
+      {
+        path: 'calendario',
+        loadComponent: () =>
+          import('./features/calendario/calendario.component').then((m) => m.CalendarioComponent),
+      },
       { path: 'amenidades', pathMatch: 'full', redirectTo: 'amenidades/directorio' },
       {
         path: 'amenidades/directorio',
