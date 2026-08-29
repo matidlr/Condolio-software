@@ -1,5 +1,7 @@
 using Condolio.Application.Common;
+using Condolio.Application.Notificaciones;
 using Condolio.Application.Residentes;
+using Condolio.Domain.Notificaciones;
 using Condolio.Domain.Residentes;
 using Condolio.Domain.Unidades;
 using Condolio.Infrastructure.Identity;
@@ -14,12 +16,15 @@ public class InvitacionPublicaService : IInvitacionPublicaService
     private readonly CondolioDbContext _db;
     private readonly UserManager<ApplicationUser> _users;
     private readonly IJwtTokenGenerator _tokens;
+    private readonly INotificacionService _notificaciones;
 
-    public InvitacionPublicaService(CondolioDbContext db, UserManager<ApplicationUser> users, IJwtTokenGenerator tokens)
+    public InvitacionPublicaService(CondolioDbContext db, UserManager<ApplicationUser> users,
+        IJwtTokenGenerator tokens, INotificacionService notificaciones)
     {
         _db = db;
         _users = users;
         _tokens = tokens;
+        _notificaciones = notificaciones;
     }
 
     public async Task<Result<InvitacionPublicaDto>> VerAsync(string token, CancellationToken ct = default)
@@ -101,6 +106,13 @@ public class InvitacionPublicaService : IInvitacionPublicaService
 
         inv.Estado = EstadoInvitacion.Aceptada;
         await _db.SaveChangesAsync(ct);
+
+        var consorcioNombre = await _db.Consorcios.IgnoreQueryFilters()
+            .Where(c => c.Id == inv.ConsorcioId).Select(c => c.Nombre).FirstOrDefaultAsync(ct) ?? "el consorcio";
+        await _notificaciones.CrearAsync(inv.ConsorcioId, TipoNotificacion.MiembroSeUnio,
+            "Nuevo miembro se unió",
+            $"{dto.Nombre.Trim()} {dto.Apellido.Trim()} se unió a {consorcioNombre} por invitación.",
+            "/panel/residentes/directorio", ct);
 
         var roles = await _users.GetRolesAsync(user);
         var (jwt, expira) = _tokens.Generar(new TokenRequest(user.Id, user.Email!, roles, user.AdministradorId));

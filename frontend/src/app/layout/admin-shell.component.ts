@@ -6,6 +6,8 @@ import { ConsorcioService } from '../core/services/consorcio.service';
 import { ResidenteService } from '../core/services/residente.service';
 import { TicketService } from '../core/services/ticket.service';
 import { EncuestaService } from '../core/services/encuesta.service';
+import { NotificacionService } from '../core/services/notificacion.service';
+import { NotificacionesPanelComponent } from '../features/notificaciones/notificaciones-panel.component';
 
 interface NavHijo {
   label: string;
@@ -36,12 +38,13 @@ const ICONOS = {
   megaphone: '<path d="M3 11l14-6v14L3 13z"/><path d="M3 11v2M7 12v5a2 2 0 0 0 4 0v-3"/>',
   calendar: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>',
   poll: '<path d="M5 21V10M12 21V4M19 21v-7"/>',
+  bell: '<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10 20a2 2 0 0 0 4 0"/>',
 } as const;
 
 @Component({
   selector: 'app-admin-shell',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, NotificacionesPanelComponent],
   templateUrl: './admin-shell.component.html',
   styleUrl: './admin-shell.component.scss',
 })
@@ -53,9 +56,11 @@ export class AdminShellComponent {
   private residentes = inject(ResidenteService);
   private ticketsApi = inject(TicketService);
   private encuestasApi = inject(EncuestaService);
+  notificacionesApi = inject(NotificacionService);
 
   colapsado = signal(false);
   menuAbierto = signal(false);
+  panelNotif = signal(false);
 
   nombre = this.auth.nombre;
   iniciales = computed(() =>
@@ -129,6 +134,7 @@ export class AdminShellComponent {
         this.residentes.refrescarPendientes(id);
         this.ticketsApi.refrescarActivos(id);
         this.encuestasApi.refrescarActivas(id);
+        this.notificacionesApi.refrescarResumen(id);
       }
     });
   }

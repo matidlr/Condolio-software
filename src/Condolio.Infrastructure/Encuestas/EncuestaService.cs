@@ -1,6 +1,8 @@
 using Condolio.Application.Common;
 using Condolio.Application.Encuestas;
+using Condolio.Application.Notificaciones;
 using Condolio.Domain.Encuestas;
+using Condolio.Domain.Notificaciones;
 using Condolio.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,11 +12,13 @@ public class EncuestaService : IEncuestaService
 {
     private readonly CondolioDbContext _db;
     private readonly ITenantContext _tenant;
+    private readonly INotificacionService _notificaciones;
 
-    public EncuestaService(CondolioDbContext db, ITenantContext tenant)
+    public EncuestaService(CondolioDbContext db, ITenantContext tenant, INotificacionService notificaciones)
     {
         _db = db;
         _tenant = tenant;
+        _notificaciones = notificaciones;
     }
 
     public async Task<Result<EncuestaListaDto>> ListarAsync(Guid consorcioId, CancellationToken ct = default)
@@ -87,6 +91,11 @@ public class EncuestaService : IEncuestaService
         Aplicar(e, dto);
         _db.Encuestas.Add(e);
         await _db.SaveChangesAsync(ct);
+
+        if (e.Estado == EstadoEncuesta.Activa)
+            await _notificaciones.CrearAsync(consorcioId, TipoNotificacion.NuevaEncuesta,
+                "Nueva encuesta publicada", $"Se publicó la encuesta “{e.Titulo}”.", "/panel/encuestas", ct);
+
         return Result<EncuestaDto>.Ok(Mapear(e, _tenant.UsuarioId ?? string.Empty));
     }
 
@@ -117,10 +126,15 @@ public class EncuestaService : IEncuestaService
             .FirstOrDefaultAsync(x => x.Id == encuestaId && x.ConsorcioId == consorcioId, ct);
         if (e is null) return Result<EncuestaDto>.Fail("Encuesta no encontrada.");
 
+        var primeraPublicacion = estado == EstadoEncuesta.Activa && e.PublicadaUtc is null;
         e.Estado = estado;
-        if (estado == EstadoEncuesta.Activa && e.PublicadaUtc is null)
-            e.PublicadaUtc = DateTime.UtcNow;
+        if (primeraPublicacion) e.PublicadaUtc = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
+
+        if (primeraPublicacion)
+            await _notificaciones.CrearAsync(consorcioId, TipoNotificacion.NuevaEncuesta,
+                "Nueva encuesta publicada", $"Se publicó la encuesta “{e.Titulo}”.", "/panel/encuestas", ct);
+
         return Result<EncuestaDto>.Ok(Mapear(e, _tenant.UsuarioId ?? string.Empty));
     }
 

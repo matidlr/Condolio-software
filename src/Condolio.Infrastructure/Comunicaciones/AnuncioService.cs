@@ -1,6 +1,8 @@
 using Condolio.Application.Comunicaciones;
 using Condolio.Application.Common;
+using Condolio.Application.Notificaciones;
 using Condolio.Domain.Comunicaciones;
+using Condolio.Domain.Notificaciones;
 using Condolio.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,11 +12,13 @@ public class AnuncioService : IAnuncioService
 {
     private readonly CondolioDbContext _db;
     private readonly ITenantContext _tenant;
+    private readonly INotificacionService _notificaciones;
 
-    public AnuncioService(CondolioDbContext db, ITenantContext tenant)
+    public AnuncioService(CondolioDbContext db, ITenantContext tenant, INotificacionService notificaciones)
     {
         _db = db;
         _tenant = tenant;
+        _notificaciones = notificaciones;
     }
 
     public async Task<Result<AnuncioListaDto>> ListarAsync(Guid consorcioId, CancellationToken ct = default)
@@ -120,15 +124,21 @@ public class AnuncioService : IAnuncioService
             .FirstOrDefaultAsync(x => x.Id == anuncioId && x.ConsorcioId == consorcioId, ct);
         if (a is null) return Result.Fail("Anuncio no encontrado.");
 
+        var autor = await NombreUsuario(_tenant.UsuarioId, ct) ?? "—";
         _db.AnuncioComentarios.Add(new AnuncioComentario
         {
             AnuncioId = anuncioId,
             AdministradorId = a.AdministradorId,
             Texto = texto.Trim(),
             AutorUsuarioId = _tenant.UsuarioId ?? string.Empty,
-            AutorNombre = await NombreUsuario(_tenant.UsuarioId, ct) ?? "—",
+            AutorNombre = autor,
         });
         await _db.SaveChangesAsync(ct);
+
+        await _notificaciones.CrearAsync(a.ConsorcioId, TipoNotificacion.ComentarioPublicacion,
+            "Nuevo comentario en publicación",
+            $"{autor} comentó en “{a.Titulo}”.",
+            "/panel/anuncios", ct);
         return Result.Ok();
     }
 

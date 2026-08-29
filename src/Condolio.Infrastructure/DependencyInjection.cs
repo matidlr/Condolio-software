@@ -7,6 +7,7 @@ using Condolio.Application.Calendario;
 using Condolio.Application.Comunicaciones;
 using Condolio.Application.Documentos;
 using Condolio.Application.Encuestas;
+using Condolio.Application.Notificaciones;
 using Condolio.Application.Residentes;
 using Condolio.Application.Tickets;
 using Condolio.Application.Unidades;
@@ -84,6 +85,7 @@ public static class DependencyInjection
         services.AddScoped<IEventoService, Condolio.Infrastructure.Calendario.EventoService>();
         services.AddScoped<IDocumentoService, Condolio.Infrastructure.Documentos.DocumentoService>();
         services.AddScoped<IEncuestaService, Condolio.Infrastructure.Encuestas.EncuestaService>();
+        services.AddScoped<INotificacionService, Condolio.Infrastructure.Notificaciones.NotificacionService>();
 
         // ---- Archivos ----
         services.AddSingleton<IFileStorage, LocalFileStorage>();

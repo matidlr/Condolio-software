@@ -1,0 +1,54 @@
+<div class="nt-back" (click)="cerrar.emit()"></div>
+<aside class="nt">
+  <header class="nt-head">
+    <span class="nt-head__ic">🔔 @if (noLeidas()) { <b>{{ noLeidas() }}</b> }</span>
+    <div class="nt-head__t">
+      <h3>Notificaciones</h3>
+      <small>{{ total() }} total, {{ noLeidas() }} no leídas</small>
+    </div>
+    <button type="button" class="nt-x" (click)="cerrar.emit()">✕</button>
+  </header>
+
+  <div class="nt-tools">
+    <div class="nt-search">
+      <span>⌕</span>
+      <input type="search" placeholder="Buscar notificaciones…"
+        [value]="busqueda()" (input)="busqueda.set($any($event.target).value)" />
+    </div>
+    <select class="nt-select" [ngModel]="filtroTipo()" (ngModelChange)="filtroTipo.set($event)">
+      <option value="todas">Todas · {{ items().length }}</option>
+      @for (t of tiposConteo(); track t.tipo) {
+        <option [value]="t.tipo">{{ meta[t.tipo].label }} · {{ t.n }}</option>
+      }
+    </select>
+    <button type="button" class="nt-readall" [disabled]="noLeidas() === 0" (click)="marcarTodas()">
+      ✓ Marcar todas como leídas
+    </button>
+  </div>
+
+  <div class="nt-list">
+    @if (cargando()) {
+      <p class="nt-empty">Cargando…</p>
+    } @else if (visibles().length === 0) {
+      <p class="nt-empty">No hay notificaciones.</p>
+    } @else {
+      @for (n of visibles(); track n.id) {
+        <button type="button" class="nt-row" [class.is-unread]="!n.leida"
+          [style.--nt-color]="meta[n.tipo].color" (click)="abrir(n)">
+          <span class="nt-row__ic">
+            {{ meta[n.tipo].icon }}
+            @if (!n.leida) { <span class="nt-row__dot"></span> }
+          </span>
+          <span class="nt-row__body">
+            <span class="nt-row__top">
+              @if (!n.leida) { <span class="nt-row__unread">●</span> }
+              <b>{{ n.titulo }}</b>
+              <small>{{ hace(n.creadoUtc) }}</small>
+            </span>
+            <span class="nt-row__txt">{{ n.cuerpo }}</span>
+          </span>
+        </button>
+      }
+    }
+  </div>
+</aside>

@@ -6,6 +6,7 @@ using Condolio.Domain.Calendario;
 using Condolio.Domain.Comunicaciones;
 using Condolio.Domain.Documentos;
 using Condolio.Domain.Encuestas;
+using Condolio.Domain.Notificaciones;
 using Condolio.Domain.Common;
 using Condolio.Domain.Consorcios;
 using Condolio.Domain.Residentes;
@@ -59,6 +60,7 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Encuesta> Encuestas => Set<Encuesta>();
     public DbSet<OpcionEncuesta> OpcionesEncuesta => Set<OpcionEncuesta>();
     public DbSet<VotoEncuesta> VotosEncuesta => Set<VotoEncuesta>();
+    public DbSet<Notificacion> Notificaciones => Set<Notificacion>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -325,6 +327,15 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.UsuarioId).HasMaxLength(450);
             e.Property(x => x.UsuarioNombre).HasMaxLength(200);
             e.HasIndex(x => new { x.EncuestaId, x.UsuarioId, x.OpcionId }).IsUnique();
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
+        });
+
+        builder.Entity<Notificacion>(e =>
+        {
+            e.Property(x => x.Titulo).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Cuerpo).HasMaxLength(1000).IsRequired();
+            e.Property(x => x.Enlace).HasMaxLength(400);
+            e.HasIndex(x => new { x.AdministradorId, x.ConsorcioId, x.LeidaUtc });
             e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
         });
     }

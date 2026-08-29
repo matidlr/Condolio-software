@@ -44,6 +44,14 @@
           </span>
         }
       }
+
+      <button type="button" class="shell__nav-item shell__nav-btn" (click)="panelNotif.set(true)">
+        <span class="shell__nav-icon" [innerHTML]="icono('bell')"></span>
+        <span class="shell__nav-label">Notificaciones</span>
+        @if (notificacionesApi.resumen().noLeidas) {
+          <span class="shell__badge">{{ notificacionesApi.resumen().noLeidas }}</span>
+        }
+      </button>
     </nav>
 
     <button class="shell__collapse" (click)="colapsado.set(!colapsado())" type="button"
@@ -85,4 +93,8 @@
       <router-outlet />
     </main>
   </div>
+
+  @if (panelNotif()) {
+    <app-notificaciones-panel (cerrar)="panelNotif.set(false)" />
+  }
 </div>

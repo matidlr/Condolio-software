@@ -1,5 +1,7 @@
 using Condolio.Application.Common;
+using Condolio.Application.Notificaciones;
 using Condolio.Application.Residentes;
+using Condolio.Domain.Notificaciones;
 using Condolio.Domain.Residentes;
 using Condolio.Domain.Unidades;
 using Condolio.Infrastructure.Identity;
@@ -16,15 +18,17 @@ public class ResidenteService : IResidenteService
     private readonly ITenantContext _tenant;
     private readonly IEmailSender _email;
     private readonly UserManager<ApplicationUser> _users;
+    private readonly INotificacionService _notificaciones;
     private readonly string _frontendUrl;
 
     public ResidenteService(CondolioDbContext db, ITenantContext tenant, IEmailSender email,
-        UserManager<ApplicationUser> users, IConfiguration config)
+        UserManager<ApplicationUser> users, IConfiguration config, INotificacionService notificaciones)
     {
         _db = db;
         _tenant = tenant;
         _email = email;
         _users = users;
+        _notificaciones = notificaciones;
         _frontendUrl = (config["Frontend:BaseUrl"] ?? "http://localhost:4200").TrimEnd('/');
     }
 
@@ -175,6 +179,13 @@ public class ResidenteService : IResidenteService
         await _db.SaveChangesAsync(ct);
 
         await EnviarEmail(invitacion, consorcio.Nombre, ct);
+
+        var quien = await _db.Users.Where(u => u.Id == _tenant.UsuarioId)
+            .Select(u => (u.Nombre + " " + u.Apellido).Trim()).FirstOrDefaultAsync(ct);
+        await _notificaciones.CrearAsync(consorcioId, TipoNotificacion.InvitacionEnviada,
+            "Nueva invitación enviada",
+            $"{(string.IsNullOrWhiteSpace(quien) ? "La administración" : quien)} invitó a {email} a unirse a {consorcio.Nombre}.",
+            "/panel/residentes/invitaciones", ct);
 
         string? unidadNombre = dto.UnidadId is { } id2
             ? await _db.Unidades.Where(u => u.Id == id2).Select(u => u.Nombre).FirstOrDefaultAsync(ct)
