@@ -193,6 +193,7 @@ public class EncuestaService : IEncuestaService
         e.Titulo = dto.Titulo.Trim();
         e.Descripcion = dto.Descripcion?.Trim() ?? string.Empty;
         e.Categoria = dto.Categoria;
+        e.ModoVotacion = dto.ModoVotacion;
         e.MultiplesOpciones = dto.MultiplesOpciones;
         e.Anonima = dto.Anonima;
         e.CierreUtc = dto.CierreUtc;
@@ -234,7 +235,7 @@ public class EncuestaService : IEncuestaService
         }).ToList();
 
         return new EncuestaDto(
-            e.Id, e.Titulo, e.Descripcion, e.Categoria, e.Estado,
+            e.Id, e.Titulo, e.Descripcion, e.Categoria, e.Estado, e.ModoVotacion,
             e.MultiplesOpciones, e.Anonima, e.PublicadaUtc, e.CierreUtc,
             string.IsNullOrWhiteSpace(e.AutorNombre) ? "Administración" : e.AutorNombre,
             totalVotos, votantes,

@@ -5,8 +5,9 @@ import { ConsorcioService } from '../../core/services/consorcio.service';
 import { EncuestaService } from '../../core/services/encuesta.service';
 import { ToastService } from '../../core/services/toast.service';
 import {
-  CATEGORIAS_ENCUESTA, CategoriaEncuesta, Encuesta, EncuestaDetalle, EstadisticasEncuestas,
-  EstadoEncuesta, ICON_CAT_ENCUESTA, LABEL_CAT_ENCUESTA, META_ESTADO,
+  CATEGORIAS_ENCUESTA, CategoriaEncuesta, DURACIONES, DuracionPreset, Encuesta, EncuestaDetalle,
+  EstadisticasEncuestas, EstadoEncuesta, ICON_CAT_ENCUESTA, LABEL_CAT_ENCUESTA, LABEL_MODO_VOTO,
+  META_ESTADO, MODOS_VOTO, ModoVotacion,
 } from '../../core/models/encuesta.models';
 
 type FiltroEstado = 'todas' | EstadoEncuesta;
@@ -28,6 +29,9 @@ export class EncuestasComponent {
   labelCat = LABEL_CAT_ENCUESTA;
   iconCat = ICON_CAT_ENCUESTA;
   metaEstado = META_ESTADO;
+  DURACIONES = DURACIONES;
+  MODOS_VOTO = MODOS_VOTO;
+  labelModo = (m: ModoVotacion) => LABEL_MODO_VOTO[m];
 
   cargando = signal(true);
   encuestas = signal<Encuesta[]>([]);
@@ -44,8 +48,15 @@ export class EncuestasComponent {
   // detalle
   detalle = signal<EncuestaDetalle | null>(null);
 
-  // crear / editar
+  // crear / editar (asistente de 3 pasos)
   form = signal<FormEncuesta | null>(null);
+  paso = signal<1 | 2 | 3>(1);
+  readonly PASOS = [
+    { n: 1, label: 'Contenido' },
+    { n: 2, label: 'Configuración' },
+    { n: 3, label: 'Revisar y publicar' },
+  ] as const;
+  readonly MAX_PREGUNTA = 300;
 
   private consorcioId = computed(() => this.consorcios.activoId());
 
@@ -182,20 +193,58 @@ export class EncuestasComponent {
 
   // ---- crear / editar ----
   abrirCrear(): void {
+    this.paso.set(1);
     this.form.set({
       id: null, titulo: '', descripcion: '', categoria: 'General',
+      modoVotacion: 'PorUnidad', duracion: '1w',
       opciones: ['', ''], multiplesOpciones: false, anonima: false,
       cierre: this.fechaEnDias(7), publicar: true,
     });
   }
   abrirEditar(e: Encuesta): void {
+    this.paso.set(1);
     this.form.set({
       id: e.id, titulo: e.titulo, descripcion: e.descripcion, categoria: e.categoria,
+      modoVotacion: e.modoVotacion, duracion: e.cierreUtc ? 'custom' : '1w',
       opciones: e.opciones.length ? e.opciones.map((o) => o.texto) : ['', ''],
       multiplesOpciones: e.multiplesOpciones, anonima: e.anonima,
       cierre: e.cierreUtc ? e.cierreUtc.slice(0, 10) : '',
       publicar: e.estado !== 'Borrador',
     });
+  }
+
+  private readonly DOTS = ['#3b82f6', '#22c55e', '#f59e0b', '#a855f7', '#ef4444', '#14b8a6', '#64748b'];
+  dotColor(i: number): string { return this.DOTS[i % this.DOTS.length]; }
+  opcionesLlenas(f: { opciones: string[] }): number { return f.opciones.filter((o) => o.trim()).length; }
+  diasDuracion(f: FormEncuesta): string {
+    if (f.duracion !== 'custom') {
+      const d = DURACIONES.find((x) => x.k === f.duracion)?.dias;
+      return d ? `${d} día${d === 1 ? '' : 's'}` : 'sin cierre';
+    }
+    if (!f.cierre) return 'sin cierre';
+    const dias = Math.max(0, Math.ceil((new Date(f.cierre).getTime() - Date.now()) / 86_400_000));
+    return `${dias} día${dias === 1 ? '' : 's'}`;
+  }
+
+  setDuracion(k: DuracionPreset): void {
+    const d = DURACIONES.find((x) => x.k === k);
+    this.setForm({ duracion: k, cierre: d?.dias ? this.fechaEnDias(d.dias) : this.form()?.cierre ?? '' });
+  }
+
+  paso1Valido = computed(() => {
+    const f = this.form();
+    return !!f && f.titulo.trim().length > 0 && f.opciones.filter((o) => o.trim()).length >= 2;
+  });
+  avanzar(): void {
+    if (this.paso() === 1 && !this.paso1Valido()) return;
+    this.paso.update((p) => (p < 3 ? ((p + 1) as 1 | 2 | 3) : p));
+  }
+  retroceder(): void {
+    this.paso.update((p) => (p > 1 ? ((p - 1) as 1 | 2 | 3) : p));
+  }
+  irAPaso(n: 1 | 2 | 3): void {
+    if (n > this.paso() && !this.paso1Valido()) return;
+    this.paso.set(n);
   }
   setForm(patch: Partial<FormEncuesta>): void {
     this.form.update((f) => f && { ...f, ...patch });
@@ -227,6 +276,7 @@ export class EncuestasComponent {
       titulo: f.titulo.trim(),
       descripcion: f.descripcion.trim(),
       categoria: f.categoria,
+      modoVotacion: f.modoVotacion,
       opciones: f.opciones.map((o) => o.trim()).filter(Boolean),
       multiplesOpciones: f.multiplesOpciones,
       anonima: f.anonima,
@@ -246,6 +296,8 @@ interface FormEncuesta {
   titulo: string;
   descripcion: string;
   categoria: CategoriaEncuesta;
+  modoVotacion: ModoVotacion;
+  duracion: DuracionPreset;
   opciones: string[];
   multiplesOpciones: boolean;
   anonima: boolean;

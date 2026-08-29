@@ -16,6 +16,16 @@ public enum CategoriaEncuesta
     Evento = 2,
 }
 
+public enum ModoVotacion
+{
+    /// <summary>Un voto por residente elegible.</summary>
+    PorResidente = 0,
+    /// <summary>Un voto por unidad.</summary>
+    PorUnidad = 1,
+    /// <summary>Un voto por unidad, ponderado por el porcentaje de propiedad indivisa.</summary>
+    PonderadoPorAlicuota = 2,
+}
+
 /// <summary>Encuesta / votación de la comunidad.</summary>
 public class Encuesta : Entity, ITenantOwned
 {
@@ -26,6 +36,7 @@ public class Encuesta : Entity, ITenantOwned
     public string Descripcion { get; set; } = string.Empty;
     public CategoriaEncuesta Categoria { get; set; } = CategoriaEncuesta.General;
     public EstadoEncuesta Estado { get; set; } = EstadoEncuesta.Borrador;
+    public ModoVotacion ModoVotacion { get; set; } = ModoVotacion.PorUnidad;
 
     /// <summary>Permite seleccionar más de una opción.</summary>
     public bool MultiplesOpciones { get; set; }

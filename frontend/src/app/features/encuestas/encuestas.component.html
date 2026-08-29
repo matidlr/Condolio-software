@@ -76,17 +76,20 @@
                   <button type="button" class="enc-kebab" (click)="menu.set(menu() === e.id ? null : e.id)">⋮</button>
                   @if (menu() === e.id) {
                     <div class="enc-menu">
-                      @if (e.estado === 'Borrador') {
-                        <button type="button" (click)="cambiarEstado(e, 'Activa'); menu.set(null)">▶ Publicar</button>
+                      @switch (e.estado) {
+                        @case ('Activa') {
+                          <button type="button" (click)="cambiarEstado(e, 'Cerrada'); menu.set(null)">🔒 Cerrar encuesta</button>
+                        }
+                        @case ('Borrador') {
+                          <button type="button" (click)="cambiarEstado(e, 'Activa'); menu.set(null)">▶ Publicar encuesta</button>
+                          <button type="button" (click)="abrirEditar(e); menu.set(null)">✎ Editar</button>
+                          <button type="button" class="enc-menu__del" (click)="eliminar(e); menu.set(null)">🗑 Eliminar</button>
+                        }
+                        @case ('Cerrada') {
+                          <button type="button" (click)="cambiarEstado(e, 'Activa'); menu.set(null)">↻ Reabrir encuesta</button>
+                          <button type="button" class="enc-menu__del" (click)="eliminar(e); menu.set(null)">🗑 Eliminar</button>
+                        }
                       }
-                      @if (e.estado === 'Activa') {
-                        <button type="button" (click)="cambiarEstado(e, 'Cerrada'); menu.set(null)">⏹ Cerrar votación</button>
-                      }
-                      @if (e.estado === 'Cerrada') {
-                        <button type="button" (click)="cambiarEstado(e, 'Activa'); menu.set(null)">↻ Reabrir</button>
-                      }
-                      <button type="button" (click)="abrirEditar(e); menu.set(null)">✎ Editar</button>
-                      <button type="button" class="enc-menu__del" (click)="eliminar(e); menu.set(null)">🗑 Eliminar</button>
                     </div>
                   }
                 </div>
@@ -103,7 +106,9 @@
                     (click)="toggleOpcion(e, o.id)">
                     <span class="enc-opt__fill" [style.width.%]="(e.yoVote || e.estado !== 'Activa') ? o.porcentaje : 0"></span>
                     <span class="enc-opt__txt">
-                      <span class="enc-opt__box">{{ marcaOpcion(e, o.id) }}</span>
+                      @if (opcionElegida(e.id, o.id) || (e.multiplesOpciones && e.estado === 'Activa' && !e.yoVote)) {
+                        <span class="enc-opt__box">{{ marcaOpcion(e, o.id) }}</span>
+                      }
                       {{ o.texto }}
                       @if (o.yoVote) { <span class="enc-opt__me">tu voto</span> }
                     </span>
@@ -116,8 +121,8 @@
                 <p class="enc-card__novotes">▤ Aún no hay votos en esta encuesta</p>
               }
 
-              @if (e.estado === 'Activa' && !e.yoVote) {
-                <button type="button" class="btn btn--primary enc-votar" [disabled]="!puedeVotar(e)" (click)="votar(e)">Votar</button>
+              @if (puedeVotar(e)) {
+                <button type="button" class="btn btn--primary enc-votar" (click)="votar(e)">Votar</button>
               }
 
               <div class="enc-card__foot">
@@ -181,56 +186,171 @@
   </div>
 }
 
-<!-- ===== crear / editar ===== -->
+<!-- ===== crear / editar (asistente) ===== -->
 @if (form(); as f) {
   <div class="enc-overlay" (click)="form.set(null)">
-    <div class="enc-modal" (click)="$event.stopPropagation()">
-      <header><h3>{{ f.id ? 'Editar encuesta' : 'Crear encuesta' }}</h3><button type="button" (click)="form.set(null)">✕</button></header>
-
-      <label class="enc-label">Título</label>
-      <input class="enc-input" placeholder="¿Sobre qué querés preguntar?"
-        [ngModel]="f.titulo" (ngModelChange)="setForm({ titulo: $event })" />
-
-      <label class="enc-label">Descripción <em>(opcional)</em></label>
-      <textarea class="enc-input" rows="2" [ngModel]="f.descripcion" (ngModelChange)="setForm({ descripcion: $event })"></textarea>
-
-      <label class="enc-label">Categoría</label>
-      <select class="enc-input" [ngModel]="f.categoria" (ngModelChange)="setForm({ categoria: $event })">
-        @for (c of categorias; track c.value) { <option [value]="c.value">{{ c.label }}</option> }
-      </select>
-
-      <label class="enc-label">Opciones</label>
-      @for (o of f.opciones; track $index) {
-        <div class="enc-optrow">
-          <input class="enc-input" [placeholder]="'Opción ' + ($index + 1)"
-            [ngModel]="o" (ngModelChange)="setOpcion($index, $event)" />
-          @if (f.opciones.length > 2) {
-            <button type="button" (click)="quitarOpcion($index)">✕</button>
-          }
+    <div class="enc-modal enc-wiz" (click)="$event.stopPropagation()">
+      <header class="enc-wiz__head">
+        <span class="enc-wiz__logo">🗳️</span>
+        <div>
+          <h3>{{ f.id ? 'Editar encuesta' : 'Crear encuesta' }}</h3>
+          <p>Involucra a tu audiencia con encuestas interactivas</p>
         </div>
-      }
-      @if (f.opciones.length < 10) {
-        <button type="button" class="enc-addopt" (click)="agregarOpcion()">+ Agregar opción</button>
-      }
+        <button type="button" (click)="form.set(null)">✕</button>
+      </header>
 
-      <div class="enc-checks">
-        <label><input type="checkbox" [ngModel]="f.multiplesOpciones" (ngModelChange)="setForm({ multiplesOpciones: $event })" /> Permitir elegir varias opciones</label>
-        <label><input type="checkbox" [ngModel]="f.anonima" (ngModelChange)="setForm({ anonima: $event })" /> Votación anónima</label>
+      <div class="enc-steps">
+        @for (s of PASOS; track s.n) {
+          <button type="button" class="enc-step" [class.is-active]="paso() === s.n" [class.is-done]="paso() > s.n"
+            (click)="irAPaso(s.n)">
+            <span class="enc-step__dot">{{ paso() > s.n ? '✓' : s.n }}</span>
+            <span class="enc-step__lbl">{{ s.label }}</span>
+          </button>
+          @if (!$last) { <span class="enc-step__line" [class.is-done]="paso() > s.n"></span> }
+        }
       </div>
 
-      <label class="enc-label">Fecha de cierre <em>(opcional)</em></label>
-      <input class="enc-input" type="date" [ngModel]="f.cierre" (ngModelChange)="setForm({ cierre: $event })" />
+      <div class="enc-wiz__body">
+        @switch (paso()) {
+          @case (1) {
+            <div class="enc-block">
+              <h4>Tu pregunta</h4>
+              <textarea class="enc-input" rows="3" [attr.maxlength]="MAX_PREGUNTA"
+                placeholder="¿Qué querés preguntar a tu comunidad?"
+                [ngModel]="f.titulo" (ngModelChange)="setForm({ titulo: $event })"></textarea>
+              <div class="enc-meter"><div [style.width.%]="(f.titulo.length / MAX_PREGUNTA) * 100"></div></div>
+              <small class="enc-count2">{{ f.titulo.length }}/{{ MAX_PREGUNTA }}</small>
+            </div>
 
-      <label class="enc-radio">
-        <input type="checkbox" [ngModel]="f.publicar" (ngModelChange)="setForm({ publicar: $event })" />
-        Publicar ahora <small>(si lo dejás sin marcar, queda como borrador)</small>
-      </label>
+            <div class="enc-block">
+              <h4>Opciones de encuesta <span class="enc-count2">{{ f.opciones.length }}/10</span></h4>
+              @for (o of f.opciones; track $index) {
+                <div class="enc-optrow">
+                  <span class="enc-optrow__grip">⠿</span>
+                  <span class="enc-optrow__num">{{ $index + 1 }}.</span>
+                  <input class="enc-input" [placeholder]="'Opción ' + ($index + 1)"
+                    [ngModel]="o" (ngModelChange)="setOpcion($index, $event)" />
+                  @if (f.opciones.length > 2) {
+                    <button type="button" class="enc-optrow__x" (click)="quitarOpcion($index)">✕</button>
+                  }
+                </div>
+              }
+              @if (f.opciones.length < 10) {
+                <button type="button" class="enc-addopt" (click)="agregarOpcion()">+ Agregar opción</button>
+              }
+            </div>
+          }
 
-      <footer>
-        <button type="button" class="btn btn--ghost" (click)="form.set(null)">Cancelar</button>
-        <button type="button" class="btn btn--primary" [disabled]="!formValido()" (click)="guardar()">
-          {{ f.id ? 'Guardar' : (f.publicar ? 'Crear y publicar' : 'Guardar borrador') }}
-        </button>
+          @case (2) {
+            <div class="enc-block">
+              <h4>⏱ Duración</h4>
+              <div class="enc-chips">
+                @for (d of DURACIONES; track d.k) {
+                  <button type="button" class="enc-chip" [class.is-active]="f.duracion === d.k"
+                    (click)="setDuracion(d.k)">{{ d.label }}</button>
+                }
+              </div>
+              @if (f.duracion === 'custom') {
+                <input class="enc-input" type="date" style="margin-top:10px"
+                  [ngModel]="f.cierre" (ngModelChange)="setForm({ cierre: $event })" />
+              } @else {
+                <p class="enc-hint">📅 {{ f.cierre ? ('Termina el ' + (f.cierre | date:'d MMM y')) : 'Sin fecha de cierre' }}</p>
+              }
+            </div>
+
+            <div class="enc-block">
+              <h4>🗳️ Modo de votación</h4>
+              @for (m of MODOS_VOTO; track m.k) {
+                <button type="button" class="enc-radio2" [class.is-sel]="f.modoVotacion === m.k"
+                  (click)="setForm({ modoVotacion: m.k })">
+                  <span class="enc-radio2__r"></span>
+                  <span class="enc-radio2__t"><b>{{ m.icon }} {{ m.label }}</b><small>{{ m.desc }}</small></span>
+                </button>
+              }
+            </div>
+
+            <div class="enc-block">
+              <h4>Categoría</h4>
+              <select class="enc-input" [ngModel]="f.categoria" (ngModelChange)="setForm({ categoria: $event })">
+                @for (c of categorias; track c.value) { <option [value]="c.value">{{ c.icon }} {{ c.label }}</option> }
+              </select>
+            </div>
+
+            <div class="enc-block">
+              <h4>Descripción <span class="enc-count2">opcional</span></h4>
+              <textarea class="enc-input" rows="3" placeholder="Contexto adicional para los votantes…"
+                [ngModel]="f.descripcion" (ngModelChange)="setForm({ descripcion: $event })"></textarea>
+            </div>
+
+            <div class="enc-block">
+              <h4>Preferencias</h4>
+              <label class="enc-toggle">
+                <input type="checkbox" [ngModel]="f.multiplesOpciones" (ngModelChange)="setForm({ multiplesOpciones: $event })" />
+                <span><b>Selección múltiple</b><small>Los votantes pueden elegir más de una opción</small></span>
+              </label>
+              <label class="enc-toggle">
+                <input type="checkbox" [ngModel]="f.anonima" (ngModelChange)="setForm({ anonima: $event })" />
+                <span><b>Votación anónima</b><small>No se muestran los nombres de quienes votaron</small></span>
+              </label>
+            </div>
+          }
+
+          @case (3) {
+            <div class="enc-preview">
+              <div class="enc-preview__bar">
+                <span>VISTA PREVIA</span>
+                <button type="button" (click)="irAPaso(1)">✎ Editar</button>
+              </div>
+              <b class="enc-preview__q">{{ f.titulo || 'Sin pregunta' }}</b>
+              @if (f.descripcion) { <p class="enc-preview__d">{{ f.descripcion }}</p> }
+              <div class="enc-preview__opts">
+                @for (o of f.opciones; track $index) {
+                  @if (o.trim()) {
+                    <div class="enc-preview__opt">
+                      <span class="enc-preview__dot" [style.background]="dotColor($index)"></span>
+                      <span>{{ o }}</span>
+                      <span class="enc-preview__radio"></span>
+                    </div>
+                  }
+                }
+              </div>
+              <div class="enc-preview__meta">
+                <span>📄 {{ opcionesLlenas(f) }} opciones</span>
+                <span>📅 {{ diasDuracion(f) }}</span>
+                <span>🏙 {{ labelModo(f.modoVotacion) }}</span>
+                <span>🔔 Nueva encuesta: {{ f.titulo || '—' }}</span>
+              </div>
+            </div>
+
+            <div class="enc-block">
+              <h4>Opciones de publicación</h4>
+              <button type="button" class="enc-radio2" [class.is-sel]="f.publicar" (click)="setForm({ publicar: true })">
+                <span class="enc-radio2__r"></span>
+                <span class="enc-radio2__t"><b>🚀 Publicar ahora</b><small>La encuesta se publicará y se notificará a los residentes</small></span>
+              </button>
+              <button type="button" class="enc-radio2" [class.is-sel]="!f.publicar" (click)="setForm({ publicar: false })">
+                <span class="enc-radio2__r"></span>
+                <span class="enc-radio2__t"><b>📄 Guardar borrador</b><small>La encuesta no será visible para los residentes</small></span>
+              </button>
+            </div>
+          }
+        }
+      </div>
+
+      <footer class="enc-wiz__foot">
+        @if (paso() === 1) {
+          <button type="button" class="btn btn--ghost" (click)="form.set(null)">Cancelar</button>
+        } @else {
+          <button type="button" class="btn btn--ghost" (click)="retroceder()">‹ Atrás</button>
+        }
+        <span class="enc-wiz__sp"></span>
+        @if (paso() < 3) {
+          <button type="button" class="btn btn--primary" [disabled]="paso() === 1 && !paso1Valido()" (click)="avanzar()">Siguiente ›</button>
+        } @else {
+          <button type="button" class="btn btn--primary" [disabled]="!formValido()" (click)="guardar()">
+            {{ f.publicar ? '🚀 Publicar ahora' : '📄 Guardar borrador' }}
+          </button>
+        }
       </footer>
     </div>
   </div>
