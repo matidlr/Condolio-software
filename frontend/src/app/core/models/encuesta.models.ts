@@ -1,5 +1,6 @@
 export type EstadoEncuesta = 'Borrador' | 'Activa' | 'Cerrada';
-export type CategoriaEncuesta = 'General' | 'Mantenimiento' | 'Evento';
+export type CategoriaEncuesta =
+  | 'General' | 'Mantenimiento' | 'Evento' | 'Reglas' | 'Finanzas' | 'Emergencia';
 export type ModoVotacion = 'PorResidente' | 'PorUnidad' | 'PonderadoPorAlicuota';
 export type DuracionPreset = '1d' | '3d' | '1w' | '2w' | 'custom';
 
@@ -23,9 +24,12 @@ export const DURACIONES: { k: DuracionPreset; label: string; dias: number | null
 ];
 
 export const CATEGORIAS_ENCUESTA: { value: CategoriaEncuesta; label: string; icon: string }[] = [
-  { value: 'General', label: 'General', icon: '🌐' },
   { value: 'Mantenimiento', label: 'Mantenimiento', icon: '🔧' },
   { value: 'Evento', label: 'Eventos', icon: '📅' },
+  { value: 'Reglas', label: 'Reglas', icon: '📋' },
+  { value: 'Finanzas', label: 'Finanzas', icon: '💳' },
+  { value: 'General', label: 'General', icon: '🌐' },
+  { value: 'Emergencia', label: 'Emergencia', icon: '⚠️' },
 ];
 
 export const LABEL_CAT_ENCUESTA: Record<CategoriaEncuesta, string> =

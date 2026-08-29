@@ -40,6 +40,7 @@ export class EncuestasComponent {
   busqueda = signal('');
   filtroEstado = signal<FiltroEstado>('todas');
   filtroCategoria = signal<CategoriaEncuesta | null>(null);
+  catAbierto = signal(true);
   menu = signal<string | null>(null);
 
   // selección de voto por encuesta (ids de opción)
@@ -69,6 +70,15 @@ export class EncuestasComponent {
       (!cat || e.categoria === cat) &&
       (!q || e.titulo.toLowerCase().includes(q) || e.descripcion.toLowerCase().includes(q)));
   });
+
+  hayFiltros = computed(() =>
+    this.filtroEstado() !== 'todas' || this.filtroCategoria() !== null || this.busqueda().trim() !== '');
+
+  limpiarFiltros(): void {
+    this.filtroEstado.set('todas');
+    this.filtroCategoria.set(null);
+    this.busqueda.set('');
+  }
 
   grupos = computed<{ titulo: string; activo: boolean; items: Encuesta[] }[]>(() => {
     const list = this.filtradas();

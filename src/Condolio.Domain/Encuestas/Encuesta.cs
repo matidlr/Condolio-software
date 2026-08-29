@@ -14,6 +14,9 @@ public enum CategoriaEncuesta
     General = 0,
     Mantenimiento = 1,
     Evento = 2,
+    Reglas = 3,
+    Finanzas = 4,
+    Emergencia = 5,
 }
 
 public enum ModoVotacion

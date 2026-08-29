@@ -20,12 +20,21 @@
         🔒 Cerrado <span class="enc-count">{{ stats().cerradas }}</span>
       </button>
 
-      <p class="enc-side__label">Por categoría</p>
-      @for (c of categorias; track c.value) {
-        <button type="button" class="enc-nav" [class.is-active]="filtroCategoria() === c.value"
-          (click)="filtroCategoria.set(filtroCategoria() === c.value ? null : c.value)">
-          {{ c.icon }} {{ c.label }}
-        </button>
+      <button type="button" class="enc-side__label enc-side__label--btn" (click)="catAbierto.set(!catAbierto())">
+        Por categoría <span>{{ catAbierto() ? '⌄' : '›' }}</span>
+      </button>
+      @if (catAbierto()) {
+        @for (c of categorias; track c.value) {
+          <button type="button" class="enc-nav" [class.is-active]="filtroCategoria() === c.value"
+            (click)="filtroCategoria.set(filtroCategoria() === c.value ? null : c.value)">
+            {{ c.icon }} {{ c.label }}
+            <span class="enc-check">{{ filtroCategoria() === c.value ? '✓' : '' }}</span>
+          </button>
+        }
+      }
+
+      @if (hayFiltros()) {
+        <button type="button" class="enc-clear" (click)="limpiarFiltros()">✕ Limpiar filtros</button>
       }
 
       <div class="enc-stats">
