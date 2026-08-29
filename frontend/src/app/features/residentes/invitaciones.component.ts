@@ -59,7 +59,10 @@ export class InvitacionesComponent {
   }
 
   private cargar(id: string): void {
-    this.api.invitaciones(id).subscribe((l) => this.todas.set(l));
+    this.api.invitaciones(id).subscribe((l) => {
+      this.todas.set(l);
+      this.api.pendientes.set(l.filter((i) => i.estado === 'Pendiente').length);
+    });
     this.unidadesApi.listar(id).subscribe((u) => this.unidades.set(u));
   }
 

@@ -433,6 +433,25 @@
 .rd-info dd { margin: 0; }
 .rd-warn { color: #a06b00; }
 
+.rd-inc-toggle {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; margin-top: 14px; padding: 10px 4px;
+  border: none; border-top: 1px solid var(--c-border); background: none;
+  font-size: 0.85rem; font-weight: 600; color: var(--c-text-muted); cursor: pointer;
+}
+.rd-inc-caret { font-size: 0.7rem; }
+.rd-inc-body { padding: 4px 0 2px; }
+.rd-inc-item { padding: 8px 0; border-top: 1px solid var(--c-border); }
+.rd-inc-item:first-child { border-top: none; }
+.rd-inc-item__top { display: flex; align-items: center; gap: 8px; }
+.rd-inc-item__top b { font-size: 0.88rem; }
+.rd-inc-item .rd-muted { margin: 2px 0 0; font-size: 0.8rem; }
+.rd-inc-sev { font-size: 0.72rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; }
+.rd-inc-sev--baja { background: #e6edf7; color: var(--c-slate-700); }
+.rd-inc-sev--media { background: #fef3c7; color: #92400e; }
+.rd-inc-sev--alta { background: #fee2e2; color: #b91c1c; }
+.rd-inc-sev--critica { background: #b91c1c; color: #fff; }
+
 @media (max-width: 760px) {
   .r-invite-grid { grid-template-columns: 1fr; }
   .r-empty__cards { grid-template-columns: 1fr; }

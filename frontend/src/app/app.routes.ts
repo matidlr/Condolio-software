@@ -68,6 +68,12 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/residentes/invitaciones.component').then((m) => m.InvitacionesComponent),
       },
+      { path: 'tickets', pathMatch: 'full', redirectTo: 'tickets/lista' },
+      {
+        path: 'tickets/lista',
+        loadComponent: () =>
+          import('./features/tickets/tickets-lista.component').then((m) => m.TicketsListaComponent),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

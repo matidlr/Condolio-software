@@ -1,0 +1,159 @@
+<section class="tk">
+  <header class="tk-head">
+    <h1>Reportar un Problema</h1>
+    <p>Contanos sobre cualquier problema que estés experimentando</p>
+  </header>
+
+  <div class="tk-bar">
+    <div class="tk-tabs">
+      <button type="button" [class.is-active]="vista() === 'activos'" (click)="vista.set('activos')">
+        📥 Activos <b>{{ activos() }}</b>
+      </button>
+      <button type="button" [class.is-active]="vista() === 'archivo'" (click)="vista.set('archivo')">
+        🗄 Archivo <b>{{ archivados() }}</b>
+      </button>
+    </div>
+    <button type="button" class="btn btn--primary" (click)="nuevoAbierto.set(true)">+ Nuevo Ticket</button>
+  </div>
+
+  <div class="tk-toolbar">
+    <div class="tk-search">
+      <span>⌕</span>
+      <input type="search" placeholder="Buscar tickets…"
+        [value]="busqueda()" (input)="busqueda.set($any($event.target).value)" />
+    </div>
+    <button type="button" class="tk-ghost" disabled>▽ Agregar filtro</button>
+    <button type="button" class="tk-ghost" disabled>🔖 Vistas guardadas</button>
+    <button type="button" class="tk-ghost" (click)="recargar()">⟳ Actualizar</button>
+  </div>
+
+  @if (cargando()) {
+    <p class="tk-loading">Cargando…</p>
+  } @else if (visibles().length === 0) {
+    <div class="tk-empty">
+      <div class="tk-empty__icon">🎫</div>
+      <h2>{{ vista() === 'archivo' ? 'No hay tickets archivados' : 'No hay tickets activos' }}</h2>
+      <p>Los reclamos escalados desde una incidencia y los tickets que crees manualmente van a aparecer acá.</p>
+      @if (vista() === 'activos') {
+        <button type="button" class="btn btn--primary" (click)="nuevoAbierto.set(true)">Crear el primer ticket</button>
+      }
+    </div>
+  } @else {
+    <div class="tk-tablewrap">
+      <table class="tk-table">
+        <thead>
+          <tr>
+            <th class="tk-c-check"><input type="checkbox" [checked]="todasSel()" (change)="toggleTodas()" /></th>
+            <th>Categoría</th><th>Estado</th><th>Prioridad</th><th>Descripción</th>
+            <th>Reportado por</th><th>Reportado en</th><th>Tiempo en estado</th><th>Asignado a</th><th>Unidad</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (t of visibles(); track t.id) {
+            <tr [class.is-sel]="seleccion().has(t.id)">
+              <td class="tk-c-check"><input type="checkbox" [checked]="seleccion().has(t.id)" (change)="toggleUno(t.id)" /></td>
+              <td class="tk-cat-cell">
+                <span class="tk-cat-ic" [innerHTML]="icono(t.categoria)"></span>
+                {{ labelCategoria[t.categoria] }}
+              </td>
+              <td><span class="tk-pill tk-pill--{{ t.estado.toLowerCase() }}">{{ labelEstado[t.estado] }}</span></td>
+              <td><span class="tk-prio tk-prio--{{ t.prioridad.toLowerCase() }}">{{ labelPrioridad[t.prioridad] }}</span></td>
+              <td class="tk-desc">{{ t.titulo ? t.titulo + ' — ' : '' }}{{ t.descripcion }}</td>
+              <td>{{ t.reportadoPor }}</td>
+              <td>{{ fechaCorta(t.reportadoUtc) }}</td>
+              <td>
+                <span class="tk-dur" [class.is-warn]="vencido(t)">
+                  @if (vencido(t)) { ⚠ }{{ desde(t.estadoDesdeUtc) }}
+                </span>
+              </td>
+              <td>{{ t.asignadoA || 'Por asignar' }}</td>
+              <td>{{ t.unidadNombre || '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  @if (seleccion().size > 0) {
+    <div class="tk-bulk">
+      <span class="tk-bulk__count">{{ seleccion().size }}</span> seleccionados
+      <button type="button" class="tk-bulk__x" (click)="limpiarSel()">✕</button>
+      <span class="tk-bulk__sep"></span>
+      <button type="button" (click)="abrirModal('estado')">⚑ Cambiar estado</button>
+      <button type="button" (click)="abrirModal('asignar')">👤 Asignar</button>
+      <button type="button" (click)="abrirModal('prioridad')">⚠ Cambiar prioridad</button>
+      <button type="button" class="tk-bulk__danger" (click)="abrirModal('eliminar')">🗑 Eliminar</button>
+    </div>
+  }
+</section>
+
+@if (nuevoAbierto()) {
+  <app-nuevo-ticket (cerrar)="nuevoAbierto.set(false)" (creado)="onCreado()" />
+}
+
+@if (modal() === 'estado') {
+  <div class="tk-overlay" (click)="modal.set(null)">
+    <div class="tk-dialog" (click)="$event.stopPropagation()">
+      <header><h3>Cambiar Estado</h3><button type="button" (click)="modal.set(null)">✕</button></header>
+      <label class="tk-label">Estado</label>
+      <select class="tk-input" [ngModel]="nuevoEstado()" (ngModelChange)="nuevoEstado.set($event)">
+        @for (e of estados; track e.value) { <option [value]="e.value">{{ e.label }}</option> }
+      </select>
+      <footer>
+        <button type="button" class="btn btn--ghost" (click)="modal.set(null)">Cancelar</button>
+        <button type="button" class="btn btn--primary" [disabled]="aplicando()" (click)="aplicarEstado()">Confirmar</button>
+      </footer>
+    </div>
+  </div>
+}
+
+@if (modal() === 'prioridad') {
+  <div class="tk-overlay" (click)="modal.set(null)">
+    <div class="tk-dialog" (click)="$event.stopPropagation()">
+      <header><h3>Cambiar Prioridad</h3><button type="button" (click)="modal.set(null)">✕</button></header>
+      <label class="tk-label">Prioridad</label>
+      <select class="tk-input" [ngModel]="nuevaPrioridad()" (ngModelChange)="nuevaPrioridad.set($event)">
+        @for (p of prioridades; track p.value) { <option [value]="p.value">{{ p.label }}</option> }
+      </select>
+      <footer>
+        <button type="button" class="btn btn--ghost" (click)="modal.set(null)">Cancelar</button>
+        <button type="button" class="btn btn--primary" [disabled]="aplicando()" (click)="aplicarPrioridad()">Confirmar</button>
+      </footer>
+    </div>
+  </div>
+}
+
+@if (modal() === 'asignar') {
+  <div class="tk-overlay" (click)="modal.set(null)">
+    <div class="tk-dialog" (click)="$event.stopPropagation()">
+      <header><h3>Asignar</h3><button type="button" (click)="modal.set(null)">✕</button></header>
+      <label class="tk-label">Asignado a</label>
+      <select class="tk-input" [ngModel]="nuevoAsignado()" (ngModelChange)="nuevoAsignado.set($event)">
+        <option value="">Por asignar</option>
+        @for (a of asignables(); track a.id) { <option [value]="a.id">{{ a.nombre }}</option> }
+      </select>
+      <footer>
+        <button type="button" class="btn btn--ghost" (click)="modal.set(null)">Cancelar</button>
+        <button type="button" class="btn btn--primary" [disabled]="aplicando()" (click)="aplicarAsignacion()">Confirmar</button>
+      </footer>
+    </div>
+  </div>
+}
+
+@if (modal() === 'eliminar') {
+  <div class="tk-overlay" (click)="modal.set(null)">
+    <div class="tk-dialog" (click)="$event.stopPropagation()">
+      <header><h3>Eliminar Reportes</h3><button type="button" (click)="modal.set(null)">✕</button></header>
+      <p class="tk-dialog__text">
+        ¿Estás seguro de que querés eliminar {{ seleccion().size }} reporte(s)? Esta acción no se puede deshacer.
+      </p>
+      <footer>
+        <button type="button" class="btn btn--ghost" (click)="modal.set(null)">Cancelar</button>
+        <button type="button" class="btn btn--danger" [disabled]="aplicando()" (click)="aplicarEliminar()">
+          Eliminar {{ seleccion().size }} reporte(s)
+        </button>
+      </footer>
+    </div>
+  </div>
+}

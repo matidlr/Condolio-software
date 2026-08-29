@@ -1,4 +1,5 @@
 using Condolio.Application.Common;
+using Condolio.Application.Tickets;
 using Condolio.Application.Unidades;
 using Condolio.Domain.Unidades;
 using Condolio.Infrastructure.Persistence;
@@ -11,12 +12,14 @@ public class IncidenciaUnidadService : IIncidenciaUnidadService
     private readonly CondolioDbContext _db;
     private readonly ITenantContext _tenant;
     private readonly IActividadUnidadService _actividad;
+    private readonly ITicketService _tickets;
 
-    public IncidenciaUnidadService(CondolioDbContext db, ITenantContext tenant, IActividadUnidadService actividad)
+    public IncidenciaUnidadService(CondolioDbContext db, ITenantContext tenant, IActividadUnidadService actividad, ITicketService tickets)
     {
         _db = db;
         _tenant = tenant;
         _actividad = actividad;
+        _tickets = tickets;
     }
 
     public async Task<Result<IReadOnlyList<IncidenciaUnidadDto>>> ListarAsync(Guid consorcioId, Guid unidadId, CancellationToken ct = default)
@@ -147,12 +150,16 @@ public class IncidenciaUnidadService : IIncidenciaUnidadService
         if (incidencia is null) return Result.Fail("Incidencia no encontrada.");
         if (incidencia.EscaladaUtc is not null) return Result.Fail("La incidencia ya fue escalada a ticket.");
 
-        // TODO: crear el Ticket real cuando exista el módulo Tickets y vincularlo.
         incidencia.EscaladaUtc = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
 
+        var ticket = await _tickets.CrearDesdeIncidenciaAsync(
+            consorcioId, unidadId, incidenciaId,
+            incidencia.Titulo, incidencia.Descripcion, incidencia.Categoria, incidencia.Severidad, ct);
+
+        var detalle = ticket.Exito ? $"Ticket #{ticket.Valor}" : "Incidencia escalada a ticket";
         await _actividad.RegistrarAsync(unidadId, TipoActividad.IncidenciaEditada,
-            "Incidencia escalada a ticket", incidencia.Titulo ?? incidencia.Categoria.ToString(), ct);
+            detalle, incidencia.Titulo ?? incidencia.Categoria.ToString(), ct);
         return Result.Ok();
     }
 

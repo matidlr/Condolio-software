@@ -5,6 +5,7 @@ using Condolio.Domain.Common;
 using Condolio.Domain.Consorcios;
 using Condolio.Domain.Residentes;
 using Condolio.Domain.Tenancy;
+using Condolio.Domain.Tickets;
 using Condolio.Domain.Unidades;
 using Condolio.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -38,6 +39,8 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<IncidenciaComentario> IncidenciaComentarios => Set<IncidenciaComentario>();
     public DbSet<Adjunto> Adjuntos => Set<Adjunto>();
     public DbSet<Invitacion> Invitaciones => Set<Invitacion>();
+    public DbSet<Ticket> Tickets => Set<Ticket>();
+    public DbSet<TicketComentario> TicketComentarios => Set<TicketComentario>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -160,6 +163,30 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
             e.HasIndex(x => x.Token).IsUnique();
             e.HasIndex(x => new { x.AdministradorId, x.ConsorcioId, x.Estado });
             e.HasOne(x => x.Consorcio).WithMany().HasForeignKey(x => x.ConsorcioId);
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
+        });
+
+        builder.Entity<Ticket>(e =>
+        {
+            e.Property(x => x.Titulo).HasMaxLength(200);
+            e.Property(x => x.Descripcion).HasMaxLength(4000).IsRequired();
+            e.Property(x => x.Etiquetas).HasMaxLength(500);
+            e.Property(x => x.Ubicacion).HasMaxLength(200);
+            e.Property(x => x.ReportadoPorUsuarioId).HasMaxLength(450);
+            e.Property(x => x.ReportadoPorNombre).HasMaxLength(200);
+            e.Property(x => x.AsignadoAUsuarioId).HasMaxLength(450);
+            e.Property(x => x.AsignadoANombre).HasMaxLength(200);
+            e.HasIndex(x => new { x.AdministradorId, x.ConsorcioId, x.Estado });
+            e.HasIndex(x => new { x.ConsorcioId, x.Numero }).IsUnique();
+            e.HasMany(x => x.Comentarios).WithOne(x => x.Ticket).HasForeignKey(x => x.TicketId);
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
+        });
+
+        builder.Entity<TicketComentario>(e =>
+        {
+            e.Property(x => x.Texto).HasMaxLength(2000).IsRequired();
+            e.Property(x => x.AutorUsuarioId).HasMaxLength(450).IsRequired();
+            e.HasIndex(x => new { x.AdministradorId, x.TicketId });
             e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
         });
     }

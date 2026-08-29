@@ -102,6 +102,7 @@ public class AdjuntoService : IAdjuntoService
     {
         TipoAdjuntoOwner.Nota => _db.UnidadNotas.AnyAsync(n => n.Id == ownerId, ct),
         TipoAdjuntoOwner.Incidencia => _db.UnidadIncidencias.AnyAsync(i => i.Id == ownerId, ct),
+        TipoAdjuntoOwner.Ticket => _db.Tickets.AnyAsync(t => t.Id == ownerId, ct),
         _ => Task.FromResult(false),
     };
 }

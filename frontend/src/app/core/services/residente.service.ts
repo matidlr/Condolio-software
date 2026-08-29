@@ -1,6 +1,6 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   CrearInvitacion, Directorio, Invitacion, PersonaDetalle, ResidenteSinUnidad,
@@ -9,6 +9,16 @@ import {
 @Injectable({ providedIn: 'root' })
 export class ResidenteService {
   private http = inject(HttpClient);
+
+  /** Cantidad de invitaciones pendientes del consorcio activo (para el badge del menú). */
+  readonly pendientes = signal(0);
+
+  refrescarPendientes(consorcioId: string): void {
+    this.invitaciones(consorcioId).subscribe({
+      next: (list) => this.pendientes.set(list.filter((i) => i.estado === 'Pendiente').length),
+      error: () => this.pendientes.set(0),
+    });
+  }
 
   private base(consorcioId: string): string {
     return `${environment.apiUrl}/consorcios/${consorcioId}/residentes`;

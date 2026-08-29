@@ -1,0 +1,119 @@
+<div class="tk-overlay" (click)="cerrar.emit()">
+  <div class="tk-modal" (click)="$event.stopPropagation()">
+    <header class="tk-modal__head">
+      <h2>🐞 Nuevo Ticket</h2>
+      <button type="button" class="tk-x" (click)="cerrar.emit()" aria-label="Cerrar">✕</button>
+    </header>
+
+    <div class="tk-modal__body">
+      <label class="tk-label">Categoría</label>
+      <div class="tk-cats">
+        @for (c of categorias; track c.value) {
+          <button type="button" class="tk-cat" [class.is-sel]="categoria() === c.value"
+            (click)="categoria.set(c.value)">
+            <span class="tk-cat__icon" [innerHTML]="icono(c.value)"></span>
+            <span>{{ c.label }}</span>
+          </button>
+        }
+      </div>
+
+      <div class="tk-row3">
+        <div>
+          <label class="tk-label">Prioridad</label>
+          <select [ngModel]="prioridad()" (ngModelChange)="prioridad.set($event)" class="tk-input">
+            @for (p of prioridades; track p.value) {
+              <option [value]="p.value">{{ p.label }}</option>
+            }
+          </select>
+        </div>
+        <div>
+          <label class="tk-label">Asignar A <span class="tk-opt">(opcional)</span></label>
+          <select [ngModel]="asignadoA()" (ngModelChange)="asignadoA.set($event)" class="tk-input">
+            <option value="">Seleccionar…</option>
+            @for (a of asignables(); track a.id) {
+              <option [value]="a.id">{{ a.nombre }}</option>
+            }
+          </select>
+        </div>
+        <div>
+          <label class="tk-label">Fecha Límite <span class="tk-opt">(opcional)</span></label>
+          <input type="date" [ngModel]="fechaLimite()" (ngModelChange)="fechaLimite.set($event)" class="tk-input" />
+        </div>
+      </div>
+
+      <div>
+        <label class="tk-label">Unidad <span class="tk-opt">(opcional)</span></label>
+        <select [ngModel]="unidadId()" (ngModelChange)="unidadId.set($event)" class="tk-input">
+          <option value="">Sin unidad</option>
+          @for (u of unidades(); track u.id) {
+            <option [value]="u.id">{{ u.nombre }}</option>
+          }
+        </select>
+      </div>
+
+      <div>
+        <label class="tk-label">Descripción</label>
+        <textarea rows="4" class="tk-input" placeholder="Por favor describe el problema…"
+          [ngModel]="descripcion()" (ngModelChange)="descripcion.set($event)"></textarea>
+      </div>
+
+      <div class="tk-row2">
+        <div>
+          <label class="tk-label">Etiquetas <span class="tk-opt">(opcional)</span></label>
+          <div class="tk-tags-input">
+            <input class="tk-input" placeholder="Ingrese nombre de etiqueta"
+              [ngModel]="etiquetaBorrador()" (ngModelChange)="etiquetaBorrador.set($event)"
+              (keydown.enter)="$event.preventDefault(); agregarEtiqueta()" />
+            <button type="button" class="tk-add" (click)="agregarEtiqueta()">+</button>
+          </div>
+          @if (etiquetas().length) {
+            <div class="tk-tags">
+              @for (t of etiquetas(); track t) {
+                <span class="tk-tag">{{ t }} <button type="button" (click)="quitarEtiqueta(t)">✕</button></span>
+              }
+            </div>
+          }
+        </div>
+        <div>
+          <label class="tk-label">Ubicación <span class="tk-opt">(opcional)</span></label>
+          <input class="tk-input" placeholder="Ingrese la ubicación específica (ej: Área común)"
+            [ngModel]="ubicacion()" (ngModelChange)="ubicacion.set($event)" />
+        </div>
+      </div>
+
+      <div>
+        <label class="tk-label">Agregar fotos y videos ({{ archivos().length }}/7)</label>
+        <label class="tk-drop" (dragover)="$event.preventDefault()" (drop)="onDrop($event)">
+          <input type="file" hidden multiple accept="image/*,video/mp4,video/quicktime,video/webm"
+            (change)="onArchivos($event)" />
+          <span class="tk-drop__icon">⬆</span>
+          <b>Haz clic para subir fotos o videos</b>
+          <span>o arrastrá y soltá archivos acá</span>
+          <span class="tk-drop__hint">Máx. 7 archivos. Imágenes: 5MB. Videos (MP4, MOV, WebM): 500MB</span>
+        </label>
+
+        @if (archivos().length) {
+          <div class="tk-files">
+            @for (f of archivos(); track f.name) {
+              <div class="tk-file">
+                @if (esImagen(f)) {
+                  <img [src]="vistaPrevia(f)" alt="" />
+                } @else {
+                  <span class="tk-file__doc">🎬</span>
+                }
+                <button type="button" class="tk-file__x" (click)="quitarArchivo(f)">✕</button>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <footer class="tk-modal__foot">
+      <button type="button" class="btn btn--ghost" (click)="cerrar.emit()">Cancelar</button>
+      <button type="button" class="btn btn--primary" [disabled]="!puedeEnviar()" (click)="enviar()">
+        {{ enviando() ? 'Enviando…' : 'Enviar' }}
+      </button>
+    </footer>
+  </div>
+</div>

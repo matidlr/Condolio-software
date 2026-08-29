@@ -1,8 +1,10 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { AuthService } from '../core/services/auth.service';
 import { ConsorcioService } from '../core/services/consorcio.service';
+import { ResidenteService } from '../core/services/residente.service';
+import { TicketService } from '../core/services/ticket.service';
 
 interface NavHijo {
   label: string;
@@ -27,6 +29,7 @@ const ICONOS = {
   wallet: '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M16 14h2"/>',
   chat: '<path d="M4 5h16v11H9l-5 4z"/>',
   folder: '<path d="M3 6h6l2 2h10v11H3z"/>',
+  ticket: '<path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4z"/><path d="M14 5v14" stroke-dasharray="2 2"/>',
 } as const;
 
 @Component({
@@ -41,6 +44,8 @@ export class AdminShellComponent {
   private router = inject(Router);
   private sanitizer = inject(DomSanitizer);
   consorcios = inject(ConsorcioService);
+  private residentes = inject(ResidenteService);
+  private ticketsApi = inject(TicketService);
 
   colapsado = signal(false);
   menuAbierto = signal(false);
@@ -50,22 +55,34 @@ export class AdminShellComponent {
     this.nombre().split(' ').map((p) => p[0] ?? '').slice(0, 2).join('').toUpperCase() || 'AD',
   );
 
-  readonly nav: NavItem[] = [
-    { label: 'Panel', ruta: '/panel/inicio', icon: 'grid', disponible: true },
-    { label: 'Unidades', ruta: '/panel/unidades', icon: 'building', disponible: true },
-    {
-      label: 'Residentes', icon: 'users', disponible: true,
-      hijos: [
-        { label: 'Directorio', ruta: '/panel/residentes/directorio', disponible: true },
-        { label: 'Por asignar', ruta: '/panel/residentes/por-asignar', disponible: true },
-        { label: 'Invitaciones', ruta: '/panel/residentes/invitaciones', disponible: true },
-      ],
-    },
-    { label: 'Expensas', ruta: '/panel/expensas', icon: 'receipt', disponible: false },
-    { label: 'Gastos', ruta: '/panel/gastos', icon: 'wallet', disponible: false },
-    { label: 'Reclamos', ruta: '/panel/reclamos', icon: 'chat', disponible: false },
-    { label: 'Documentos', ruta: '/panel/documentos', icon: 'folder', disponible: false },
-  ];
+  readonly nav = computed<NavItem[]>(() => {
+    const pend = this.residentes.pendientes();
+    const tks = this.ticketsApi.activos();
+    return [
+      { label: 'Panel', ruta: '/panel/inicio', icon: 'grid', disponible: true },
+      { label: 'Unidades', ruta: '/panel/unidades', icon: 'building', disponible: true },
+      {
+        label: 'Residentes', icon: 'users', disponible: true,
+        hijos: [
+          { label: 'Directorio', ruta: '/panel/residentes/directorio', disponible: true },
+          { label: 'Por asignar', ruta: '/panel/residentes/por-asignar', disponible: true },
+          { label: 'Invitaciones', ruta: '/panel/residentes/invitaciones', disponible: true, badge: pend || undefined },
+        ],
+      },
+      {
+        label: 'Tickets', icon: 'ticket', disponible: true,
+        hijos: [
+          { label: 'Lista', ruta: '/panel/tickets/lista', disponible: true, badge: tks || undefined },
+          { label: 'Panel', ruta: '/panel/tickets/panel', disponible: false },
+          { label: 'Métricas', ruta: '/panel/tickets/metricas', disponible: false },
+        ],
+      },
+      { label: 'Expensas', ruta: '/panel/expensas', icon: 'receipt', disponible: false },
+      { label: 'Gastos', ruta: '/panel/gastos', icon: 'wallet', disponible: false },
+      { label: 'Reclamos', ruta: '/panel/reclamos', icon: 'chat', disponible: false },
+      { label: 'Documentos', ruta: '/panel/documentos', icon: 'folder', disponible: false },
+    ];
+  });
 
   gruposAbiertos = signal<Set<string>>(new Set());
 
@@ -84,6 +101,16 @@ export class AdminShellComponent {
       this.iconoCache.set(nombre, this.sanitizer.bypassSecurityTrustHtml(svg));
     }
     return this.iconoCache.get(nombre)!;
+  }
+
+  constructor() {
+    effect(() => {
+      const id = this.consorcios.activoId();
+      if (id) {
+        this.residentes.refrescarPendientes(id);
+        this.ticketsApi.refrescarActivos(id);
+      }
+    });
   }
 
   ngOnInit(): void {

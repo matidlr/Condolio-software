@@ -6,7 +6,7 @@
     </a>
 
     <nav class="shell__nav">
-      @for (item of nav; track item.label) {
+      @for (item of nav(); track item.label) {
         @if (item.hijos) {
           <button type="button" class="shell__nav-item shell__nav-group"
             [class.is-open]="gruposAbiertos().has(item.label)" (click)="toggleGrupo(item.label)">

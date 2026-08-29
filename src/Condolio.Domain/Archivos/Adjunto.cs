@@ -6,9 +6,10 @@ public enum TipoAdjuntoOwner
 {
     Nota = 0,
     Incidencia = 1,
+    Ticket = 2,
 }
 
-/// <summary>Archivo adjunto (imagen o PDF) asociado a una nota o incidencia.</summary>
+/// <summary>Archivo adjunto (imagen, video o PDF) asociado a una nota, incidencia o ticket.</summary>
 public class Adjunto : Entity, ITenantOwned
 {
     public Guid AdministradorId { get; set; }

@@ -1,12 +1,14 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { forkJoin } from 'rxjs';
 import { ConsorcioService } from '../../core/services/consorcio.service';
 import { ResidenteService } from '../../core/services/residente.service';
 import { UnidadService } from '../../core/services/unidad.service';
+import { IncidenciaUnidadService } from '../../core/services/incidencia-unidad.service';
 import { ToastService } from '../../core/services/toast.service';
 import { Directorio, PersonaDetalle, PersonaUnidadRef, Residente } from '../../core/models/residente.models';
-import { RolUnidad, Unidad } from '../../core/models/consorcio.models';
+import { IncidenciaUnidad, LABEL_CATEGORIA, RolUnidad, Unidad } from '../../core/models/consorcio.models';
 import { InvitarResidenteComponent } from './invitar-residente.component';
 import { AyudaPanelComponent } from '../../shared/ayuda-panel.component';
 
@@ -25,6 +27,7 @@ export class DirectorioComponent {
   consorcios = inject(ConsorcioService);
   private api = inject(ResidenteService);
   private unidadesApi = inject(UnidadService);
+  private incidenciasApi = inject(IncidenciaUnidadService);
 
   data = signal<Directorio | null>(null);
   cargando = signal(true);
@@ -42,6 +45,10 @@ export class DirectorioComponent {
   agregandoUnidad = signal(false);
   nuevaUnidadId = signal('');
   nuevaUnidadRol = signal<RolUnidad>('Propietario');
+  incidenciasAbierto = signal(false);
+  cargandoIncidencias = signal(false);
+  incidencias = signal<(IncidenciaUnidad & { unidadNombre: string })[]>([]);
+  labelCategoria = LABEL_CATEGORIA;
 
   private consorcioId = computed(() => this.consorcios.activoId());
 
@@ -87,6 +94,8 @@ export class DirectorioComponent {
   onInvitado(): void {
     this.invitarAbierto.set(false);
     this.refrescar();
+    const id = this.consorcioId();
+    if (id) this.api.refrescarPendientes(id);
   }
 
   iniciales(r: { nombre: string; apellido: string }): string {
@@ -104,6 +113,8 @@ export class DirectorioComponent {
     this.personaIdSel.set(r.id);
     this.editandoTel.set(false);
     this.agregandoUnidad.set(false);
+    this.incidenciasAbierto.set(false);
+    this.incidencias.set([]);
     this.api.personaDetalle(cid, r.id).subscribe((d) => {
       this.detalle.set(d);
       this.telNuevo.set(d.telefono ?? '');
@@ -113,6 +124,29 @@ export class DirectorioComponent {
   cerrarDetalle(): void {
     this.detalle.set(null);
     this.refrescar();
+  }
+
+  toggleIncidencias(): void {
+    const abrir = !this.incidenciasAbierto();
+    this.incidenciasAbierto.set(abrir);
+    const cid = this.consorcioId();
+    const d = this.detalle();
+    if (!abrir || !cid || !d || this.incidencias().length || this.cargandoIncidencias()) return;
+    if (!d.unidades.length) return;
+    this.cargandoIncidencias.set(true);
+    forkJoin(
+      d.unidades.map((u) => this.incidenciasApi.listar(cid, u.unidadId)),
+    ).subscribe({
+      next: (listas) => {
+        const merged = listas.flatMap((lista, i) =>
+          lista.map((inc) => ({ ...inc, unidadNombre: d.unidades[i].unidadNombre })),
+        );
+        merged.sort((a, b) => b.fechaEvento.localeCompare(a.fechaEvento));
+        this.incidencias.set(merged);
+        this.cargandoIncidencias.set(false);
+      },
+      error: () => this.cargandoIncidencias.set(false),
+    });
   }
 
   private recargarDetalle(): void {
