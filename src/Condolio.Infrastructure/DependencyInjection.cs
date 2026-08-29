@@ -8,6 +8,7 @@ using Condolio.Application.Comunicaciones;
 using Condolio.Application.Documentos;
 using Condolio.Application.Encuestas;
 using Condolio.Application.Notificaciones;
+using Condolio.Application.Panel;
 using Condolio.Application.Residentes;
 using Condolio.Application.Tickets;
 using Condolio.Application.Unidades;
@@ -86,6 +87,7 @@ public static class DependencyInjection
         services.AddScoped<IDocumentoService, Condolio.Infrastructure.Documentos.DocumentoService>();
         services.AddScoped<IEncuestaService, Condolio.Infrastructure.Encuestas.EncuestaService>();
         services.AddScoped<INotificacionService, Condolio.Infrastructure.Notificaciones.NotificacionService>();
+        services.AddScoped<IPanelService, Condolio.Infrastructure.Panel.PanelService>();
 
         // ---- Archivos ----
         services.AddSingleton<IFileStorage, LocalFileStorage>();

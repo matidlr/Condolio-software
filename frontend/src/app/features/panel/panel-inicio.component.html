@@ -1,0 +1,67 @@
+@if (consorcios.consorcios().length === 0) {
+  <section class="pi">
+    <div class="pi-empty">
+      <h2>Creá tu primer consorcio</h2>
+      <p>Para empezar a cargar unidades necesitás dar de alta un consorcio.</p>
+      <a class="btn btn--primary" routerLink="/panel/unidades">Ir a Unidades</a>
+    </div>
+  </section>
+} @else {
+  <section class="pi">
+    <header class="pi-hero">
+      <span class="pi-hero__avatar">{{ iniciales() }}</span>
+      <div>
+        <h1>{{ r()?.consorcioNombre ?? consorcios.activo?.nombre }}</h1>
+        <p>Resumen de la gestión de tu comunidad</p>
+      </div>
+    </header>
+
+    <div class="pi-stats">
+      <div class="pi-stat">
+        <span class="pi-stat__k">{{ r()?.consorcioNombre ?? consorcios.activo?.nombre }}</span>
+        <b>{{ r()?.unidades ?? '—' }}</b>
+        <small>unidades</small>
+      </div>
+      <div class="pi-stat pi-stat--green">
+        <span class="pi-stat__k">Residentes</span>
+        <b>{{ r()?.residentes ?? '—' }}</b>
+        <small>residentes</small>
+      </div>
+      <div class="pi-stat pi-stat--purple">
+        <span class="pi-stat__k">Publicaciones</span>
+        <b>{{ r()?.publicacionesMes ?? '—' }}</b>
+        <small>Este mes</small>
+      </div>
+    </div>
+
+    <h2 class="pi-h2">Resumen de Funciones</h2>
+    <div class="pi-grid">
+      @for (f of funciones; track f.titulo) {
+        @if (f.ruta) {
+          <a class="pi-card" [routerLink]="f.ruta" [style.--fc]="f.color">
+            <ng-container [ngTemplateOutlet]="cuerpo" [ngTemplateOutletContext]="{ $implicit: f }" />
+          </a>
+        } @else {
+          <div class="pi-card pi-card--soon" [style.--fc]="f.color">
+            <ng-container [ngTemplateOutlet]="cuerpo" [ngTemplateOutletContext]="{ $implicit: f }" />
+          </div>
+        }
+      }
+    </div>
+  </section>
+}
+
+<ng-template #cuerpo let-f>
+  <div class="pi-card__row">
+    <span class="pi-card__ic" [innerHTML]="icono(f.icon)"></span>
+    <span class="pi-card__arrow">→</span>
+  </div>
+  <h3>{{ f.titulo }}</h3>
+  <p>{{ f.descripcion }}</p>
+  <div class="pi-card__stat">
+    <small>{{ f.statLabel }}</small>
+    <b [class.is-alert]="f.alerta && f.alerta()">
+      {{ f.stat() }} @if (f.alerta && f.alerta()) { <span>⚠</span> }
+    </b>
+  </div>
+</ng-template>
