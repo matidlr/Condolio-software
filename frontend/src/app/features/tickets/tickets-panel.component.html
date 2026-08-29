@@ -1,0 +1,90 @@
+<section class="tp">
+  <header class="tp-head">
+    <button type="button" class="tp-back" (click)="volver()" aria-label="Volver">←</button>
+    <div>
+      <h1>Panel de Tickets</h1>
+      <p>Vista general del estado de tickets</p>
+    </div>
+    <button type="button" class="tp-alt" (click)="irAnalisis()">▥ Panel de Análisis</button>
+  </header>
+
+  @if (cargando()) {
+    <p class="tp-loading">Cargando…</p>
+  } @else {
+    <div class="tp-kpis">
+      <div class="tp-kpi">
+        <span class="tp-kpi__ic tp-kpi__ic--blue">📥</span>
+        <span class="tp-kpi__l">Total abiertos</span>
+        <b>{{ totalAbiertos() }}</b>
+      </div>
+      <div class="tp-kpi">
+        <span class="tp-kpi__ic tp-kpi__ic--amber">⏱</span>
+        <span class="tp-kpi__l">Pendientes</span>
+        <b>{{ pendientes() }}</b>
+      </div>
+      <div class="tp-kpi">
+        <span class="tp-kpi__ic tp-kpi__ic--green">▶</span>
+        <span class="tp-kpi__l">En progreso</span>
+        <b>{{ enProgreso() }}</b>
+        <small>{{ enProgresoAsignados() }} asignados</small>
+      </div>
+      <div class="tp-kpi">
+        <span class="tp-kpi__ic tp-kpi__ic--red">⚠</span>
+        <span class="tp-kpi__l">Requieren atención</span>
+        <b>{{ requierenAtencion() }}</b>
+      </div>
+    </div>
+
+    <div class="tp-grid">
+      <div class="tp-card">
+        <h3>Desglose por antigüedad</h3>
+        @for (a of antiguedad(); track a.label) {
+          <div class="tp-bar">
+            <div class="tp-bar__top"><span>{{ a.label }}</span><b>{{ a.n }} ({{ a.pct }}%)</b></div>
+            <div class="tp-bar__track"><div class="tp-bar__fill" [style.width.%]="a.pct"></div></div>
+          </div>
+        }
+      </div>
+
+      <div class="tp-card">
+        <h3>Carga del personal</h3>
+        <p class="tp-sub">
+          Total: {{ totalAbiertos() }} abiertos · {{ cargaPersonal().totalPersonal }} personal ·
+          Prom: {{ cargaPersonal().prom }} por persona
+        </p>
+
+        <div class="tp-person">
+          <div class="tp-person__top">
+            <span>Por asignar</span><b>{{ cargaPersonal().sinAsignar }}</b>
+          </div>
+          <div class="tp-bar__track"><div class="tp-bar__fill tp-bar__fill--muted"
+            [style.width.%]="totalAbiertos() ? (cargaPersonal().sinAsignar / totalAbiertos()) * 100 : 0"></div></div>
+          <div class="tp-person__foot">
+            <span class="tp-dot-amber">● {{ cargaPersonal().sinAsignarNuevos }} nuevos</span>
+            <button type="button" class="tp-link" (click)="irLista('sinasignar')">Ver sin asignar</button>
+          </div>
+        </div>
+
+        @for (p of cargaPersonal().personas; track p.nombre) {
+          <div class="tp-person">
+            <div class="tp-person__top"><span>{{ p.nombre }}</span><b>{{ p.asignados }}</b></div>
+            <div class="tp-bar__track"><div class="tp-bar__fill"
+              [style.width.%]="totalAbiertos() ? (p.asignados / totalAbiertos()) * 100 : 0"></div></div>
+            <div class="tp-person__foot"><span class="tp-dot-amber">● {{ p.nuevos }} nuevos</span></div>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="tp-card">
+      <h3>Alertas</h3>
+      @if (alertas().length === 0) {
+        <p class="tp-ok">✓ Sin alertas en este momento</p>
+      } @else {
+        <ul class="tp-alertas">
+          @for (a of alertas(); track a) { <li>⚠ {{ a }}</li> }
+        </ul>
+      }
+    </div>
+  }
+</section>

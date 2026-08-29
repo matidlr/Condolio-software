@@ -219,3 +219,85 @@ textarea.tk-input { resize: vertical; }
 }
 .btn--danger:hover { background: #b91c1c; }
 .btn--danger:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ---- filtros / filtros rápidos ---- */
+.tk-filterwrap { position: relative; }
+.tk-ghost.is-on { border-color: var(--c-slate-500); color: var(--c-text); font-weight: 600; }
+.tk-ghost b {
+  background: var(--c-navy-800); color: #fff; border-radius: 999px;
+  padding: 0 6px; font-size: 0.72rem; margin-left: 4px;
+}
+.tk-ghost--link { border-color: transparent; color: var(--c-danger); }
+.tk-caret { font-size: 0.7rem; }
+
+.tk-fback { position: fixed; inset: 0; z-index: 40; }
+.tk-fpop {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 41;
+  display: flex; background: var(--c-surface); border: 1px solid var(--c-border);
+  border-radius: 10px; box-shadow: 0 16px 40px rgba(15, 27, 45, 0.18);
+  min-width: 440px; overflow: hidden;
+}
+.tk-fpop--menu { flex-direction: column; min-width: 220px; padding: 6px; }
+
+.tk-fpop__dims {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 8px; border-right: 1px solid var(--c-border); min-width: 150px;
+}
+.tk-fpop__dims button {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 10px; border: none; background: none; border-radius: 6px;
+  font: inherit; font-size: 0.85rem; color: var(--c-text); cursor: pointer; text-align: left;
+}
+.tk-fpop__dims button span { color: var(--c-text-soft); }
+.tk-fpop__dims button:hover { background: var(--c-bg); }
+.tk-fpop__dims button.is-active { background: #eef1f6; font-weight: 600; }
+
+.tk-fpop__opts { flex: 1; padding: 10px 12px; max-height: 320px; overflow-y: auto; }
+.tk-fpop__acts { display: flex; gap: 12px; margin-bottom: 6px; }
+.tk-fpop__acts button {
+  border: none; background: none; font: inherit; font-size: 0.78rem;
+  color: var(--c-slate-600); cursor: pointer; padding: 2px 0;
+}
+.tk-fpop__acts button:hover { text-decoration: underline; }
+.tk-fpop__group {
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: .04em;
+  color: var(--c-text-soft); padding: 8px 4px 4px;
+}
+
+.tk-fopt {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 4px; font-size: 0.85rem; cursor: pointer;
+}
+.tk-fopt:hover { background: var(--c-bg); border-radius: 6px; }
+.tk-fopt__l { flex: 1; }
+.tk-fopt__n { color: var(--c-text-soft); font-size: 0.8rem; }
+.tk-fdot { width: 8px; height: 8px; border-radius: 50%; background: var(--c-text-soft); flex-shrink: 0; }
+.tk-fdot--nuevo { background: #2563eb; }
+.tk-fdot--enprogreso { background: #0891b2; }
+.tk-fdot--esperandoinformacion { background: #7c3aed; }
+.tk-fdot--pendienteaprobacion { background: #d97706; }
+.tk-fdot--resuelto { background: #16a34a; }
+
+.tk-fpresets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.tk-fpresets button {
+  border: 1px solid var(--c-border); background: var(--c-surface); border-radius: 7px;
+  padding: 5px 9px; font-size: 0.78rem; cursor: pointer; color: var(--c-text);
+}
+.tk-fpresets button:hover { border-color: var(--c-slate-500); }
+.tk-flabel { display: block; font-size: 0.78rem; font-weight: 600; margin: 8px 0 4px; }
+.tk-fclear {
+  margin-top: 10px; border: none; background: none; color: var(--c-danger);
+  font: inherit; font-size: 0.8rem; cursor: pointer;
+}
+
+.tk-rapido {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 8px 10px; border: none; background: none; border-radius: 6px;
+  font: inherit; font-size: 0.85rem; color: var(--c-text); cursor: pointer; text-align: left;
+}
+.tk-rapido:hover { background: var(--c-bg); }
+.tk-rapido.is-active { background: #eef1f6; font-weight: 600; }
+.tk-rapido__ck { margin-left: auto; color: var(--c-slate-600); }
+
+.tk-fpop--right { left: auto; right: 0; }
+.tk-dialog__hint { font-size: 0.8rem; color: var(--c-text-soft); margin: 8px 0 0; }

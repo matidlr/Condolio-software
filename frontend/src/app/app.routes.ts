@@ -74,6 +74,16 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/tickets/tickets-lista.component').then((m) => m.TicketsListaComponent),
       },
+      {
+        path: 'tickets/panel',
+        loadComponent: () =>
+          import('./features/tickets/tickets-panel.component').then((m) => m.TicketsPanelComponent),
+      },
+      {
+        path: 'tickets/metricas',
+        loadComponent: () =>
+          import('./features/tickets/tickets-metricas.component').then((m) => m.TicketsMetricasComponent),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

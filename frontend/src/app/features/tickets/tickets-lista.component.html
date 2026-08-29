@@ -22,8 +22,153 @@
       <input type="search" placeholder="Buscar tickets…"
         [value]="busqueda()" (input)="busqueda.set($any($event.target).value)" />
     </div>
-    <button type="button" class="tk-ghost" disabled>▽ Agregar filtro</button>
-    <button type="button" class="tk-ghost" disabled>🔖 Vistas guardadas</button>
+    <div class="tk-filterwrap">
+      <button type="button" class="tk-ghost" [class.is-on]="filtrosActivos()"
+        (click)="filtroAbierto.set(!filtroAbierto())">
+        ▽ Agregar filtro @if (filtrosActivos()) { <b>{{ filtrosActivos() }}</b> }
+      </button>
+
+      @if (filtroAbierto()) {
+        <div class="tk-fback" (click)="filtroAbierto.set(false)"></div>
+        <div class="tk-fpop">
+          <div class="tk-fpop__dims">
+            @for (d of [
+              { k: 'estado', l: 'Estado' }, { k: 'categoria', l: 'Categoría' },
+              { k: 'prioridad', l: 'Prioridad' }, { k: 'asignado', l: 'Asignado a' },
+              { k: 'fechas', l: 'Rango de fechas' }
+            ]; track d.k) {
+              <button type="button" [class.is-active]="filtroDim() === d.k"
+                (click)="filtroDim.set($any(d.k))">{{ d.l }} <span>›</span></button>
+            }
+          </div>
+
+          <div class="tk-fpop__opts">
+            @switch (filtroDim()) {
+              @case ('estado') {
+                <div class="tk-fpop__acts">
+                  <button type="button" (click)="seleccionarTodosFiltro('estado', estadosValores())">Seleccionar todos</button>
+                  <button type="button" (click)="limpiarDim('estado')">Limpiar</button>
+                </div>
+                @for (e of estados; track e.value) {
+                  <label class="tk-fopt">
+                    <input type="checkbox" [checked]="filtroTiene('estado', e.value)"
+                      (change)="toggleFiltro('estado', e.value)" />
+                    <span class="tk-fdot tk-fdot--{{ e.value.toLowerCase() }}"></span>
+                    <span class="tk-fopt__l">{{ e.label }}</span>
+                    <span class="tk-fopt__n">{{ contar('estado', e.value) }}</span>
+                  </label>
+                }
+              }
+              @case ('categoria') {
+                <div class="tk-fpop__acts">
+                  <button type="button" (click)="seleccionarTodosFiltro('categoria', categoriasValores())">Seleccionar todos</button>
+                  <button type="button" (click)="limpiarDim('categoria')">Limpiar</button>
+                </div>
+                @for (c of categorias; track c.value) {
+                  <label class="tk-fopt">
+                    <input type="checkbox" [checked]="filtroTiene('categoria', c.value)"
+                      (change)="toggleFiltro('categoria', c.value)" />
+                    <span class="tk-fopt__l">{{ c.label }}</span>
+                    <span class="tk-fopt__n">{{ contar('categoria', c.value) }}</span>
+                  </label>
+                }
+              }
+              @case ('prioridad') {
+                <div class="tk-fpop__acts">
+                  <button type="button" (click)="seleccionarTodosFiltro('prioridad', prioridadesValores())">Seleccionar todos</button>
+                  <button type="button" (click)="limpiarDim('prioridad')">Limpiar</button>
+                </div>
+                @for (p of prioridades; track p.value) {
+                  <label class="tk-fopt">
+                    <input type="checkbox" [checked]="filtroTiene('prioridad', p.value)"
+                      (change)="toggleFiltro('prioridad', p.value)" />
+                    <span class="tk-fdot" [style.background]="p.color"></span>
+                    <span class="tk-fopt__l">{{ p.label }}</span>
+                    <span class="tk-fopt__n">{{ contar('prioridad', p.value) }}</span>
+                  </label>
+                }
+              }
+              @case ('asignado') {
+                <label class="tk-fopt">
+                  <input type="checkbox" [checked]="filtroTiene('asignado', '')"
+                    (change)="toggleFiltro('asignado', '')" />
+                  <span class="tk-fopt__l">Por asignar</span>
+                  <span class="tk-fopt__n">{{ contar('asignado', '') }}</span>
+                </label>
+                <div class="tk-fpop__group">Administradores</div>
+                @for (a of asignables(); track a.id) {
+                  <label class="tk-fopt">
+                    <input type="checkbox" [checked]="filtroTiene('asignado', a.nombre)"
+                      (change)="toggleFiltro('asignado', a.nombre)" />
+                    <span class="tk-fopt__l">{{ a.nombre }}</span>
+                    <span class="tk-fopt__n">{{ contar('asignado', a.nombre) }}</span>
+                  </label>
+                }
+              }
+              @case ('fechas') {
+                <div class="tk-fpresets">
+                  <button type="button" (click)="rangoPreset(1)">Hoy</button>
+                  <button type="button" (click)="rangoPreset(7)">Últimos 7 días</button>
+                  <button type="button" (click)="rangoPreset(30)">Últimos 30 días</button>
+                  <button type="button" (click)="rangoPreset(60)">Últimos 60 días</button>
+                  <button type="button" (click)="rangoPreset(90)">Últimos 90 días</button>
+                </div>
+                <label class="tk-flabel">Fecha inicio</label>
+                <input type="date" class="tk-input" [ngModel]="filtros().desde"
+                  (ngModelChange)="setFecha('desde', $event)" />
+                <label class="tk-flabel">Fecha fin</label>
+                <input type="date" class="tk-input" [ngModel]="filtros().hasta"
+                  (ngModelChange)="setFecha('hasta', $event)" />
+                <button type="button" class="tk-fclear" (click)="limpiarDim('fechas')">Limpiar fechas</button>
+              }
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="tk-filterwrap">
+      <button type="button" class="tk-ghost" [class.is-on]="rapidoActivo()"
+        (click)="rapidosAbierto.set(!rapidosAbierto())">
+        🔖 {{ rapidoLabel() }} <span class="tk-caret">▾</span>
+      </button>
+      @if (rapidosAbierto()) {
+        <div class="tk-fback" (click)="rapidosAbierto.set(false)"></div>
+        <div class="tk-fpop tk-fpop--menu">
+          <div class="tk-fpop__group">Filtros rápidos</div>
+          @for (r of rapidos; track r.k) {
+            <button type="button" class="tk-rapido" [class.is-active]="rapidoActivo() === r.k"
+              (click)="aplicarRapido(r.k)">
+              <span>{{ r.ic }}</span> {{ r.l }}
+              @if (rapidoActivo() === r.k) { <span class="tk-rapido__ck">✓</span> }
+            </button>
+          }
+        </div>
+      }
+    </div>
+
+    @if (filtrosActivos()) {
+      <button type="button" class="tk-ghost tk-ghost--link" (click)="limpiarFiltros()">Limpiar filtros</button>
+    }
+
+    <div class="tk-filterwrap">
+      <button type="button" class="tk-ghost" (click)="columnasAbierto.set(!columnasAbierto())">
+        ▦ Columnas <b>{{ columnasVisibles().size }}/{{ columnasDef.length }}</b>
+      </button>
+      @if (columnasAbierto()) {
+        <div class="tk-fback" (click)="columnasAbierto.set(false)"></div>
+        <div class="tk-fpop tk-fpop--menu tk-fpop--right">
+          @for (c of columnasDef; track c.key) {
+            <label class="tk-fopt">
+              <input type="checkbox" [checked]="verCol(c.key)" (change)="toggleColumna(c.key)" />
+              <span class="tk-fopt__l">{{ c.label }}</span>
+            </label>
+          }
+        </div>
+      }
+    </div>
+
+    <button type="button" class="tk-ghost" (click)="exportarAbierto.set(true)">⭳ Exportar</button>
     <button type="button" class="tk-ghost" (click)="recargar()">⟳ Actualizar</button>
   </div>
 
@@ -32,10 +177,14 @@
   } @else if (visibles().length === 0) {
     <div class="tk-empty">
       <div class="tk-empty__icon">🎫</div>
-      <h2>{{ vista() === 'archivo' ? 'No hay tickets archivados' : 'No hay tickets activos' }}</h2>
-      <p>Los reclamos escalados desde una incidencia y los tickets que crees manualmente van a aparecer acá.</p>
-      @if (vista() === 'activos') {
-        <button type="button" class="btn btn--primary" (click)="nuevoAbierto.set(true)">Crear el primer ticket</button>
+      @if (busqueda() || filtrosActivos()) {
+        <h2>Ningún ticket coincide con el filtro</h2>
+        <p>Probá ajustar la búsqueda o los filtros aplicados.</p>
+        <button type="button" class="btn btn--ghost" (click)="busqueda.set(''); limpiarFiltros()">Limpiar todo</button>
+      } @else {
+        <h2>No hay tickets aún</h2>
+        <p>Cuando los residentes reporten problemas, aparecerán acá.<br />También podés crear tickets manualmente.</p>
+        <button type="button" class="btn btn--primary" (click)="nuevoAbierto.set(true)">Nuevo Ticket</button>
       }
     </div>
   } @else {
@@ -44,30 +193,51 @@
         <thead>
           <tr>
             <th class="tk-c-check"><input type="checkbox" [checked]="todasSel()" (change)="toggleTodas()" /></th>
-            <th>Categoría</th><th>Estado</th><th>Prioridad</th><th>Descripción</th>
-            <th>Reportado por</th><th>Reportado en</th><th>Tiempo en estado</th><th>Asignado a</th><th>Unidad</th>
+            @if (verCol('categoria')) { <th>Categoría</th> }
+            @if (verCol('estado')) { <th>Estado</th> }
+            @if (verCol('prioridad')) { <th>Prioridad</th> }
+            @if (verCol('descripcion')) { <th>Descripción</th> }
+            @if (verCol('reportadoPor')) { <th>Reportado por</th> }
+            @if (verCol('fecha')) { <th>Fecha</th> }
+            @if (verCol('tiempoEstado')) { <th>Tiempo en estado</th> }
+            @if (verCol('diasAbierto')) { <th>Días abierto</th> }
+            @if (verCol('asignado')) { <th>Asignado a</th> }
+            @if (verCol('unidad')) { <th>Unidad</th> }
+            @if (verCol('ultimaActividad')) { <th>Última actividad</th> }
           </tr>
         </thead>
         <tbody>
           @for (t of visibles(); track t.id) {
             <tr [class.is-sel]="seleccion().has(t.id)">
               <td class="tk-c-check"><input type="checkbox" [checked]="seleccion().has(t.id)" (change)="toggleUno(t.id)" /></td>
-              <td class="tk-cat-cell">
-                <span class="tk-cat-ic" [innerHTML]="icono(t.categoria)"></span>
-                {{ labelCategoria[t.categoria] }}
-              </td>
-              <td><span class="tk-pill tk-pill--{{ t.estado.toLowerCase() }}">{{ labelEstado[t.estado] }}</span></td>
-              <td><span class="tk-prio tk-prio--{{ t.prioridad.toLowerCase() }}">{{ labelPrioridad[t.prioridad] }}</span></td>
-              <td class="tk-desc">{{ t.titulo ? t.titulo + ' — ' : '' }}{{ t.descripcion }}</td>
-              <td>{{ t.reportadoPor }}</td>
-              <td>{{ fechaCorta(t.reportadoUtc) }}</td>
-              <td>
-                <span class="tk-dur" [class.is-warn]="vencido(t)">
-                  @if (vencido(t)) { ⚠ }{{ desde(t.estadoDesdeUtc) }}
-                </span>
-              </td>
-              <td>{{ t.asignadoA || 'Por asignar' }}</td>
-              <td>{{ t.unidadNombre || '—' }}</td>
+              @if (verCol('categoria')) {
+                <td class="tk-cat-cell">
+                  <span class="tk-cat-ic" [innerHTML]="icono(t.categoria)"></span>
+                  {{ labelCategoria[t.categoria] }}
+                </td>
+              }
+              @if (verCol('estado')) {
+                <td><span class="tk-pill tk-pill--{{ t.estado.toLowerCase() }}">{{ labelEstado[t.estado] }}</span></td>
+              }
+              @if (verCol('prioridad')) {
+                <td><span class="tk-prio tk-prio--{{ t.prioridad.toLowerCase() }}">{{ labelPrioridad[t.prioridad] }}</span></td>
+              }
+              @if (verCol('descripcion')) {
+                <td class="tk-desc">{{ t.titulo ? t.titulo + ' — ' : '' }}{{ t.descripcion }}</td>
+              }
+              @if (verCol('reportadoPor')) { <td>{{ t.reportadoPor }}</td> }
+              @if (verCol('fecha')) { <td>{{ fechaCorta(t.reportadoUtc) }}</td> }
+              @if (verCol('tiempoEstado')) {
+                <td>
+                  <span class="tk-dur" [class.is-warn]="vencido(t)">
+                    @if (vencido(t)) { ⚠ }{{ desde(t.estadoDesdeUtc) }}
+                  </span>
+                </td>
+              }
+              @if (verCol('diasAbierto')) { <td>{{ diasAbierto(t.reportadoUtc) }}d</td> }
+              @if (verCol('asignado')) { <td>{{ t.asignadoA || 'Por asignar' }}</td> }
+              @if (verCol('unidad')) { <td>{{ t.unidadNombre || '—' }}</td> }
+              @if (verCol('ultimaActividad')) { <td>hace {{ desde(t.ultimaActividadUtc) }}</td> }
             </tr>
           }
         </tbody>
@@ -90,6 +260,26 @@
 
 @if (nuevoAbierto()) {
   <app-nuevo-ticket (cerrar)="nuevoAbierto.set(false)" (creado)="onCreado()" />
+}
+
+@if (exportarAbierto()) {
+  <div class="tk-overlay" (click)="exportarAbierto.set(false)">
+    <div class="tk-dialog" (click)="$event.stopPropagation()">
+      <header><h3>Exportar reportes</h3><button type="button" (click)="exportarAbierto.set(false)">✕</button></header>
+      <p class="tk-dialog__text">Exportá los reportes filtrados con el historial de actividad.</p>
+      <label class="tk-label">Formato de exportación</label>
+      <select class="tk-input" [ngModel]="formatoExport()" (ngModelChange)="formatoExport.set($event)">
+        <option value="xlsx">Excel (XLSX)</option>
+        <option value="csv">CSV</option>
+        <option value="pdf">Documento PDF</option>
+      </select>
+      <p class="tk-dialog__hint">{{ visibles().length }} ticket(s)</p>
+      <footer>
+        <button type="button" class="btn btn--ghost" (click)="exportarAbierto.set(false)">Cancelar</button>
+        <button type="button" class="btn btn--primary" (click)="exportar()">⭳ Exportar</button>
+      </footer>
+    </div>
+  </div>
 }
 
 @if (modal() === 'estado') {

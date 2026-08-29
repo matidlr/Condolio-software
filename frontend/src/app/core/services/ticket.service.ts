@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, forkJoin, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   ActualizarTicket, CrearTicket, Ticket, TicketDetalle, TicketLista, UsuarioAsignable,
@@ -26,6 +26,17 @@ export class TicketService {
       next: (l) => this.activos.set(l.activos),
       error: () => this.activos.set(0),
     });
+  }
+
+  /** Todos los tickets del consorcio (activos + archivados), sin duplicados. */
+  todos(consorcioId: string): Observable<Ticket[]> {
+    return forkJoin([this.listar(consorcioId, false), this.listar(consorcioId, true)]).pipe(
+      map(([a, b]) => {
+        const porId = new Map<string, Ticket>();
+        for (const t of [...a.tickets, ...b.tickets]) porId.set(t.id, t);
+        return [...porId.values()];
+      }),
+    );
   }
 
   asignables(consorcioId: string): Observable<UsuarioAsignable[]> {

@@ -73,8 +73,8 @@ export class AdminShellComponent {
         label: 'Tickets', icon: 'ticket', disponible: true,
         hijos: [
           { label: 'Lista', ruta: '/panel/tickets/lista', disponible: true, badge: tks || undefined },
-          { label: 'Panel', ruta: '/panel/tickets/panel', disponible: false },
-          { label: 'Métricas', ruta: '/panel/tickets/metricas', disponible: false },
+          { label: 'Panel', ruta: '/panel/tickets/panel', disponible: true },
+          { label: 'Métricas', ruta: '/panel/tickets/metricas', disponible: true },
         ],
       },
       { label: 'Expensas', ruta: '/panel/expensas', icon: 'receipt', disponible: false },

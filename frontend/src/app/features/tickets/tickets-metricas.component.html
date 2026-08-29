@@ -1,0 +1,113 @@
+<section class="tp">
+  <header class="tp-head">
+    <button type="button" class="tp-back" (click)="volver()" aria-label="Volver">←</button>
+    <div>
+      <h1>Panel de Análisis</h1>
+      <p>Métricas detalladas e información de rendimiento</p>
+    </div>
+    <button type="button" class="tp-alt" (click)="irPanel()">▤ Panel de Tickets</button>
+  </header>
+
+  <div class="tp-periodos">
+    @for (p of periodos; track p.k) {
+      <button type="button" [class.is-active]="periodo() === p.k" (click)="periodo.set(p.k)">{{ p.l }}</button>
+    }
+  </div>
+
+  @if (cargando()) {
+    <p class="tp-loading">Cargando…</p>
+  } @else {
+    <div class="tp-kpis">
+      <div class="tp-kpi">
+        <span class="tp-kpi__ic tp-kpi__ic--blue">📄</span>
+        <span class="tp-kpi__l">Total de reportes</span>
+        <b>{{ totalReportes() }}</b>
+      </div>
+      <div class="tp-kpi">
+        <span class="tp-kpi__ic tp-kpi__ic--amber">⏱</span>
+        <span class="tp-kpi__l">Tiempo promedio de resolución</span>
+        <b>{{ tiempoPromedio() ?? '—' }}</b>
+      </div>
+      <div class="tp-kpi">
+        <span class="tp-kpi__ic tp-kpi__ic--amber">✓</span>
+        <span class="tp-kpi__l">Tasa de resolución</span>
+        <b>{{ tasaResolucion() }}%</b>
+      </div>
+      <div class="tp-kpi">
+        <span class="tp-kpi__ic tp-kpi__ic--blue">📥</span>
+        <span class="tp-kpi__l">Reportes abiertos</span>
+        <b>{{ abiertosPeriodo() }}</b>
+      </div>
+    </div>
+
+    <div class="tp-grid">
+      <div class="tp-card">
+        <div class="tp-card__head">
+          <h3>↗ Creados vs resueltos</h3>
+          <span class="tp-chip" [class.tp-chip--pos]="cambioNeto() > 0" [class.tp-chip--neg]="cambioNeto() < 0">
+            {{ cambioNeto() > 0 ? '+' : '' }}{{ cambioNeto() }} cambio neto
+          </span>
+        </div>
+        <p class="tp-sub">Creación y resolución de tickets en el período seleccionado</p>
+
+        <div class="tp-chartwrap">
+          <svg [attr.viewBox]="'0 0 ' + W + ' ' + H" class="tp-chart" (mouseleave)="hover.set(null)">
+            @for (t of ejeY(); track t.v) {
+              <line [attr.x1]="PAD" [attr.x2]="W - PAD" [attr.y1]="t.y" [attr.y2]="t.y" class="tp-chart__grid" />
+              <text [attr.x]="PAD - 8" [attr.y]="t.y + 3" text-anchor="end" class="tp-chart__ytick">{{ t.v }}</text>
+              <text [attr.x]="W - PAD + 8" [attr.y]="t.y + 3" class="tp-chart__ytick">{{ t.v }}</text>
+            }
+
+            <path [attr.d]="lineaBacklog()" class="tp-chart__backlog" />
+
+            @for (p of serie(); track p.fecha; let i = $index) {
+              @if (p.creados > 0) {
+                <rect [attr.x]="p.x - 4" [attr.y]="p.cyCre" width="8"
+                  [attr.height]="H - PAD - p.cyCre" class="tp-chart__bar" />
+              }
+              <circle [attr.cx]="p.x" [attr.cy]="p.cyBack" r="3.5" class="tp-chart__dot" />
+              <rect [attr.x]="p.x - (serie().length > 1 ? (serie()[1].x - serie()[0].x) / 2 : 20)"
+                y="0" [attr.width]="serie().length > 1 ? (serie()[1].x - serie()[0].x) : 40" [attr.height]="H"
+                fill="transparent" (mouseenter)="hover.set(i)" />
+            }
+
+            @for (t of serie(); track t.fecha; let i = $index) {
+              @if (i % (serie().length > 10 ? 3 : 1) === 0) {
+                <text [attr.x]="t.x" [attr.y]="H - 8" text-anchor="middle" class="tp-chart__xtick">{{ t.label }}</text>
+              }
+            }
+          </svg>
+
+          @if (hover() !== null && serie()[hover()!]; as p) {
+            <div class="tp-tip" [style.left.%]="(p.x / W) * 100">
+              <b>{{ p.label }}</b>
+              <div><span class="tp-tip__k tp-tip__k--cre">■ Creados</span><span>{{ p.creados }}</span></div>
+              <div><span class="tp-tip__k tp-tip__k--res">■ Resueltos</span><span>{{ p.resueltos }}</span></div>
+              <div><span class="tp-tip__k tp-tip__k--back">■ Backlog neto</span><span>{{ p.backlog }}</span></div>
+            </div>
+          }
+        </div>
+
+        <div class="tp-legend">
+          <span class="tp-tip__k--cre">■ Creados</span>
+          <span class="tp-tip__k--res">■ Resueltos</span>
+          <span class="tp-tip__k--back">■ Backlog neto</span>
+        </div>
+      </div>
+
+      <div class="tp-card">
+        <h3>Distribución por categoría</h3>
+        @if (distribucionCategoria().length === 0) {
+          <p class="tp-sub">Sin datos en el período.</p>
+        } @else {
+          @for (c of distribucionCategoria(); track c.label) {
+            <div class="tp-bar">
+              <div class="tp-bar__top"><span>{{ c.label }}</span><b>{{ c.n }} ({{ c.pct }}%)</b></div>
+              <div class="tp-bar__track"><div class="tp-bar__fill" [style.width.%]="c.pct"></div></div>
+            </div>
+          }
+        }
+      </div>
+    </div>
+  }
+</section>
