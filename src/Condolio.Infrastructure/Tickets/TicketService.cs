@@ -76,7 +76,8 @@ public class TicketService : ITicketService
             .Select(c => new TicketComentarioDto(
                 c.Texto,
                 nombres.TryGetValue(c.AutorUsuarioId, out var n) ? n : "—",
-                c.CreadoUtc))
+                c.CreadoUtc,
+                c.EsInterna))
             .ToList();
 
         return Result<TicketDetalleDto>.Ok(new TicketDetalleDto(Mapear(ticket, unidad), comentarios));
@@ -156,19 +157,25 @@ public class TicketService : ITicketService
         return Result<TicketDto>.Ok(Mapear(ticket, unidad));
     }
 
-    public async Task<Result> ComentarAsync(Guid consorcioId, Guid ticketId, string texto, CancellationToken ct = default)
+    public async Task<Result> ComentarAsync(Guid consorcioId, Guid ticketId, string texto, bool esInterna, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(texto)) return Result.Fail("El comentario no puede estar vacío.");
-        var ticket = await _db.Tickets.FirstOrDefaultAsync(t => t.Id == ticketId && t.ConsorcioId == consorcioId, ct);
+        var ticket = await _db.Tickets.AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Id == ticketId && t.ConsorcioId == consorcioId, ct);
         if (ticket is null) return Result.Fail("Ticket no encontrado.");
 
-        ticket.Comentarios.Add(new TicketComentario
+        _db.TicketComentarios.Add(new TicketComentario
         {
+            TicketId = ticketId,
+            AdministradorId = ticket.AdministradorId,
             Texto = texto.Trim(),
             AutorUsuarioId = _tenant.UsuarioId ?? string.Empty,
+            EsInterna = esInterna,
         });
-        ticket.UltimaActividadUtc = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
+
+        await _db.Tickets.Where(t => t.Id == ticketId)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.UltimaActividadUtc, DateTime.UtcNow), ct);
         return Result.Ok();
     }
 

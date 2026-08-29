@@ -84,4 +84,6 @@ public class TicketComentario : Entity, ITenantOwned
     public Ticket Ticket { get; set; } = null!;
     public string Texto { get; set; } = string.Empty;
     public string AutorUsuarioId { get; set; } = string.Empty;
+    /// <summary>true = nota interna del equipo; false = respuesta visible para el residente.</summary>
+    public bool EsInterna { get; set; }
 }

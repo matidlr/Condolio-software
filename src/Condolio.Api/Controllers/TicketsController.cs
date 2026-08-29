@@ -14,7 +14,7 @@ public class TicketsController : ApiControllerBase
 
     public TicketsController(ITicketService tickets) => _tickets = tickets;
 
-    public record ComentarioBody(string Texto);
+    public record ComentarioBody(string Texto, bool EsInterna = false);
     public record ArchivarBody(bool Archivar);
 
     [HttpGet]
@@ -39,7 +39,7 @@ public class TicketsController : ApiControllerBase
 
     [HttpPost("{ticketId:guid}/comentarios")]
     public async Task<IActionResult> Comentar(Guid consorcioId, Guid ticketId, ComentarioBody body, CancellationToken ct) =>
-        ToResult(await _tickets.ComentarAsync(consorcioId, ticketId, body.Texto, ct));
+        ToResult(await _tickets.ComentarAsync(consorcioId, ticketId, body.Texto, body.EsInterna, ct));
 
     [HttpPost("{ticketId:guid}/archivar")]
     public async Task<IActionResult> Archivar(Guid consorcioId, Guid ticketId, ArchivarBody body, CancellationToken ct) =>

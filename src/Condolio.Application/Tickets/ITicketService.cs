@@ -33,7 +33,7 @@ public record TicketDetalleDto(
     TicketDto Ticket,
     IReadOnlyList<TicketComentarioDto> Comentarios);
 
-public record TicketComentarioDto(string Texto, string Autor, DateTime FechaUtc);
+public record TicketComentarioDto(string Texto, string Autor, DateTime FechaUtc, bool EsInterna);
 
 public record UsuarioAsignableDto(string Id, string Nombre);
 
@@ -60,7 +60,7 @@ public interface ITicketService
     Task<Result<TicketDetalleDto>> ObtenerAsync(Guid consorcioId, Guid ticketId, CancellationToken ct = default);
     Task<Result<TicketDto>> CrearAsync(Guid consorcioId, CrearTicketDto dto, CancellationToken ct = default);
     Task<Result<TicketDto>> ActualizarAsync(Guid consorcioId, Guid ticketId, ActualizarTicketDto dto, CancellationToken ct = default);
-    Task<Result> ComentarAsync(Guid consorcioId, Guid ticketId, string texto, CancellationToken ct = default);
+    Task<Result> ComentarAsync(Guid consorcioId, Guid ticketId, string texto, bool esInterna, CancellationToken ct = default);
     Task<Result> ArchivarAsync(Guid consorcioId, Guid ticketId, bool archivar, CancellationToken ct = default);
     Task<Result> EliminarAsync(Guid consorcioId, Guid ticketId, CancellationToken ct = default);
 

@@ -1,6 +1,6 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { forkJoin } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
@@ -40,6 +40,7 @@ const SIN_FILTROS = (): FiltrosTicket => ({
 })
 export class TicketsListaComponent {
   private auth = inject(AuthService);
+  private router = inject(Router);
   private consorcios = inject(ConsorcioService);
   private api = inject(TicketService);
   private toasts = inject(ToastService);
@@ -429,5 +430,13 @@ export class TicketsListaComponent {
     this.modal.set(null);
     this.toasts.exito(msg);
     this.recargar();
+  }
+
+  nuevaSeleccion(id: string): Set<string> {
+    return new Set([id]);
+  }
+
+  abrirDetalle(t: Ticket): void {
+    this.router.navigate(['/panel/tickets', t.id]);
   }
 }

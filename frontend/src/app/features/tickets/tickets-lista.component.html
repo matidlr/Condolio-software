@@ -204,12 +204,15 @@
             @if (verCol('asignado')) { <th>Asignado a</th> }
             @if (verCol('unidad')) { <th>Unidad</th> }
             @if (verCol('ultimaActividad')) { <th>Última actividad</th> }
+            <th class="tk-c-acc">Acciones</th>
           </tr>
         </thead>
         <tbody>
           @for (t of visibles(); track t.id) {
-            <tr [class.is-sel]="seleccion().has(t.id)">
-              <td class="tk-c-check"><input type="checkbox" [checked]="seleccion().has(t.id)" (change)="toggleUno(t.id)" /></td>
+            <tr class="tk-row" [class.is-sel]="seleccion().has(t.id)" (click)="abrirDetalle(t)">
+              <td class="tk-c-check" (click)="$event.stopPropagation()">
+                <input type="checkbox" [checked]="seleccion().has(t.id)" (change)="toggleUno(t.id)" />
+              </td>
               @if (verCol('categoria')) {
                 <td class="tk-cat-cell">
                   <span class="tk-cat-ic" [innerHTML]="icono(t.categoria)"></span>
@@ -238,6 +241,15 @@
               @if (verCol('asignado')) { <td>{{ t.asignadoA || 'Por asignar' }}</td> }
               @if (verCol('unidad')) { <td>{{ t.unidadNombre || '—' }}</td> }
               @if (verCol('ultimaActividad')) { <td>hace {{ desde(t.ultimaActividadUtc) }}</td> }
+              <td class="tk-c-acc" (click)="$event.stopPropagation()">
+                <div class="tk-rowacc">
+                  <button type="button" title="Cambiar estado"
+                    (click)="seleccion.set(nuevaSeleccion(t.id)); abrirModal('estado')">⚑</button>
+                  <button type="button" title="Asignar"
+                    (click)="seleccion.set(nuevaSeleccion(t.id)); abrirModal('asignar')">👤</button>
+                  <button type="button" title="Ver detalle" (click)="abrirDetalle(t)">⋮</button>
+                </div>
+              </td>
             </tr>
           }
         </tbody>

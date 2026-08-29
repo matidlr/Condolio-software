@@ -89,6 +89,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/tickets/tickets-metricas.component').then((m) => m.TicketsMetricasComponent),
       },
+      {
+        path: 'tickets/:id',
+        loadComponent: () =>
+          import('./features/tickets/ticket-detalle.component').then((m) => m.TicketDetalleComponent),
+      },
       { path: 'amenidades', pathMatch: 'full', redirectTo: 'amenidades/directorio' },
       {
         path: 'amenidades/directorio',

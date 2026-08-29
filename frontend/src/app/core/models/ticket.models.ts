@@ -78,6 +78,7 @@ export interface TicketComentario {
   texto: string;
   autor: string;
   fechaUtc: string;
+  esInterna: boolean;
 }
 
 export interface TicketDetalle {

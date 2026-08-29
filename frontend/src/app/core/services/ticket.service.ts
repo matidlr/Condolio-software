@@ -55,8 +55,8 @@ export class TicketService {
     return this.http.put<Ticket>(`${this.base(consorcioId)}/${id}`, body);
   }
 
-  comentar(consorcioId: string, id: string, texto: string): Observable<void> {
-    return this.http.post<void>(`${this.base(consorcioId)}/${id}/comentarios`, { texto });
+  comentar(consorcioId: string, id: string, texto: string, esInterna = false): Observable<void> {
+    return this.http.post<void>(`${this.base(consorcioId)}/${id}/comentarios`, { texto, esInterna });
   }
 
   archivar(consorcioId: string, id: string, archivar: boolean): Observable<void> {

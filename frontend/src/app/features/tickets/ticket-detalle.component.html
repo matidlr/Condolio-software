@@ -1,0 +1,218 @@
+@if (detalle(); as d) {
+  <section class="tk">
+    <header class="td-head">
+      <button type="button" class="td-back" (click)="volver()" aria-label="Volver">←</button>
+      <div>
+        <h1>Reporte #{{ d.ticket.numero }}</h1>
+        <p>{{ d.ticket.titulo || labelCategoria[d.ticket.categoria] }}</p>
+      </div>
+    </header>
+
+    <div class="td-grid">
+      <!-- ===== Sidebar de detalles ===== -->
+      <aside class="td-card td-sidebar">
+        <h3>Detalles del reporte</h3>
+        <div class="td-field">
+          <small>⏱ Estado</small>
+          <span class="tk-pill tk-pill--{{ d.ticket.estado.toLowerCase() }}">{{ labelEstado[d.ticket.estado] }}</span>
+        </div>
+        <div class="td-field">
+          <small>⚠ Prioridad</small>
+          <span class="tk-prio tk-prio--{{ d.ticket.prioridad.toLowerCase() }}">{{ labelPrioridad[d.ticket.prioridad] }}</span>
+        </div>
+        <div class="td-field"><small>🏷 Categoría</small><b>{{ labelCategoria[d.ticket.categoria] }}</b></div>
+        <div class="td-field"><small>👤 Reportado por</small><b>{{ d.ticket.reportadoPor }}</b></div>
+        <div class="td-field"><small>📅 Creado</small><b>{{ d.ticket.reportadoUtc | date:'d MMMM y' }}</b></div>
+        <div class="td-field"><small>👥 Asignado a</small>
+          <b [class.td-italic]="!d.ticket.asignadoA">{{ d.ticket.asignadoA || 'Por asignar' }}</b></div>
+        <div class="td-field"><small>🕐 Fecha límite</small>
+          <b [class.td-italic]="!d.ticket.fechaLimite">{{ d.ticket.fechaLimite ? (d.ticket.fechaLimite | date:'d MMM y') : 'Sin fecha límite' }}</b></div>
+        <div class="td-field"><small>📍 Ubicación</small>
+          <b [class.td-italic]="!d.ticket.ubicacion">{{ d.ticket.ubicacion || 'Sin ubicación especificada' }}</b></div>
+        <div class="td-field"><small>🏷 Etiquetas</small>
+          @if (d.ticket.etiquetas.length) {
+            <div class="td-tags">@for (t of d.ticket.etiquetas; track t) { <span class="tk-tag">{{ t }}</span> }</div>
+          } @else { <b class="td-italic">Sin etiquetas</b> }
+        </div>
+      </aside>
+
+      <!-- ===== Contenido con pestañas ===== -->
+      <div class="td-main">
+        <div class="td-tabs">
+          <button type="button" [class.is-active]="tab() === 'reporte'" (click)="tab.set('reporte')">📄 Reporte</button>
+          <button type="button" [class.is-active]="tab() === 'conversacion'" (click)="tab.set('conversacion')">
+            💬 Conversación @if (d.comentarios.length) { <b>{{ d.comentarios.length }}</b> }
+          </button>
+          <button type="button" [class.is-active]="tab() === 'archivos'" (click)="tab.set('archivos')">📎 Archivos</button>
+          <button type="button" [class.is-active]="tab() === 'acciones'" (click)="tab.set('acciones')">⚙ Acciones</button>
+        </div>
+
+        @switch (tab()) {
+          @case ('reporte') {
+            <div class="td-card">
+              <div class="td-card__head">
+                <h3>🏷 Reporte</h3>
+                <span class="td-when">{{ d.ticket.reportadoUtc | date:"d MMM 'a las' HH:mm" }}</span>
+              </div>
+              <div class="td-meta">
+                <div>
+                  <span class="td-avatar">{{ (d.ticket.reportadoPor || '?').slice(0,2).toUpperCase() }}</span>
+                  <div><small>Reportado por</small><b>{{ d.ticket.reportadoPor }}</b></div>
+                </div>
+                <div><span class="td-mic">📍</span><div><small>Unidad</small><b>{{ d.ticket.unidadNombre || 'Sin unidad' }}</b></div></div>
+                <div>
+                  <span class="td-mic" [innerHTML]="icono(d.ticket.categoria)"></span>
+                  <div><small>Categoría</small><b>{{ labelCategoria[d.ticket.categoria] }}</b></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="td-card">
+              <h3>📄 Descripción</h3>
+              <p class="td-desc">{{ d.ticket.descripcion }}</p>
+            </div>
+
+            @if (d.ticket.etiquetas.length || d.ticket.ubicacion) {
+              <div class="td-card">
+                <h3>📎 Adjuntos</h3>
+                <app-adjuntos ownerTipo="Ticket" [ownerId]="d.ticket.id" [editable]="true" />
+              </div>
+            } @else {
+              <div class="td-card">
+                <h3>📎 Adjuntos</h3>
+                <app-adjuntos ownerTipo="Ticket" [ownerId]="d.ticket.id" [editable]="true" />
+              </div>
+            }
+
+            <div class="td-card">
+              <h3>📈 Actividad reciente</h3>
+              <ul class="td-timeline">
+                <li><b>Reporte creado</b><small>{{ d.ticket.reportadoUtc | date:'d MMM y, HH:mm' }}</small></li>
+                @for (c of d.comentarios; track c.fechaUtc) {
+                  <li><b>{{ c.autor }}: {{ c.texto }}</b><small>{{ c.fechaUtc | date:'d MMM y, HH:mm' }}</small></li>
+                }
+              </ul>
+            </div>
+          }
+
+          @case ('conversacion') {
+            <div class="td-card">
+              <div class="td-convtoggle">
+                <button type="button" [class.is-active]="convModo() === 'residente'" (click)="convModo.set('residente')">
+                  🌐 Responder al residente
+                </button>
+                <button type="button" class="td-convtoggle--int" [class.is-active]="convModo() === 'interna'" (click)="convModo.set('interna')">
+                  🔒 Nota interna
+                </button>
+              </div>
+              <p class="td-convhint" [class.td-convhint--int]="convModo() === 'interna'">
+                {{ convModo() === 'interna'
+                  ? 'Esta nota solo será visible para administradores y personal.'
+                  : 'Este mensaje se enviará al residente y será visible en su aplicación.' }}
+              </p>
+
+              <div class="td-thread">
+                @for (c of comentariosFiltrados(); track c.fechaUtc) {
+                  <div class="td-coment">
+                    <span class="td-avatar td-avatar--sm">{{ (c.autor || '?').slice(0,2).toUpperCase() }}</span>
+                    <div>
+                      <p class="td-coment__head"><b>{{ c.autor }}</b> · {{ c.fechaUtc | date:'d MMM HH:mm' }}</p>
+                      <p>{{ c.texto }}</p>
+                    </div>
+                  </div>
+                } @empty {
+                  <div class="td-emptyconv">
+                    <span>💬</span>
+                    <b>{{ convModo() === 'interna' ? 'No hay notas internas aún' : 'No hay mensajes aún' }}</b>
+                    <p>{{ convModo() === 'interna'
+                      ? 'Las notas internas solo son visibles para administradores y personal.'
+                      : 'Enviá un mensaje a ' + d.ticket.reportadoPor + ' sobre su reporte.' }}</p>
+                  </div>
+                }
+              </div>
+
+              @if (convModo() === 'residente') {
+                <div class="td-quick">
+                  <span>✦ Respuestas rápidas</span>
+                  @for (q of ['Investigando', 'Trabajo iniciado', 'Se necesita más información', 'Problema resuelto']; track q) {
+                    <button type="button" (click)="comentario.set(q)">{{ q }}</button>
+                  }
+                </div>
+              }
+
+              <div class="td-comentbox" [class.td-comentbox--int]="convModo() === 'interna'">
+                <textarea rows="3" placeholder="Escribí un mensaje…" maxlength="1000"
+                  [ngModel]="comentario()" (ngModelChange)="comentario.set($event)"
+                  (keydown.control.enter)="comentar()"></textarea>
+                <div class="td-comentbox__foot">
+                  <small>{{ 1000 - comentario().length }} restantes</small>
+                  <button type="button" class="btn btn--primary" [disabled]="!comentario().trim() || enviando()" (click)="comentar()">
+                    {{ enviando() ? 'Enviando…' : 'Enviar' }}
+                  </button>
+                </div>
+              </div>
+              <p class="td-muted td-kbd">Ctrl+Enter para enviar{{ convModo() === 'interna' ? ' (nota interna)' : '' }}</p>
+            </div>
+          }
+
+          @case ('archivos') {
+            <div class="td-card">
+              <h3>📎 Archivos</h3>
+              <app-adjuntos ownerTipo="Ticket" [ownerId]="d.ticket.id" [editable]="true" />
+            </div>
+          }
+
+          @case ('acciones') {
+            <div class="td-card">
+              <div class="td-card__head">
+                <h3>⚙ Acciones</h3>
+                <span class="tk-pill tk-pill--{{ d.ticket.estado.toLowerCase() }}">{{ labelEstado[d.ticket.estado] }}</span>
+              </div>
+
+              @for (a of acciones(); track a.key) {
+                <div class="td-accioncard" [class.is-open]="accionAbierta() === a.key">
+                  <button type="button" class="td-accioncard__title" (click)="abrirAccion(a)">
+                    {{ a.icono }} {{ a.label }}
+                  </button>
+                  @if (accionAbierta() === a.key) {
+                    @if (a.obligatorio) {
+                      <p class="td-accionwarn">⚠ Este cambio de estado requiere una nota de resolución.</p>
+                    }
+                    <label class="td-label">Mensaje @if (a.obligatorio) { <span class="td-req">*</span> }</label>
+                    <textarea rows="3" class="tk-input" maxlength="1000"
+                      [ngModel]="accionMsg()" (ngModelChange)="accionMsg.set($event)"></textarea>
+                    <p class="td-muted">Este mensaje será visible para el residente.</p>
+                    <div class="td-accionbtns">
+                      <button type="button" class="btn btn--primary" [disabled]="guardando()" (click)="ejecutarAccion(a)">{{ a.label }}</button>
+                      <button type="button" class="btn btn--ghost" (click)="accionAbierta.set(null)">Cancelar</button>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+
+            <div class="td-card">
+              <h3>⚙ Gestión</h3>
+              <label class="td-label">Prioridad</label>
+              <select class="tk-input" [ngModel]="d.ticket.prioridad" (ngModelChange)="cambiarPrioridad($event)">
+                @for (p of prioridades; track p.value) { <option [value]="p.value">{{ p.label }}</option> }
+              </select>
+
+              <label class="td-label" style="margin-top:12px">Asignar a</label>
+              <select class="tk-input" [ngModel]="d.ticket.asignadoA ?? ''" (ngModelChange)="asignar($event || '')">
+                <option value="">Sin asignar</option>
+                @for (a of asignables(); track a.id) { <option [value]="a.nombre">{{ a.nombre }}</option> }
+              </select>
+
+              <button type="button" class="btn btn--ghost td-archivar" (click)="archivar()">
+                {{ d.ticket.archivado ? 'Reabrir ticket' : '🗄 Archivar ticket' }}
+              </button>
+            </div>
+          }
+        }
+      </div>
+    </div>
+  </section>
+} @else if (cargando()) {
+  <p class="tk-loading">Cargando…</p>
+}
