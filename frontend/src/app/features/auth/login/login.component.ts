@@ -1,7 +1,9 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import {
+  Component, ElementRef, NgZone, computed, effect, inject, signal, viewChild,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { NgTemplateOutlet } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { Location, NgTemplateOutlet } from '@angular/common';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   AbstractControl,
   FormBuilder,
@@ -10,6 +12,10 @@ import {
   Validators,
 } from '@angular/forms';
 import { AuthService } from '../../../core/services/auth.service';
+import { ToastService } from '../../../core/services/toast.service';
+import { environment } from '../../../../environments/environment';
+
+declare const google: any;
 
 type Tab = 'login' | 'registro';
 
@@ -40,6 +46,13 @@ function passwordsIguales(group: AbstractControl): ValidationErrors | null {
   return pass && confirm && pass !== confirm ? { passwordsDistintas: true } : null;
 }
 
+/** Exige lo mismo que muestra la lista de requisitos: 6+ caracteres, mayúscula, minúscula y número. */
+function passwordSegura(control: AbstractControl): ValidationErrors | null {
+  const p: string = control.value ?? '';
+  const ok = p.length >= 6 && /[A-Z]/.test(p) && /[a-z]/.test(p) && /\d/.test(p);
+  return ok ? null : { passwordDebil: true };
+}
+
 @Component({
   selector: 'app-login',
   standalone: true,
@@ -51,12 +64,22 @@ export class LoginComponent {
   private fb = inject(FormBuilder);
   private auth = inject(AuthService);
   private router = inject(Router);
+  private location = inject(Location);
+  private toasts = inject(ToastService);
+  private zone = inject(NgZone);
 
-  tab = signal<Tab>('login');
+  googleHost = viewChild<ElementRef<HTMLDivElement>>('googleHost');
+  googleListo = signal(false);
+  private gisInit = false;
+
+  tab = signal<Tab>(
+    inject(ActivatedRoute).snapshot.url.some((s) => s.path === 'registro') ? 'registro' : 'login',
+  );
   cargando = signal(false);
   error = signal<string | null>(null);
   verPassword = signal(false);
   verConfirm = signal(false);
+  registroOk = signal<string | null>(null);
 
   brand = computed(() => brandContent[this.tab()]);
 
@@ -70,7 +93,7 @@ export class LoginComponent {
       nombre: ['', [Validators.required]],
       apellido: ['', [Validators.required]],
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(8)]],
+      password: ['', [Validators.required, passwordSegura]],
       confirmPassword: ['', [Validators.required]],
       acepto: [false, [Validators.requiredTrue]],
     },
@@ -80,6 +103,57 @@ export class LoginComponent {
   cambiarTab(t: Tab): void {
     this.tab.set(t);
     this.error.set(null);
+    this.location.replaceState(t === 'registro' ? '/registro' : '/login');
+  }
+
+  constructor() {
+    // Renderiza el botón de Google cuando el contenedor está en el DOM (cambia con el tab).
+    effect(() => {
+      const host = this.googleHost();
+      this.tab();
+      if (host) this.montarGoogle(host.nativeElement);
+    });
+  }
+
+  private montarGoogle(el: HTMLElement, intentos = 20): void {
+    const clientId = environment.googleClientId;
+    if (!clientId) return;
+    if (typeof google === 'undefined' || !google?.accounts?.id) {
+      if (intentos > 0) setTimeout(() => this.montarGoogle(el, intentos - 1), 250);
+      return;
+    }
+    if (!this.gisInit) {
+      google.accounts.id.initialize({
+        client_id: clientId,
+        callback: (resp: { credential?: string }) =>
+          this.zone.run(() => this.entrarConGoogle(resp.credential)),
+      });
+      this.gisInit = true;
+    }
+    el.innerHTML = '';
+    google.accounts.id.renderButton(el, {
+      type: 'standard', theme: 'outline', size: 'large', shape: 'rectangular',
+      text: this.tab() === 'registro' ? 'signup_with' : 'signin_with',
+      logo_alignment: 'center', width: 340,
+    });
+    this.googleListo.set(true);
+  }
+
+  googleNoConfigurado(): void {
+    this.toasts.info('Configurá el Client ID de Google para habilitar este acceso.');
+  }
+
+  private entrarConGoogle(credential?: string): void {
+    if (!credential) return;
+    this.cargando.set(true);
+    this.error.set(null);
+    this.auth.googleLogin(credential).subscribe({
+      next: () => this.router.navigateByUrl(this.auth.rutaInicio()),
+      error: (err) => {
+        this.error.set(err?.error?.message ?? 'No pudimos entrar con Google.');
+        this.cargando.set(false);
+      },
+    });
   }
 
   private pwValue = toSignal(this.registroForm.controls.password.valueChanges, { initialValue: '' });
@@ -87,7 +161,7 @@ export class LoginComponent {
   pwChecks = computed(() => {
     const p = this.pwValue() ?? '';
     return {
-      largo: p.length >= 8,
+      largo: p.length >= 6,
       mayus: /[A-Z]/.test(p),
       minus: /[a-z]/.test(p),
       numero: /\d/.test(p),
@@ -133,11 +207,20 @@ export class LoginComponent {
     this.cargando.set(true);
     this.error.set(null);
     this.auth.registrar({ nombre, apellido, email, password }).subscribe({
-      next: (res) => this.router.navigate(['/verificar'], { queryParams: { email: res.email } }),
+      next: (res) => {
+        this.cargando.set(false);
+        this.registroOk.set(res.email);
+      },
       error: (err) => {
         this.error.set(err?.error?.message ?? 'No pudimos crear la cuenta. Intentá de nuevo.');
         this.cargando.set(false);
       },
     });
+  }
+
+  irAVerificar(): void {
+    const email = this.registroOk();
+    this.registroOk.set(null);
+    this.router.navigate(['/verificar'], { queryParams: { email } });
   }
 }

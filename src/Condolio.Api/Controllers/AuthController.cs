@@ -4,6 +4,7 @@ using Condolio.Application.Residentes;
 using Condolio.Domain.Tenancy;
 using Condolio.Infrastructure.Identity;
 using Condolio.Infrastructure.Persistence;
+using Google.Apis.Auth;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +21,7 @@ public class AuthController : ControllerBase
     private readonly ISuscripcionService _suscripciones;
     private readonly IInvitacionPublicaService _invitaciones;
     private readonly IEmailSender _email;
+    private readonly IConfiguration _config;
 
     public AuthController(
         UserManager<ApplicationUser> users,
@@ -27,7 +29,8 @@ public class AuthController : ControllerBase
         CondolioDbContext db,
         ISuscripcionService suscripciones,
         IInvitacionPublicaService invitaciones,
-        IEmailSender email)
+        IEmailSender email,
+        IConfiguration config)
     {
         _users = users;
         _tokens = tokens;
@@ -35,10 +38,12 @@ public class AuthController : ControllerBase
         _suscripciones = suscripciones;
         _invitaciones = invitaciones;
         _email = email;
+        _config = config;
     }
 
     public record LoginRequest(string Email, string Password);
     public record RegistroRequest(string Nombre, string Apellido, string Email, string Password);
+    public record GoogleLoginRequest(string IdToken);
     public record LoginResponse(string Token, DateTime ExpiraUtc, string Email, string Nombre, IEnumerable<string> Roles);
     public record RegistroResponse(bool RequiereVerificacion, string Email);
     public record VerificarRequest(string Email, string Codigo);
@@ -153,12 +158,102 @@ public class AuthController : ControllerBase
         if (!creado.Succeeded)
             return BadRequest(new { message = string.Join(" ", creado.Errors.Select(e => e.Description)) });
 
+        await CrearTenantAsync(user, req.Nombre, req.Apellido, email);
+
+        await GenerarYEnviarCodigo(user);
+        await _users.UpdateAsync(user);
+
+        return Ok(new RegistroResponse(true, email));
+    }
+
+    /// <summary>
+    /// Acceso con Google. Valida el ID token, y según el correo: inicia sesión,
+    /// acepta una invitación pendiente, o crea un administrador nuevo con trial.
+    /// Google ya verificó el correo, así que no se pide código.
+    /// </summary>
+    [HttpPost("google")]
+    public async Task<IActionResult> GoogleLogin(GoogleLoginRequest req)
+    {
+        var clientId = _config["Google:ClientId"];
+        if (string.IsNullOrWhiteSpace(clientId))
+            return BadRequest(new { message = "El acceso con Google no está configurado." });
+
+        GoogleJsonWebSignature.Payload payload;
+        try
+        {
+            payload = await GoogleJsonWebSignature.ValidateAsync(req.IdToken,
+                new GoogleJsonWebSignature.ValidationSettings { Audience = new[] { clientId } });
+        }
+        catch (InvalidJwtException)
+        {
+            return Unauthorized(new { message = "El token de Google no es válido." });
+        }
+
+        if (!payload.EmailVerified)
+            return BadRequest(new { message = "Tu cuenta de Google no tiene el correo verificado." });
+
+        var email = payload.Email.Trim().ToLowerInvariant();
+        var nombre = string.IsNullOrWhiteSpace(payload.GivenName) ? "Usuario" : payload.GivenName.Trim();
+        var apellido = payload.FamilyName?.Trim() ?? string.Empty;
+
+        var user = await _users.FindByEmailAsync(email);
+        if (user is not null)
+        {
+            if (!user.EmailConfirmed)
+            {
+                user.EmailConfirmed = true;
+                user.CodigoVerificacion = null;
+                user.CodigoVerificacionExpiraUtc = null;
+                await _users.UpdateAsync(user);
+            }
+            return Ok(await ConstruirRespuesta(user));
+        }
+
+        // Usuario nuevo: ¿invitación pendiente? -> residente; si no -> administrador.
+        var invitacion = await _db.Invitaciones
+            .IgnoreQueryFilters()
+            .Where(i => i.Email == email && i.Estado == Condolio.Domain.Residentes.EstadoInvitacion.Pendiente
+                && i.ExpiraUtc > DateTime.UtcNow)
+            .OrderByDescending(i => i.CreadoUtc)
+            .FirstOrDefaultAsync();
+
+        if (invitacion is not null)
+        {
+            var res = await _invitaciones.AceptarAsync(invitacion.Token,
+                new AceptarInvitacionDto(nombre, apellido, null, GenerarPasswordAleatoria()));
+            if (!res.Exito) return BadRequest(new { message = res.Error });
+
+            var residente = await _users.FindByEmailAsync(email);
+            return Ok(await ConstruirRespuesta(residente!));
+        }
+
+        var nuevo = new ApplicationUser
+        {
+            UserName = email,
+            Email = email,
+            Nombre = nombre,
+            Apellido = apellido,
+            EmailConfirmed = true,
+        };
+        var creado = await _users.CreateAsync(nuevo);
+        if (!creado.Succeeded)
+            return BadRequest(new { message = string.Join(" ", creado.Errors.Select(e => e.Description)) });
+
+        await CrearTenantAsync(nuevo, nombre, apellido, email);
+        await _users.UpdateAsync(nuevo);
+
+        return Ok(await ConstruirRespuesta(nuevo));
+    }
+
+    /// <summary>Crea el Administrador (tenant) para <paramref name="user"/>, lo asocia y arranca el trial.</summary>
+    private async Task CrearTenantAsync(ApplicationUser user, string nombre, string apellido, string email)
+    {
         await _users.AddToRoleAsync(user, Roles.Administrador);
 
         var administrador = new Administrador
         {
-            RazonSocial = $"{req.Nombre} {req.Apellido}".Trim(),
-            Email = req.Email,
+            RazonSocial = $"{nombre} {apellido}".Trim(),
+            Email = email,
             UsuarioId = user.Id,
         };
         _db.Administradores.Add(administrador);
@@ -166,12 +261,10 @@ public class AuthController : ControllerBase
 
         user.AdministradorId = administrador.Id;
         await _suscripciones.IniciarTrialAsync(administrador.Id);
-
-        await GenerarYEnviarCodigo(user);
-        await _users.UpdateAsync(user);
-
-        return Ok(new RegistroResponse(true, email));
     }
+
+    private static string GenerarPasswordAleatoria() =>
+        $"G{Guid.NewGuid():N}A9!";
 
     private async Task<LoginResponse> ConstruirRespuesta(ApplicationUser user)
     {

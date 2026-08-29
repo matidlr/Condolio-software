@@ -33,6 +33,13 @@ export class AuthService {
     return this.http.post<RegistroResponse>(`${environment.apiUrl}/auth/register`, body);
   }
 
+  /** Inicia sesión / registra con el ID token que devuelve Google Identity Services. */
+  googleLogin(idToken: string): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(`${environment.apiUrl}/auth/google`, { idToken }).pipe(
+      tap((res) => this.guardarSesion(res)),
+    );
+  }
+
   verificar(email: string, codigo: string): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${environment.apiUrl}/auth/verificar`, { email, codigo }).pipe(
       tap((res) => this.guardarSesion(res)),

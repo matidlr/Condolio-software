@@ -136,6 +136,9 @@
 }
 
 .auth__google { margin-bottom: 20px; }
+.auth__google-host { display: flex; justify-content: center; min-height: 0; }
+.auth__google-host:empty { display: none; }
+.auth__google-fallback { width: 100%; }
 
 .auth__divider {
   display: flex;
@@ -196,6 +199,17 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
+  align-items: start;
+}
+
+.auth__row .field { margin-bottom: 0; }
+
+/* Evita que el autocompletado de Chrome pinte el fondo y desalinee visualmente los campos */
+.field > input:-webkit-autofill,
+.field__with-action > input:-webkit-autofill {
+  -webkit-text-fill-color: var(--c-text);
+  transition: background-color 5000s ease-in-out 0s;
+  box-shadow: 0 0 0 1000px #f3f6fb inset;
 }
 
 .field__with-action {
@@ -305,6 +319,31 @@
 .pw-checks { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; margin: 8px 0 0; font-size: 0.78rem; }
 .pw-checks li { list-style: none; color: var(--c-text-soft); }
 .pw-checks li.ok { color: var(--c-success); }
+
+/* ---- Modal de registro exitoso ---- */
+.auth__modal-overlay {
+  position: fixed; inset: 0; z-index: 80;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  background: rgba(15, 27, 45, 0.5);
+}
+.auth__modal {
+  position: relative; background: #fff; border-radius: 16px;
+  padding: 32px 28px; max-width: 420px; width: 100%; text-align: center;
+  box-shadow: 0 24px 60px rgba(15, 27, 45, 0.35);
+}
+.auth__modal-x {
+  position: absolute; top: 12px; right: 12px; width: 30px; height: 30px;
+  border: none; background: transparent; color: var(--c-text-soft);
+  font-size: 1rem; cursor: pointer; border-radius: 6px;
+}
+.auth__modal-x:hover { background: var(--c-bg); }
+.auth__modal-check {
+  width: 60px; height: 60px; margin: 0 auto 14px;
+  display: grid; place-items: center; border-radius: 50%; background: #dcfce7;
+}
+.auth__modal h3 { margin: 0 0 10px; font-size: 1.25rem; }
+.auth__modal p { margin: 0 0 10px; font-size: 0.9rem; color: var(--c-text-muted); line-height: 1.5; }
+.auth__modal .btn { margin-top: 12px; width: 100%; }
 
 /* ---- Responsive ---- */
 @media (max-width: 900px) {

@@ -13,6 +13,11 @@ export const routes: Routes = [
       import('./features/auth/login/login.component').then((m) => m.LoginComponent),
   },
   {
+    path: 'registro',
+    loadComponent: () =>
+      import('./features/auth/login/login.component').then((m) => m.LoginComponent),
+  },
+  {
     path: 'verificar',
     loadComponent: () =>
       import('./features/auth/verificar.component').then((m) => m.VerificarComponent),

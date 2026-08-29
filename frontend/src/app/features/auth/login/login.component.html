@@ -76,10 +76,7 @@
         <h2 class="auth__title">Iniciar Sesión</h2>
         <p class="auth__subtitle">Iniciá sesión en tu cuenta de administrador</p>
 
-        <button type="button" class="btn btn--ghost auth__google">
-          <ng-container *ngTemplateOutlet="googleIcon" />
-          Continuar con Google
-        </button>
+        <ng-container *ngTemplateOutlet="googleBloque" />
 
         <div class="auth__divider"><span>o</span></div>
 
@@ -121,10 +118,7 @@
         <h2 class="auth__title">Crear una Cuenta</h2>
         <p class="auth__subtitle">Unite a la comunidad Condolio hoy</p>
 
-        <button type="button" class="btn btn--ghost auth__google">
-          <ng-container *ngTemplateOutlet="googleIcon" />
-          Continuar con Google
-        </button>
+        <ng-container *ngTemplateOutlet="googleBloque" />
 
         <div class="auth__divider"><span>o</span></div>
 
@@ -170,7 +164,7 @@
               </div>
               <p class="pw-label">Contraseña {{ pwLabel().t.toLowerCase() }}</p>
               <ul class="pw-checks">
-                <li [class.ok]="pwChecks().largo">{{ pwChecks().largo ? '✓' : '✕' }} Al menos 8 caracteres</li>
+                <li [class.ok]="pwChecks().largo">{{ pwChecks().largo ? '✓' : '✕' }} Al menos 6 caracteres</li>
                 <li [class.ok]="pwChecks().mayus">{{ pwChecks().mayus ? '✓' : '✕' }} Una letra mayúscula</li>
                 <li [class.ok]="pwChecks().minus">{{ pwChecks().minus ? '✓' : '✕' }} Una letra minúscula</li>
                 <li [class.ok]="pwChecks().numero">{{ pwChecks().numero ? '✓' : '✕' }} Un número</li>
@@ -204,7 +198,8 @@
 
           @if (error()) { <p class="auth__alert">{{ error() }}</p> }
 
-          <button type="submit" class="btn btn--primary" [disabled]="cargando()">
+          <button type="submit" class="btn btn--primary"
+            [disabled]="cargando() || registroForm.invalid">
             {{ cargando() ? 'Creando cuenta…' : 'Crear Cuenta' }}
           </button>
         </form>
@@ -212,6 +207,38 @@
     </div>
   </main>
 </div>
+
+@if (registroOk(); as email) {
+  <div class="auth__modal-overlay">
+    <div class="auth__modal" role="dialog" aria-modal="true">
+      <button type="button" class="auth__modal-x" (click)="irAVerificar()" aria-label="Cerrar">✕</button>
+      <div class="auth__modal-check">
+        <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#16a34a" stroke-width="2">
+          <circle cx="12" cy="12" r="10" />
+          <path d="m8 12 3 3 5-6" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </div>
+      <h3>¡Registro exitoso!</h3>
+      <p>Tu cuenta fue creada. Revisá tu correo para obtener el código de verificación.</p>
+      <p>Enviamos un código de 4 dígitos a <b>{{ email }}</b>. Ingresalo para verificar tu cuenta.</p>
+      <button type="button" class="btn btn--primary" (click)="irAVerificar()">
+        Ingresar código de verificación
+      </button>
+    </div>
+  </div>
+}
+
+<ng-template #googleBloque>
+  <div class="auth__google">
+    <div #googleHost class="auth__google-host"></div>
+    @if (!googleListo()) {
+      <button type="button" class="btn btn--ghost auth__google-fallback" (click)="googleNoConfigurado()">
+        <ng-container *ngTemplateOutlet="googleIcon" />
+        Continuar con Google
+      </button>
+    }
+  </div>
+</ng-template>
 
 <ng-template #googleIcon>
   <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">

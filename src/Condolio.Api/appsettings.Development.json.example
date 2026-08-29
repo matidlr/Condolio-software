@@ -14,6 +14,9 @@
   "SuperAdmin": {
     "Password": "elegí-una-contraseña"
   },
+  "Google": {
+    "ClientId": "TU-CLIENT-ID.apps.googleusercontent.com"
+  },
   "Smtp": {
     "Host": "",
     "Port": 587,
