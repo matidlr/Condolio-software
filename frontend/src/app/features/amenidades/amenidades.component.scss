@@ -356,6 +356,72 @@ textarea.wz-input { resize: vertical; }
 
 .ad-blocked-title { color: var(--c-danger); }
 .ad-meta p { font-size: 0.78rem; color: var(--c-text-soft); margin: 2px 0; }
+
+/* ===== Reservaciones ===== */
+.rs-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.rs-toolbar--2 { margin-bottom: 16px; }
+.rs-nav { display: flex; align-items: center; gap: 8px; border: 1px solid var(--c-border); border-radius: 8px; padding: 4px 6px; }
+.rs-nav b { text-transform: capitalize; font-size: 0.86rem; min-width: 130px; text-align: center; }
+.rs-nav button { border: none; background: none; cursor: pointer; font-size: 1rem; color: var(--c-text-muted); padding: 2px 6px; }
+.rs-filterwrap { position: relative; }
+.rs-fpop {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 20;
+  background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 10px;
+  box-shadow: 0 14px 34px rgba(15,27,45,.16); padding: 6px; min-width: 160px;
+}
+.rs-fpop button {
+  display: block; width: 100%; text-align: left; border: none; background: none;
+  padding: 7px 10px; border-radius: 6px; font: inherit; font-size: 0.85rem; cursor: pointer; color: var(--c-text);
+}
+.rs-fpop button:hover { background: var(--c-bg); }
+.rs-fpop button.is-active { background: #eef1f6; font-weight: 600; }
+
+.am-kpi__ic--red { background: #fee2e2; }
+
+.rs-list { display: flex; flex-direction: column; gap: 10px; }
+.rs-item {
+  border: 1px solid var(--c-border); border-left: 3px solid var(--c-border);
+  border-radius: 10px; padding: 12px 14px; background: var(--c-surface);
+}
+.rs-item--pendiente { border-left-color: #d97706; }
+.rs-item--confirmada { border-left-color: #16a34a; }
+.rs-item--rechazada { border-left-color: #dc2626; }
+.rs-item--cancelada { border-left-color: var(--c-text-soft); }
+.rs-item__main { display: flex; align-items: center; gap: 10px; }
+.rs-item__main b { font-size: 0.95rem; }
+.rs-item__meta { margin: 4px 0 0; font-size: 0.82rem; color: var(--c-text-muted); }
+.rs-item__nota { margin: 6px 0 0; font-size: 0.83rem; color: var(--c-text); }
+.rs-item__actions { display: flex; gap: 8px; margin-top: 10px; }
+.rs-item__actions button {
+  border: 1px solid var(--c-border); background: var(--c-surface); border-radius: 7px;
+  padding: 5px 12px; font-size: 0.82rem; cursor: pointer;
+}
+.rs-approve { color: #15803d; border-color: #bbf7d0 !important; }
+.rs-reject { color: #b91c1c; border-color: #fecaca !important; }
+.rs-del { margin-left: auto; }
+
+.rs-pill { font-size: 0.74rem; font-weight: 600; padding: 2px 9px; border-radius: 999px; }
+.rs-pill--pendiente { background: #fef3c7; color: #92400e; }
+.rs-pill--confirmada { background: #dcfce7; color: #15803d; }
+.rs-pill--rechazada { background: #fee2e2; color: #b91c1c; }
+.rs-pill--cancelada { background: var(--c-bg); color: var(--c-text-muted); }
+
+.rs-cal { padding: 8px; }
+.rs-cell {
+  min-height: 88px; border: 1px solid var(--c-border); border-radius: 6px; padding: 4px 5px;
+  display: flex; flex-direction: column; gap: 2px; font-size: 0.75rem;
+}
+.rs-cell.is-out { background: var(--c-bg); color: var(--c-text-soft); }
+.rs-cell > span { font-weight: 600; }
+.rs-dot {
+  font-style: normal; font-size: 0.68rem; padding: 1px 4px; border-radius: 4px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rs-dot--pendiente { background: #fef3c7; color: #92400e; }
+.rs-dot--confirmada { background: #dcfce7; color: #15803d; }
+.rs-dot--rechazada { background: #fee2e2; color: #b91c1c; }
+.rs-dot--cancelada { background: var(--c-bg); color: var(--c-text-muted); }
+.rs-more { font-style: normal; font-size: 0.68rem; color: var(--c-text-soft); }
 .ad-actions { display: flex; flex-direction: column; gap: 8px; }
 .ad-del { background: var(--c-danger); color: #fff; border: 1px solid var(--c-danger); }
 .ad-del:hover { background: #b91c1c; }

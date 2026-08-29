@@ -82,7 +82,7 @@ export class AdminShellComponent {
         label: 'Amenidades', icon: 'amenity', disponible: true,
         hijos: [
           { label: 'Directorio', ruta: '/panel/amenidades/directorio', disponible: true },
-          { label: 'Reservaciones', ruta: '/panel/amenidades/reservaciones', disponible: false },
+          { label: 'Reservaciones', ruta: '/panel/amenidades/reservaciones', disponible: true },
           { label: 'Estadísticas', ruta: '/panel/amenidades/estadisticas', disponible: false },
         ],
       },

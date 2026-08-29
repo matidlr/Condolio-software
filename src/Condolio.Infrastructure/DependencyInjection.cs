@@ -75,6 +75,7 @@ public static class DependencyInjection
         services.AddScoped<IVistaResidenteService, Condolio.Infrastructure.Residentes.VistaResidenteService>();
         services.AddScoped<ITicketService, Condolio.Infrastructure.Tickets.TicketService>();
         services.AddScoped<IAmenidadService, Condolio.Infrastructure.Amenidades.AmenidadService>();
+        services.AddScoped<IReservaService, Condolio.Infrastructure.Amenidades.ReservaService>();
 
         // ---- Archivos ----
         services.AddSingleton<IFileStorage, LocalFileStorage>();

@@ -101,6 +101,11 @@ export const routes: Routes = [
           import('./features/amenidades/nueva-amenidad.component').then((m) => m.NuevaAmenidadComponent),
       },
       {
+        path: 'amenidades/reservaciones',
+        loadComponent: () =>
+          import('./features/amenidades/reservaciones.component').then((m) => m.ReservacionesComponent),
+      },
+      {
         path: 'amenidades/:id',
         loadComponent: () =>
           import('./features/amenidades/amenidad-detalle.component').then((m) => m.AmenidadDetalleComponent),

@@ -1,0 +1,173 @@
+<section class="am">
+  <header class="am-head">
+    <h1>Reservaciones</h1>
+    <p>Ver y gestionar reservaciones de instalaciones</p>
+  </header>
+
+  @if (data(); as d) {
+    <div class="am-kpis">
+      <div class="am-kpi">
+        <span class="am-kpi__ic am-kpi__ic--amber">⏱</span>
+        <span class="am-kpi__l">Pendientes</span><b>{{ d.pendientes }}</b>
+      </div>
+      <div class="am-kpi">
+        <span class="am-kpi__ic am-kpi__ic--green">✓</span>
+        <span class="am-kpi__l">Aprobadas</span><b>{{ d.aprobadas }}</b>
+      </div>
+      <div class="am-kpi">
+        <span class="am-kpi__ic am-kpi__ic--red">✕</span>
+        <span class="am-kpi__l">Rechazadas</span><b>{{ d.rechazadas }}</b>
+      </div>
+      <div class="am-kpi">
+        <span class="am-kpi__ic am-kpi__ic--blue">📅</span>
+        <span class="am-kpi__l">Reservas de hoy</span><b>{{ d.hoyConfirmadas }}</b>
+      </div>
+    </div>
+
+    <div class="am-panel">
+      <div class="rs-toolbar">
+        <div class="rs-nav">
+          <button type="button" (click)="mover(-1)">‹</button>
+          <b>{{ periodoLabel() }}</b>
+          <button type="button" (click)="mover(1)">›</button>
+        </div>
+        <div class="am-search">
+          <span>⌕</span>
+          <input type="search" placeholder="Buscar reservaciones…"
+            [value]="busqueda()" (input)="busqueda.set($any($event.target).value)" />
+        </div>
+      </div>
+
+      <div class="rs-toolbar rs-toolbar--2">
+        <div class="rs-filterwrap">
+          <button type="button" class="am-tabs" [class.is-active]="filtroEstado() !== 'todas'"
+            (click)="filtrosAbierto.set(!filtrosAbierto())">▽ Filtros</button>
+          @if (filtrosAbierto()) {
+            <div class="rs-fpop">
+              @for (o of opcionesFiltro; track o.valor) {
+                <button type="button" [class.is-active]="filtroEstado() === o.valor"
+                  (click)="filtroEstado.set(o.valor); filtrosAbierto.set(false)">{{ o.label }}</button>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="am-tabs">
+          <button type="button" [class.is-active]="rango() === 'dia'" (click)="rango.set('dia')">Día</button>
+          <button type="button" [class.is-active]="rango() === 'semana'" (click)="rango.set('semana')">Semana</button>
+          <button type="button" [class.is-active]="rango() === 'mes'" (click)="rango.set('mes')">Mes</button>
+        </div>
+
+        <div class="am-tabs">
+          <button type="button" [class.is-active]="vista() === 'lista'" (click)="vista.set('lista')">☰</button>
+          <button type="button" [class.is-active]="vista() === 'calendario'" (click)="vista.set('calendario')">▦</button>
+        </div>
+
+        <button type="button" class="btn btn--primary" (click)="abrirNueva()">+ Nueva reservación</button>
+        <button type="button" class="u-icon-btn" (click)="recargar()" aria-label="Refrescar">⟳</button>
+      </div>
+
+      @if (cargando()) {
+        <p class="am-loading">Cargando…</p>
+      } @else if (visibles().length === 0) {
+        <div class="am-empty">
+          <div class="am-empty__ic">📅</div>
+          <h2>No se encontraron reservaciones</h2>
+          <p>No hay reservas para el período seleccionado. Van a aparecer acá cuando los residentes empiecen a reservar.</p>
+          <button type="button" class="btn btn--primary" (click)="abrirNueva()">+ Nueva reservación</button>
+        </div>
+      } @else if (vista() === 'lista') {
+        <div class="rs-list">
+          @for (r of visibles(); track r.id) {
+            <div class="rs-item rs-item--{{ r.estado.toLowerCase() }}">
+              <div class="rs-item__main">
+                <b>{{ r.amenidadNombre }}</b>
+                <span class="rs-pill rs-pill--{{ r.estado.toLowerCase() }}">{{ labelEstado[r.estado] }}</span>
+              </div>
+              <p class="rs-item__meta">
+                {{ r.inicio | date:'EEE d MMM, HH:mm' }} – {{ r.fin | date:'HH:mm' }}
+                · {{ r.solicitante }}{{ r.unidadNombre ? ' · ' + r.unidadNombre : '' }}
+                @if (r.importe) { · {{ moneda(r.importe) }} }
+              </p>
+              @if (r.nota) { <p class="rs-item__nota">{{ r.nota }}</p> }
+              <div class="rs-item__actions">
+                @if (r.estado === 'Pendiente') {
+                  <button type="button" class="rs-approve" (click)="cambiar(r, 'Confirmada')">Aprobar</button>
+                  <button type="button" class="rs-reject" (click)="cambiar(r, 'Rechazada')">Rechazar</button>
+                } @else if (r.estado === 'Confirmada') {
+                  <button type="button" class="rs-reject" (click)="cambiar(r, 'Cancelada')">Cancelar</button>
+                }
+                <button type="button" class="rs-del" (click)="eliminar(r)" aria-label="Eliminar">🗑</button>
+              </div>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="wz-cal rs-cal">
+          <div class="wz-cal__grid">
+            @for (dw of ['L','M','M','J','V','S','D']; track $index) { <span class="wz-cal__dow">{{ dw }}</span> }
+            @for (c of grillaMes(); track c.fecha) {
+              <div class="rs-cell" [class.is-out]="c.otroMes">
+                <span>{{ c.dia }}</span>
+                @for (r of c.reservas.slice(0,3); track r.id) {
+                  <em class="rs-dot rs-dot--{{ r.estado.toLowerCase() }}">{{ r.amenidadNombre }}</em>
+                }
+                @if (c.reservas.length > 3) { <em class="rs-more">+{{ c.reservas.length - 3 }}</em> }
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  } @else if (cargando()) {
+    <p class="am-loading">Cargando…</p>
+  }
+</section>
+
+@if (nuevaAbierto()) {
+  <div class="wz-overlay" (click)="nuevaAbierto.set(false)">
+    <div class="wz-modal" (click)="$event.stopPropagation()">
+      <header><h3>Nueva reservación</h3><button type="button" (click)="nuevaAbierto.set(false)">✕</button></header>
+
+      <label class="wz-label">Amenidad</label>
+      <select class="wz-input" [ngModel]="fAmenidad()" (ngModelChange)="fAmenidad.set($event)">
+        <option value="">Elegí una amenidad</option>
+        @for (a of amenidades(); track a.id) { <option [value]="a.id">{{ a.nombre }}</option> }
+      </select>
+
+      <label class="wz-label" style="margin-top:12px">Unidad <span class="wz-opt">(opcional)</span></label>
+      <select class="wz-input" [ngModel]="fUnidad()" (ngModelChange)="fUnidad.set($event)">
+        <option value="">Sin unidad</option>
+        @for (u of unidades(); track u.id) { <option [value]="u.id">{{ u.nombre }}</option> }
+      </select>
+
+      <label class="wz-label" style="margin-top:12px">Fecha</label>
+      <input type="date" class="wz-input" [ngModel]="fFecha()" (ngModelChange)="fFecha.set($event)" />
+
+      <div class="wz-grid2" style="margin-top:12px">
+        <div>
+          <label class="wz-label">Desde</label>
+          <select class="wz-input" [ngModel]="fInicio()" (ngModelChange)="fInicio.set(+$event)">
+            @for (o of horas; track o.min) { <option [value]="o.min">{{ o.label }}</option> }
+          </select>
+        </div>
+        <div>
+          <label class="wz-label">Hasta</label>
+          <select class="wz-input" [ngModel]="fFin()" (ngModelChange)="fFin.set(+$event)">
+            @for (o of horas; track o.min) { <option [value]="o.min">{{ o.label }}</option> }
+          </select>
+        </div>
+      </div>
+
+      <label class="wz-label" style="margin-top:12px">Nota <span class="wz-opt">(opcional)</span></label>
+      <textarea class="wz-input" rows="2" [ngModel]="fNota()" (ngModelChange)="fNota.set($event)"></textarea>
+
+      <footer>
+        <button type="button" class="btn btn--ghost" (click)="nuevaAbierto.set(false)">Cancelar</button>
+        <button type="button" class="btn btn--primary" [disabled]="!fAmenidad() || guardando()" (click)="crear()">
+          {{ guardando() ? 'Creando…' : 'Crear reservación' }}
+        </button>
+      </footer>
+    </div>
+  </div>
+}
