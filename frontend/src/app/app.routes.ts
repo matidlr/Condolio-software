@@ -104,6 +104,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/calendario/calendario.component').then((m) => m.CalendarioComponent),
       },
+      {
+        path: 'documentos',
+        loadComponent: () =>
+          import('./features/documentos/documentos.component').then((m) => m.DocumentosComponent),
+      },
       { path: 'amenidades', pathMatch: 'full', redirectTo: 'amenidades/directorio' },
       {
         path: 'amenidades/directorio',

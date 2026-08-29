@@ -1,0 +1,172 @@
+<section class="doc">
+  <header class="doc-head">
+    <h1>Documentos</h1>
+    <p>Gestionar y organizar archivos de la comunidad</p>
+  </header>
+
+  <div class="doc-layout">
+    <aside class="doc-side">
+      <button type="button" class="doc-side__inicio" [class.is-active]="esInicio() && !carpetaId()" (click)="irSeccion('inicio')">
+        ▦ Inicio
+      </button>
+
+      <p class="doc-side__label">Acceso rápido</p>
+      <button type="button" class="doc-nav" [class.is-active]="seccion() === 'recientes'" (click)="irSeccion('recientes')">🕐 Recientes</button>
+      <button type="button" class="doc-nav" [class.is-active]="seccion() === 'destacados'" (click)="irSeccion('destacados')">⭐ Destacados</button>
+
+      <p class="doc-side__label">Por nivel de acceso</p>
+      @for (n of niveles; track n.value) {
+        <button type="button" class="doc-nav" [class.is-active]="seccion() === 'nivel-' + n.value"
+          (click)="irSeccion($any('nivel-' + n.value))">
+          <span [style.color]="n.color">●</span> {{ n.label }}
+        </button>
+      }
+
+      <div class="doc-storage">
+        <p>💾 Almacenamiento</p>
+        <div class="doc-storage__bar"><div [style.width.%]="almacenamiento().pct"></div></div>
+        <small>{{ almacenamiento().usado }} de {{ almacenamiento().total }} usado</small>
+      </div>
+    </aside>
+
+    <div class="doc-main">
+      <div class="doc-toolbar">
+        <div class="doc-search">
+          <span>⌕</span>
+          <input type="search" placeholder="Buscar archivos y carpetas…"
+            [value]="busqueda()" (input)="busqueda.set($any($event.target).value)" />
+        </div>
+        <div class="doc-vista">
+          <button type="button" [class.is-active]="vista() === 'grid'" (click)="vista.set('grid')">▦</button>
+          <button type="button" [class.is-active]="vista() === 'lista'" (click)="vista.set('lista')">☰</button>
+        </div>
+        <div class="doc-nuevo">
+          <button type="button" class="btn btn--primary" (click)="nuevoMenu.set(!nuevoMenu())">+ Nuevo</button>
+          @if (nuevoMenu()) {
+            <div class="doc-menu" (click)="$event.stopPropagation()">
+              <button type="button" (click)="abrirCarpetaModal()">📁 Nueva carpeta</button>
+              <label class="doc-menu__file">
+                <input type="file" hidden multiple (change)="onSubir($event)" />
+                ⬆ Subir archivos
+              </label>
+            </div>
+          }
+        </div>
+      </div>
+
+      @if (esInicio() && ruta().length > 1) {
+        <nav class="doc-breadcrumb">
+          @for (r of ruta(); track $index; let last = $last) {
+            <button type="button" [disabled]="last" (click)="irRuta($index)">{{ r.nombre }}</button>
+            @if (!last) { <span>/</span> }
+          }
+        </nav>
+      } @else {
+        <h2 class="doc-titulo">{{ seccionTitulo() }}</h2>
+      }
+
+      @if (cargando()) {
+        <p class="doc-loading">Cargando…</p>
+      } @else {
+        @if (esInicio() && carpetasVis().length) {
+          <p class="doc-group">Carpetas</p>
+          <div class="doc-grid" [class.doc-grid--list]="vista() === 'lista'">
+            @for (c of carpetasVis(); track c.id) {
+              <div class="doc-card doc-card--folder" (click)="abrirCarpeta(c)">
+                <span class="doc-card__ic">📁</span>
+                <div class="doc-card__body">
+                  <b>{{ c.nombre }}</b>
+                  <small>{{ c.elementos }} elemento{{ c.elementos === 1 ? '' : 's' }} · {{ meta[c.nivel].label }}</small>
+                </div>
+                <div class="doc-card__acc" (click)="$event.stopPropagation()">
+                  <button type="button" class="doc-kebab" (click)="menu.set(menu() === c.id ? null : c.id)">⋮</button>
+                  @if (menu() === c.id) {
+                    <div class="doc-menu doc-menu--card">
+                      <button type="button" (click)="renombrarCarpeta(c); menu.set(null)">Renombrar</button>
+                      <button type="button" class="doc-menu__del" (click)="eliminarCarpeta(c); menu.set(null)">Eliminar</button>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        @if (docsVis().length) {
+          <p class="doc-group">Archivos</p>
+          <div class="doc-grid" [class.doc-grid--list]="vista() === 'lista'">
+            @for (d of docsVis(); track d.id) {
+              <div class="doc-card" (click)="descargar(d)">
+                <span class="doc-card__badge" [style.background]="meta[d.nivel].color + '22'" [style.color]="meta[d.nivel].color">
+                  {{ meta[d.nivel].label }}
+                </span>
+                <span class="doc-card__ic">{{ icono(d.contentType) }}</span>
+                <div class="doc-card__body">
+                  <b>{{ d.nombre }}</b>
+                  <small>{{ tamano(d.tamano) }} · {{ d.subidoPor }} · {{ d.creadoUtc | date:'d MMM y' }}</small>
+                </div>
+                @if (d.destacado) { <span class="doc-card__star">⭐</span> }
+                <div class="doc-card__acc" (click)="$event.stopPropagation()">
+                  <button type="button" class="doc-kebab" (click)="menu.set(menu() === d.id ? null : d.id)">⋮</button>
+                  @if (menu() === d.id) {
+                    <div class="doc-menu doc-menu--card">
+                      <button type="button" (click)="descargar(d); menu.set(null)">Descargar</button>
+                      <button type="button" (click)="toggleDestacar(d); menu.set(null)">{{ d.destacado ? 'Quitar de destacados' : 'Destacar' }}</button>
+                      <button type="button" (click)="abrirEdit(d); menu.set(null)">Editar</button>
+                      <button type="button" class="doc-menu__del" (click)="eliminar(d); menu.set(null)">Eliminar</button>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        @if (carpetasVis().length === 0 && docsVis().length === 0) {
+          <div class="doc-empty">
+            <div class="doc-empty__ic">📂</div>
+            <h3>{{ esInicio() ? 'Esta carpeta está vacía' : 'No hay documentos' }}</h3>
+            <p>Subí archivos o creá carpetas para organizar la documentación de la comunidad.</p>
+          </div>
+        }
+      }
+    </div>
+  </div>
+</section>
+
+@if (carpetaModal()) {
+  <div class="doc-overlay" (click)="carpetaModal.set(false)">
+    <div class="doc-modal" (click)="$event.stopPropagation()">
+      <header><h3>Nueva carpeta</h3><button type="button" (click)="carpetaModal.set(false)">✕</button></header>
+      <label class="doc-label">Nombre</label>
+      <input class="doc-input" [ngModel]="nuevaCarpetaNombre()" (ngModelChange)="nuevaCarpetaNombre.set($event)"
+        (keydown.enter)="crearCarpeta()" />
+      <label class="doc-label" style="margin-top:12px">Nivel de acceso</label>
+      <select class="doc-input" [ngModel]="nuevaCarpetaNivel()" (ngModelChange)="nuevaCarpetaNivel.set($event)">
+        @for (n of niveles; track n.value) { <option [value]="n.value">{{ n.label }}</option> }
+      </select>
+      <footer>
+        <button type="button" class="btn btn--ghost" (click)="carpetaModal.set(false)">Cancelar</button>
+        <button type="button" class="btn btn--primary" [disabled]="!nuevaCarpetaNombre().trim()" (click)="crearCarpeta()">Crear</button>
+      </footer>
+    </div>
+  </div>
+}
+
+@if (editDoc(); as d) {
+  <div class="doc-overlay" (click)="editDoc.set(null)">
+    <div class="doc-modal" (click)="$event.stopPropagation()">
+      <header><h3>Editar documento</h3><button type="button" (click)="editDoc.set(null)">✕</button></header>
+      <label class="doc-label">Nombre</label>
+      <input class="doc-input" [ngModel]="editNombre()" (ngModelChange)="editNombre.set($event)" />
+      <label class="doc-label" style="margin-top:12px">Nivel de acceso</label>
+      <select class="doc-input" [ngModel]="editNivel()" (ngModelChange)="editNivel.set($event)">
+        @for (n of niveles; track n.value) { <option [value]="n.value">{{ n.label }}</option> }
+      </select>
+      <footer>
+        <button type="button" class="btn btn--ghost" (click)="editDoc.set(null)">Cancelar</button>
+        <button type="button" class="btn btn--primary" [disabled]="!editNombre().trim()" (click)="guardarEdit()">Guardar</button>
+      </footer>
+    </div>
+  </div>
+}

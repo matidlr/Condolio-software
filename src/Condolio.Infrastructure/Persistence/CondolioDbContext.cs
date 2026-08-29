@@ -4,6 +4,7 @@ using Condolio.Domain.Archivos;
 using Condolio.Domain.Billing;
 using Condolio.Domain.Calendario;
 using Condolio.Domain.Comunicaciones;
+using Condolio.Domain.Documentos;
 using Condolio.Domain.Common;
 using Condolio.Domain.Consorcios;
 using Condolio.Domain.Residentes;
@@ -51,6 +52,8 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<AnuncioComentario> AnuncioComentarios => Set<AnuncioComentario>();
     public DbSet<AnuncioLike> AnuncioLikes => Set<AnuncioLike>();
     public DbSet<EventoCalendario> EventosCalendario => Set<EventoCalendario>();
+    public DbSet<CarpetaDocumento> CarpetasDocumento => Set<CarpetaDocumento>();
+    public DbSet<Documento> Documentos => Set<Documento>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -265,6 +268,24 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.CreadoPorUsuarioId).HasMaxLength(450);
             e.Property(x => x.CreadoPorNombre).HasMaxLength(200);
             e.HasIndex(x => new { x.AdministradorId, x.ConsorcioId, x.InicioUtc });
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
+        });
+
+        builder.Entity<CarpetaDocumento>(e =>
+        {
+            e.Property(x => x.Nombre).HasMaxLength(200).IsRequired();
+            e.HasIndex(x => new { x.AdministradorId, x.ConsorcioId, x.CarpetaPadreId });
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
+        });
+
+        builder.Entity<Documento>(e =>
+        {
+            e.Property(x => x.Nombre).HasMaxLength(260).IsRequired();
+            e.Property(x => x.ContentType).HasMaxLength(120).IsRequired();
+            e.Property(x => x.RutaRelativa).HasMaxLength(400).IsRequired();
+            e.Property(x => x.SubidoPorUsuarioId).HasMaxLength(450);
+            e.Property(x => x.SubidoPorNombre).HasMaxLength(200);
+            e.HasIndex(x => new { x.AdministradorId, x.ConsorcioId, x.CarpetaId });
             e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
         });
     }

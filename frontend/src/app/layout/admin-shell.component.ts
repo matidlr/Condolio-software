@@ -93,7 +93,7 @@ export class AdminShellComponent {
       { label: 'Expensas', ruta: '/panel/expensas', icon: 'receipt', disponible: false },
       { label: 'Gastos', ruta: '/panel/gastos', icon: 'wallet', disponible: false },
       { label: 'Reclamos', ruta: '/panel/reclamos', icon: 'chat', disponible: false },
-      { label: 'Documentos', ruta: '/panel/documentos', icon: 'folder', disponible: false },
+      { label: 'Documentos', ruta: '/panel/documentos', icon: 'folder', disponible: true },
     ];
   });
 
