@@ -4,6 +4,7 @@ using Condolio.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Condolio.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(CondolioDbContext))]
-    partial class CondolioDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260829165216_DocumentoCategoria")]
+    partial class DocumentoCategoria
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -710,42 +713,6 @@ namespace Condolio.Infrastructure.Persistence.Migrations
                     b.HasIndex("AdministradorId", "ConsorcioId", "CarpetaId");
 
                     b.ToTable("Documentos");
-                });
-
-            modelBuilder.Entity("Condolio.Domain.Documentos.DocumentoAcceso", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime?>("ActualizadoUtc")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<Guid>("AdministradorId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid>("ConsorcioId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("CreadoUtc")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<Guid>("DocumentoId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<bool>("EsDescarga")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<string>("UsuarioId")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("varchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AdministradorId", "ConsorcioId", "DocumentoId");
-
-                    b.ToTable("DocumentosAcceso");
                 });
 
             modelBuilder.Entity("Condolio.Domain.Residentes.Invitacion", b =>

@@ -12,6 +12,7 @@ public record DocumentoDto(
     long Tamano,
     Guid? CarpetaId,
     NivelAcceso Nivel,
+    CategoriaDocumento Categoria,
     bool Destacado,
     DateTime CreadoUtc,
     DateTime? UltimoAccesoUtc,
@@ -25,9 +26,27 @@ public record ContenidoDto(
     long AlmacenamientoUsado,
     long AlmacenamientoTotal);
 
+public record AnaliticasDto(
+    int TotalArchivos,
+    long AlmacenamientoUsado,
+    long AlmacenamientoTotal,
+    int TotalVistas,
+    int TotalDescargas,
+    int VisoresUnicos,
+    int ArchivosCompartidos,
+    int ActividadReciente,
+    double PromedioDescargas,
+    IReadOnlyList<CategoriaAggDto> PorCategoria,
+    IReadOnlyList<DocPopularDto> Populares,
+    IReadOnlyList<TimelinePuntoDto> Timeline);
+
+public record CategoriaAggDto(CategoriaDocumento Categoria, int Cantidad, long Tamano);
+public record DocPopularDto(Guid Id, string Nombre, CategoriaDocumento Categoria, int Vistas, int Descargas, DateTime? UltimoAccesoUtc);
+public record TimelinePuntoDto(DateOnly Fecha, int Vistas, int Descargas);
+
 public record CrearCarpetaDto(string Nombre, Guid? CarpetaPadreId, NivelAcceso Nivel);
-public record NuevoDocumento(string Nombre, string ContentType, long Tamano, Stream Contenido, Guid? CarpetaId, NivelAcceso Nivel);
-public record ActualizarDocumentoDto(string Nombre, NivelAcceso Nivel, Guid? CarpetaId);
+public record NuevoDocumento(string Nombre, string ContentType, long Tamano, Stream Contenido, Guid? CarpetaId, NivelAcceso Nivel, CategoriaDocumento Categoria);
+public record ActualizarDocumentoDto(string Nombre, NivelAcceso Nivel, CategoriaDocumento Categoria, Guid? CarpetaId);
 public record ArchivoDocumento(string Nombre, string ContentType, Stream Contenido);
 
 public interface IDocumentoService
@@ -39,11 +58,14 @@ public interface IDocumentoService
 
     Task<Result<CarpetaDto>> CrearCarpetaAsync(Guid consorcioId, CrearCarpetaDto dto, CancellationToken ct = default);
     Task<Result> RenombrarCarpetaAsync(Guid consorcioId, Guid carpetaId, string nombre, CancellationToken ct = default);
+    Task<Result> MoverCarpetaAsync(Guid consorcioId, Guid carpetaId, Guid? destinoId, CancellationToken ct = default);
     Task<Result> EliminarCarpetaAsync(Guid consorcioId, Guid carpetaId, CancellationToken ct = default);
+    Task<Result<IReadOnlyList<CarpetaDto>>> TodasLasCarpetasAsync(Guid consorcioId, CancellationToken ct = default);
 
     Task<Result<DocumentoDto>> SubirAsync(Guid consorcioId, NuevoDocumento archivo, CancellationToken ct = default);
     Task<Result<DocumentoDto>> ActualizarAsync(Guid consorcioId, Guid documentoId, ActualizarDocumentoDto dto, CancellationToken ct = default);
     Task<Result> DestacarAsync(Guid consorcioId, Guid documentoId, bool destacar, CancellationToken ct = default);
-    Task<Result<ArchivoDocumento>> DescargarAsync(Guid consorcioId, Guid documentoId, CancellationToken ct = default);
+    Task<Result<ArchivoDocumento>> DescargarAsync(Guid consorcioId, Guid documentoId, bool registrarDescarga = false, CancellationToken ct = default);
     Task<Result> EliminarAsync(Guid consorcioId, Guid documentoId, CancellationToken ct = default);
+    Task<Result<AnaliticasDto>> AnaliticasAsync(Guid consorcioId, CancellationToken ct = default);
 }

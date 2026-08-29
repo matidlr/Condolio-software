@@ -46,7 +46,7 @@ public class DocumentoService : IDocumentoService
         var docs = await _db.Documentos
             .Where(d => d.ConsorcioId == consorcioId && d.CarpetaId == carpetaId)
             .OrderByDescending(d => d.CreadoUtc)
-            .Select(d => new DocumentoDto(d.Id, d.Nombre, d.ContentType, d.Tamano, d.CarpetaId, d.Nivel, d.Destacado, d.CreadoUtc, d.UltimoAccesoUtc, d.SubidoPorNombre))
+            .Select(d => new DocumentoDto(d.Id, d.Nombre, d.ContentType, d.Tamano, d.CarpetaId, d.Nivel, d.Categoria, d.Destacado, d.CreadoUtc, d.UltimoAccesoUtc, d.SubidoPorNombre))
             .ToListAsync(ct);
 
         var usado = await _db.Documentos.Where(d => d.ConsorcioId == consorcioId).SumAsync(d => (long?)d.Tamano, ct) ?? 0;
@@ -58,17 +58,17 @@ public class DocumentoService : IDocumentoService
         Result<IReadOnlyList<DocumentoDto>>.Ok(await _db.Documentos
             .Where(d => d.ConsorcioId == consorcioId)
             .OrderByDescending(d => d.UltimoAccesoUtc ?? d.CreadoUtc)
-            .Take(20).Select(d => new DocumentoDto(d.Id, d.Nombre, d.ContentType, d.Tamano, d.CarpetaId, d.Nivel, d.Destacado, d.CreadoUtc, d.UltimoAccesoUtc, d.SubidoPorNombre)).ToListAsync(ct));
+            .Take(20).Select(d => new DocumentoDto(d.Id, d.Nombre, d.ContentType, d.Tamano, d.CarpetaId, d.Nivel, d.Categoria, d.Destacado, d.CreadoUtc, d.UltimoAccesoUtc, d.SubidoPorNombre)).ToListAsync(ct));
 
     public async Task<Result<IReadOnlyList<DocumentoDto>>> DestacadosAsync(Guid consorcioId, CancellationToken ct = default) =>
         Result<IReadOnlyList<DocumentoDto>>.Ok(await _db.Documentos
             .Where(d => d.ConsorcioId == consorcioId && d.Destacado)
-            .OrderByDescending(d => d.CreadoUtc).Select(d => new DocumentoDto(d.Id, d.Nombre, d.ContentType, d.Tamano, d.CarpetaId, d.Nivel, d.Destacado, d.CreadoUtc, d.UltimoAccesoUtc, d.SubidoPorNombre)).ToListAsync(ct));
+            .OrderByDescending(d => d.CreadoUtc).Select(d => new DocumentoDto(d.Id, d.Nombre, d.ContentType, d.Tamano, d.CarpetaId, d.Nivel, d.Categoria, d.Destacado, d.CreadoUtc, d.UltimoAccesoUtc, d.SubidoPorNombre)).ToListAsync(ct));
 
     public async Task<Result<IReadOnlyList<DocumentoDto>>> PorNivelAsync(Guid consorcioId, NivelAcceso nivel, CancellationToken ct = default) =>
         Result<IReadOnlyList<DocumentoDto>>.Ok(await _db.Documentos
             .Where(d => d.ConsorcioId == consorcioId && d.Nivel == nivel)
-            .OrderByDescending(d => d.CreadoUtc).Select(d => new DocumentoDto(d.Id, d.Nombre, d.ContentType, d.Tamano, d.CarpetaId, d.Nivel, d.Destacado, d.CreadoUtc, d.UltimoAccesoUtc, d.SubidoPorNombre)).ToListAsync(ct));
+            .OrderByDescending(d => d.CreadoUtc).Select(d => new DocumentoDto(d.Id, d.Nombre, d.ContentType, d.Tamano, d.CarpetaId, d.Nivel, d.Categoria, d.Destacado, d.CreadoUtc, d.UltimoAccesoUtc, d.SubidoPorNombre)).ToListAsync(ct));
 
     public async Task<Result<CarpetaDto>> CrearCarpetaAsync(Guid consorcioId, CrearCarpetaDto dto, CancellationToken ct = default)
     {
@@ -95,6 +95,37 @@ public class DocumentoService : IDocumentoService
             .ExecuteUpdateAsync(s => s.SetProperty(c => c.Nombre, nombre.Trim()), ct);
         return n == 0 ? Result.Fail("Carpeta no encontrada.") : Result.Ok();
     }
+
+    public async Task<Result> MoverCarpetaAsync(Guid consorcioId, Guid carpetaId, Guid? destinoId, CancellationToken ct = default)
+    {
+        var c = await _db.CarpetasDocumento.FirstOrDefaultAsync(x => x.Id == carpetaId && x.ConsorcioId == consorcioId, ct);
+        if (c is null) return Result.Fail("Carpeta no encontrada.");
+        if (destinoId == carpetaId) return Result.Fail("No se puede mover una carpeta dentro de sí misma.");
+        if (destinoId is { } dst)
+        {
+            // evitar ciclos: el destino no puede ser un descendiente
+            var todas = await _db.CarpetasDocumento.Where(x => x.ConsorcioId == consorcioId)
+                .Select(x => new { x.Id, x.CarpetaPadreId }).ToListAsync(ct);
+            var actual = dst;
+            while (actual != Guid.Empty)
+            {
+                if (actual == carpetaId) return Result.Fail("No se puede mover dentro de una subcarpeta.");
+                var padre = todas.FirstOrDefault(x => x.Id == actual)?.CarpetaPadreId;
+                if (padre is null) break;
+                actual = padre.Value;
+            }
+        }
+        c.CarpetaPadreId = destinoId;
+        await _db.SaveChangesAsync(ct);
+        return Result.Ok();
+    }
+
+    public async Task<Result<IReadOnlyList<CarpetaDto>>> TodasLasCarpetasAsync(Guid consorcioId, CancellationToken ct = default) =>
+        Result<IReadOnlyList<CarpetaDto>>.Ok(await _db.CarpetasDocumento
+            .Where(c => c.ConsorcioId == consorcioId)
+            .OrderBy(c => c.Nombre)
+            .Select(c => new CarpetaDto(c.Id, c.Nombre, c.CarpetaPadreId, c.Nivel, 0))
+            .ToListAsync(ct));
 
     public async Task<Result> EliminarCarpetaAsync(Guid consorcioId, Guid carpetaId, CancellationToken ct = default)
     {
@@ -139,6 +170,7 @@ public class DocumentoService : IDocumentoService
             Tamano = archivo.Tamano,
             RutaRelativa = ruta,
             Nivel = archivo.Nivel,
+            Categoria = archivo.Categoria,
             SubidoPorUsuarioId = _tenant.UsuarioId ?? string.Empty,
             SubidoPorNombre = autor ?? "Administración",
         };
@@ -157,6 +189,7 @@ public class DocumentoService : IDocumentoService
 
         d.Nombre = dto.Nombre.Trim();
         d.Nivel = dto.Nivel;
+        d.Categoria = dto.Categoria;
         d.CarpetaId = dto.CarpetaId;
         await _db.SaveChangesAsync(ct);
         return Result<DocumentoDto>.Ok(ProyectarObj(d));
@@ -169,14 +202,85 @@ public class DocumentoService : IDocumentoService
         return n == 0 ? Result.Fail("Documento no encontrado.") : Result.Ok();
     }
 
-    public async Task<Result<ArchivoDocumento>> DescargarAsync(Guid consorcioId, Guid documentoId, CancellationToken ct = default)
+    public async Task<Result<ArchivoDocumento>> DescargarAsync(Guid consorcioId, Guid documentoId, bool registrarDescarga = false, CancellationToken ct = default)
     {
-        var d = await _db.Documentos.FirstOrDefaultAsync(x => x.Id == documentoId && x.ConsorcioId == consorcioId, ct);
+        var d = await _db.Documentos.AsNoTracking().FirstOrDefaultAsync(x => x.Id == documentoId && x.ConsorcioId == consorcioId, ct);
         if (d is null || !_storage.Existe(d.RutaRelativa)) return Result<ArchivoDocumento>.Fail("Documento no encontrado.");
 
+        _db.DocumentosAcceso.Add(new DocumentoAcceso
+        {
+            AdministradorId = d.AdministradorId,
+            ConsorcioId = consorcioId,
+            DocumentoId = documentoId,
+            EsDescarga = registrarDescarga,
+            UsuarioId = _tenant.UsuarioId ?? string.Empty,
+        });
+        await _db.SaveChangesAsync(ct);
         await _db.Documentos.Where(x => x.Id == documentoId)
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.UltimoAccesoUtc, DateTime.UtcNow), ct);
+
         return Result<ArchivoDocumento>.Ok(new ArchivoDocumento(d.Nombre, d.ContentType, _storage.Abrir(d.RutaRelativa)));
+    }
+
+    public async Task<Result<AnaliticasDto>> AnaliticasAsync(Guid consorcioId, CancellationToken ct = default)
+    {
+        if (!await _db.Consorcios.AnyAsync(c => c.Id == consorcioId, ct))
+            return Result<AnaliticasDto>.Fail("Consorcio no encontrado.");
+
+        var docs = await _db.Documentos.AsNoTracking()
+            .Where(d => d.ConsorcioId == consorcioId)
+            .Select(d => new { d.Id, d.Nombre, d.Categoria, d.Tamano, d.Nivel, d.UltimoAccesoUtc })
+            .ToListAsync(ct);
+
+        var accesos = await _db.DocumentosAcceso.AsNoTracking()
+            .Where(a => a.ConsorcioId == consorcioId)
+            .Select(a => new { a.DocumentoId, a.EsDescarga, a.UsuarioId, a.CreadoUtc })
+            .ToListAsync(ct);
+
+        var ahora = DateTime.UtcNow;
+        var totalVistas = accesos.Count(a => !a.EsDescarga);
+        var totalDescargas = accesos.Count(a => a.EsDescarga);
+
+        var porCategoria = docs
+            .GroupBy(d => d.Categoria)
+            .Select(g => new CategoriaAggDto(g.Key, g.Count(), g.Sum(x => x.Tamano)))
+            .OrderByDescending(c => c.Tamano)
+            .ToList();
+
+        var populares = docs
+            .Select(d => new DocPopularDto(
+                d.Id, d.Nombre, d.Categoria,
+                accesos.Count(a => a.DocumentoId == d.Id && !a.EsDescarga),
+                accesos.Count(a => a.DocumentoId == d.Id && a.EsDescarga),
+                d.UltimoAccesoUtc))
+            .OrderByDescending(d => d.Vistas + d.Descargas)
+            .ThenByDescending(d => d.UltimoAccesoUtc)
+            .Take(10)
+            .ToList();
+
+        var desde = (accesos.Count > 0 ? accesos.Min(a => a.CreadoUtc) : ahora).Date;
+        if ((ahora.Date - desde).TotalDays > 30) desde = ahora.Date.AddDays(-30);
+        var timeline = new List<TimelinePuntoDto>();
+        for (var dia = desde; dia <= ahora.Date; dia = dia.AddDays(1))
+        {
+            var delDia = accesos.Where(a => a.CreadoUtc.Date == dia).ToList();
+            timeline.Add(new TimelinePuntoDto(DateOnly.FromDateTime(dia),
+                delDia.Count(a => !a.EsDescarga), delDia.Count(a => a.EsDescarga)));
+        }
+
+        return Result<AnaliticasDto>.Ok(new AnaliticasDto(
+            docs.Count,
+            docs.Sum(d => d.Tamano),
+            TopeAlmacenamiento,
+            totalVistas,
+            totalDescargas,
+            accesos.Where(a => !a.EsDescarga && a.UsuarioId != string.Empty).Select(a => a.UsuarioId).Distinct().Count(),
+            docs.Count(d => d.Nivel != NivelAcceso.Admin),
+            accesos.Count(a => a.CreadoUtc >= ahora.AddDays(-30)),
+            docs.Count == 0 ? 0 : Math.Round((double)totalDescargas / docs.Count, 1),
+            porCategoria,
+            populares,
+            timeline));
     }
 
     public async Task<Result> EliminarAsync(Guid consorcioId, Guid documentoId, CancellationToken ct = default)
@@ -190,6 +294,6 @@ public class DocumentoService : IDocumentoService
     }
 
     private static DocumentoDto ProyectarObj(Documento d) => new(
-        d.Id, d.Nombre, d.ContentType, d.Tamano, d.CarpetaId, d.Nivel, d.Destacado,
+        d.Id, d.Nombre, d.ContentType, d.Tamano, d.CarpetaId, d.Nivel, d.Categoria, d.Destacado,
         d.CreadoUtc, d.UltimoAccesoUtc, string.IsNullOrWhiteSpace(d.SubidoPorNombre) ? "Administración" : d.SubidoPorNombre);
 }

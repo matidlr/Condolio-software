@@ -54,6 +54,7 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<EventoCalendario> EventosCalendario => Set<EventoCalendario>();
     public DbSet<CarpetaDocumento> CarpetasDocumento => Set<CarpetaDocumento>();
     public DbSet<Documento> Documentos => Set<Documento>();
+    public DbSet<DocumentoAcceso> DocumentosAcceso => Set<DocumentoAcceso>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -286,6 +287,13 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.SubidoPorUsuarioId).HasMaxLength(450);
             e.Property(x => x.SubidoPorNombre).HasMaxLength(200);
             e.HasIndex(x => new { x.AdministradorId, x.ConsorcioId, x.CarpetaId });
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
+        });
+
+        builder.Entity<DocumentoAcceso>(e =>
+        {
+            e.Property(x => x.UsuarioId).HasMaxLength(450);
+            e.HasIndex(x => new { x.AdministradorId, x.ConsorcioId, x.DocumentoId });
             e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
         });
     }
