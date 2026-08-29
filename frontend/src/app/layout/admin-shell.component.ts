@@ -30,6 +30,7 @@ const ICONOS = {
   chat: '<path d="M4 5h16v11H9l-5 4z"/>',
   folder: '<path d="M3 6h6l2 2h10v11H3z"/>',
   ticket: '<path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4z"/><path d="M14 5v14" stroke-dasharray="2 2"/>',
+  amenity: '<path d="M3 15c1.5 0 1.5 1 3 1s1.5-1 3-1 1.5 1 3 1 1.5-1 3-1 1.5 1 3 1 1.5-1 3-1"/><path d="M3 19c1.5 0 1.5 1 3 1s1.5-1 3-1 1.5 1 3 1 1.5-1 3-1 1.5 1 3 1 1.5-1 3-1"/><path d="M7 12V6a2 2 0 0 1 4 0M7 9h4"/>',
 } as const;
 
 @Component({
@@ -75,6 +76,14 @@ export class AdminShellComponent {
           { label: 'Lista', ruta: '/panel/tickets/lista', disponible: true, badge: tks || undefined },
           { label: 'Panel', ruta: '/panel/tickets/panel', disponible: true },
           { label: 'Métricas', ruta: '/panel/tickets/metricas', disponible: true },
+        ],
+      },
+      {
+        label: 'Amenidades', icon: 'amenity', disponible: true,
+        hijos: [
+          { label: 'Directorio', ruta: '/panel/amenidades/directorio', disponible: true },
+          { label: 'Reservaciones', ruta: '/panel/amenidades/reservaciones', disponible: false },
+          { label: 'Estadísticas', ruta: '/panel/amenidades/estadisticas', disponible: false },
         ],
       },
       { label: 'Expensas', ruta: '/panel/expensas', icon: 'receipt', disponible: false },

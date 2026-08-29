@@ -21,6 +21,10 @@ export class AdjuntoService {
     return this.http.post<Adjunto>(this.base, form);
   }
 
+  renombrar(id: string, nombre: string): Observable<Adjunto> {
+    return this.http.patch<Adjunto>(`${this.base}/${id}`, { nombre });
+  }
+
   eliminar(id: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/${id}`);
   }

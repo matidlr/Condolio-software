@@ -7,6 +7,7 @@ public enum TipoAdjuntoOwner
     Nota = 0,
     Incidencia = 1,
     Ticket = 2,
+    Amenidad = 3,
 }
 
 /// <summary>Archivo adjunto (imagen, video o PDF) asociado a una nota, incidencia o ticket.</summary>

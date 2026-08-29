@@ -1,0 +1,90 @@
+<section class="am">
+  <header class="am-head">
+    <h1>Amenidades</h1>
+    <p>Gestionar instalaciones y espacios comunitarios</p>
+  </header>
+
+  @if (data(); as d) {
+    <div class="am-kpis">
+      <div class="am-kpi">
+        <span class="am-kpi__ic am-kpi__ic--blue">🏛</span>
+        <span class="am-kpi__l">Total de amenidades</span>
+        <b>{{ d.total }}</b>
+      </div>
+      <div class="am-kpi">
+        <span class="am-kpi__ic am-kpi__ic--green">📅</span>
+        <span class="am-kpi__l">Reservaciones este mes</span>
+        <b>{{ d.reservacionesEsteMes }}</b>
+      </div>
+      <div class="am-kpi">
+        <span class="am-kpi__ic am-kpi__ic--amber">⏱</span>
+        <span class="am-kpi__l">Aprobaciones pendientes</span>
+        <b>{{ d.aprobacionesPendientes }}</b>
+      </div>
+      <div class="am-kpi">
+        <span class="am-kpi__ic am-kpi__ic--green">$</span>
+        <span class="am-kpi__l">Ingresos generados</span>
+        <b>{{ moneda(d.ingresosGenerados) }}</b>
+      </div>
+    </div>
+
+    <div class="am-panel">
+      <div class="am-toolbar">
+        <div class="am-search">
+          <span>⌕</span>
+          <input type="search" placeholder="Buscar amenidades…"
+            [value]="busqueda()" (input)="busqueda.set($any($event.target).value)" />
+        </div>
+        <div class="am-tabs">
+          <button type="button" [class.is-active]="filtro() === 'todas'" (click)="filtro.set('todas')">Todas</button>
+          <button type="button" [class.is-active]="filtro() === 'reservables'" (click)="filtro.set('reservables')">Reservables</button>
+          <button type="button" [class.is-active]="filtro() === 'no'" (click)="filtro.set('no')">No reservables</button>
+        </div>
+        <button type="button" class="btn btn--primary am-nueva" (click)="nueva()">+ Nueva amenidad</button>
+      </div>
+
+      @if (cargando()) {
+        <p class="am-loading">Cargando…</p>
+      } @else if (visibles().length === 0) {
+        <div class="am-empty">
+          <div class="am-empty__ic">🏊</div>
+          <h2>{{ d.total === 0 ? 'Todavía no hay amenidades' : 'Sin resultados' }}</h2>
+          <p>
+            {{ d.total === 0
+              ? 'Cargá la piscina, el SUM, el gimnasio o cualquier espacio común para que los residentes puedan verlos y reservarlos.'
+              : 'Ninguna amenidad coincide con la búsqueda o el filtro.' }}
+          </p>
+          @if (d.total === 0) {
+            <button type="button" class="btn btn--primary" (click)="nueva()">Crear la primera amenidad</button>
+          }
+        </div>
+      } @else {
+        <div class="am-grid">
+          @for (a of visibles(); track a.id) {
+            <button type="button" class="am-card" (click)="abrir(a)">
+              <div class="am-card__img" [class.is-empty]="!portada(a)">
+                @if (portada(a); as url) { <img [src]="url" alt="" /> }
+                <span class="am-card__name">{{ a.nombre }}</span>
+                @if (!a.reservable) { <span class="am-card__badge">No reservable</span> }
+              </div>
+              <div class="am-card__body">
+                <p>{{ a.descripcion || 'Sin descripción' }}</p>
+                <div class="am-card__meta">
+                  @if (a.reservable) {
+                    <span>📅 {{ a.reservasProximas }} próximas</span>
+                    @if (a.tieneCosto && a.tarifa) { <span>💲 {{ moneda(a.tarifa) }}</span> }
+                    @if (a.requiereAprobacion) { <span>✔ con aprobación</span> }
+                  } @else {
+                    <span>Solo informativa</span>
+                  }
+                </div>
+              </div>
+            </button>
+          }
+        </div>
+      }
+    </div>
+  } @else if (cargando()) {
+    <p class="am-loading">Cargando…</p>
+  }
+</section>

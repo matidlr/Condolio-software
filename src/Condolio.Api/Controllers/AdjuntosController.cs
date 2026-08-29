@@ -45,6 +45,12 @@ public class AdjuntosController : ApiControllerBase
         return File(a.Contenido, a.ContentType, a.NombreArchivo);
     }
 
+    public record RenombrarBody(string Nombre);
+
+    [HttpPatch("{id:guid}")]
+    public async Task<IActionResult> Renombrar(Guid id, RenombrarBody body, CancellationToken ct) =>
+        ToResult(await _adjuntos.RenombrarAsync(id, body.Nombre, ct));
+
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Eliminar(Guid id, CancellationToken ct) =>
         ToResult(await _adjuntos.EliminarAsync(id, ct));

@@ -2,6 +2,7 @@ using Condolio.Application.Archivos;
 using Condolio.Application.Billing;
 using Condolio.Application.Common;
 using Condolio.Application.Consorcios;
+using Condolio.Application.Amenidades;
 using Condolio.Application.Residentes;
 using Condolio.Application.Tickets;
 using Condolio.Application.Unidades;
@@ -73,6 +74,7 @@ public static class DependencyInjection
         services.AddScoped<IInvitacionPublicaService, Condolio.Infrastructure.Residentes.InvitacionPublicaService>();
         services.AddScoped<IVistaResidenteService, Condolio.Infrastructure.Residentes.VistaResidenteService>();
         services.AddScoped<ITicketService, Condolio.Infrastructure.Tickets.TicketService>();
+        services.AddScoped<IAmenidadService, Condolio.Infrastructure.Amenidades.AmenidadService>();
 
         // ---- Archivos ----
         services.AddSingleton<IFileStorage, LocalFileStorage>();

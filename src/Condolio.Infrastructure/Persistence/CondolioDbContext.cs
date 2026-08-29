@@ -1,4 +1,5 @@
 using Condolio.Application.Common;
+using Condolio.Domain.Amenidades;
 using Condolio.Domain.Archivos;
 using Condolio.Domain.Billing;
 using Condolio.Domain.Common;
@@ -41,6 +42,9 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Invitacion> Invitaciones => Set<Invitacion>();
     public DbSet<Ticket> Tickets => Set<Ticket>();
     public DbSet<TicketComentario> TicketComentarios => Set<TicketComentario>();
+    public DbSet<Amenidad> Amenidades => Set<Amenidad>();
+    public DbSet<AmenidadHorario> AmenidadHorarios => Set<AmenidadHorario>();
+    public DbSet<Reserva> Reservas => Set<Reserva>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -187,6 +191,34 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.Texto).HasMaxLength(2000).IsRequired();
             e.Property(x => x.AutorUsuarioId).HasMaxLength(450).IsRequired();
             e.HasIndex(x => new { x.AdministradorId, x.TicketId });
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
+        });
+
+        builder.Entity<Amenidad>(e =>
+        {
+            e.Property(x => x.Nombre).HasMaxLength(120).IsRequired();
+            e.Property(x => x.Descripcion).HasMaxLength(2000);
+            e.Property(x => x.Tarifa).HasPrecision(12, 2);
+            e.HasIndex(x => new { x.AdministradorId, x.ConsorcioId });
+            e.HasMany(x => x.Horarios).WithOne(x => x.Amenidad).HasForeignKey(x => x.AmenidadId);
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
+        });
+
+        builder.Entity<AmenidadHorario>(e =>
+        {
+            e.HasIndex(x => new { x.AdministradorId, x.AmenidadId });
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
+        });
+
+        builder.Entity<Reserva>(e =>
+        {
+            e.Property(x => x.SolicitanteUsuarioId).HasMaxLength(450);
+            e.Property(x => x.SolicitanteNombre).HasMaxLength(200);
+            e.Property(x => x.Nota).HasMaxLength(1000);
+            e.Property(x => x.Importe).HasPrecision(12, 2);
+            e.HasIndex(x => new { x.AdministradorId, x.ConsorcioId, x.Estado });
+            e.HasIndex(x => new { x.AmenidadId, x.Inicio });
+            e.HasOne(x => x.Amenidad).WithMany().HasForeignKey(x => x.AmenidadId);
             e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
         });
     }

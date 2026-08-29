@@ -1,0 +1,204 @@
+@if (amenidad(); as a) {
+  <section class="am">
+    <header class="am-head am-head--wizard">
+      <button type="button" class="am-back" (click)="volver()" aria-label="Volver">←</button>
+      <div>
+        <h1>{{ a.nombre }}</h1>
+        <p>Detalles de la amenidad</p>
+      </div>
+    </header>
+
+    <div class="ad-grid">
+      <div class="ad-main">
+        <div class="ad-cover" [class.is-empty]="imagenes().length === 0">
+          @if (imagenes()[imgActiva()]; as url) { <img [src]="url" alt="" /> }
+        </div>
+        @if (imagenes().length > 1) {
+          <div class="ad-thumbs">
+            @for (url of imagenes(); track url; let i = $index) {
+              <img [src]="url" alt="" [class.is-active]="i === imgActiva()" (click)="imgActiva.set(i)" />
+            }
+          </div>
+        }
+
+        <div class="ad-card">
+          <h3>Descripción</h3>
+          <p>{{ a.descripcion || 'Sin descripción.' }}</p>
+        </div>
+
+        @if (a.reservable) {
+          <div class="ad-card">
+            <h3>Ver disponibilidad</h3>
+            <div class="wz-cal">
+              <div class="wz-cal__head">
+                <button type="button" (click)="cambiarMes(-1)">‹</button>
+                <b>{{ mesLabel() }}</b>
+                <button type="button" (click)="cambiarMes(1)">›</button>
+              </div>
+              <div class="wz-cal__grid">
+                @for (d of ['D','L','M','M','J','V','S']; track $index) { <span class="wz-cal__dow">{{ d }}</span> }
+                @for (c of grillaMes(); track c.fecha) {
+                  <span class="wz-cal__day ad-day"
+                    [class.is-out]="c.otroMes"
+                    [class.ad-day--blocked]="c.bloqueado"
+                    [class.ad-day--free]="!c.bloqueado && !c.previo && !c.otroMes">{{ c.dia }}</span>
+                }
+              </div>
+              <div class="ad-legend">
+                <span class="ad-legend--free">● Disponible</span>
+                <span class="ad-legend--blocked">● Bloqueado</span>
+              </div>
+            </div>
+          </div>
+        }
+
+        <div class="ad-card">
+          <div class="ad-card__head">
+            <h3>📄 Documentos</h3>
+            <button type="button" class="wz-adddoc" (click)="abrirDocModal()">+ Agregar documento</button>
+          </div>
+          @if (documentos().length === 0) {
+            <div class="wz-nodocs"><span>📄</span><p>No hay documentos adjuntos</p></div>
+          } @else {
+            @for (doc of documentos(); track doc.id) {
+              <div class="ad-docrow">
+                <span class="ad-docrow__ic">📄</span>
+                @if (renombrandoId() === doc.id) {
+                  <input class="wz-input" [ngModel]="renombreTexto()" (ngModelChange)="renombreTexto.set($event)"
+                    (keydown.enter)="confirmarRenombre(doc)" />
+                  <button type="button" class="ad-docrow__ok" (click)="confirmarRenombre(doc)" aria-label="Guardar">✓</button>
+                  <button type="button" (click)="cancelarRenombre()" aria-label="Cancelar">✕</button>
+                } @else {
+                  <div class="ad-docrow__info">
+                    <b>{{ doc.nombreArchivo }}</b>
+                    <small>Subido {{ doc.creadoUtc | date:'d MMM y' }} · {{ tamanoDoc(doc.tamano) }}</small>
+                  </div>
+                  <button type="button" (click)="empezarRenombre(doc)" title="Renombrar">✎</button>
+                  <button type="button" (click)="verDoc(doc)" title="Ver documento">⤢</button>
+                  <button type="button" class="ad-docrow__del" (click)="docAEliminar.set(doc)" title="Eliminar documento">🗑</button>
+                }
+              </div>
+            }
+          }
+        </div>
+      </div>
+
+      <aside class="ad-side">
+        @if (a.reservable) {
+          <div class="ad-card">
+            <h3>Información de reservación</h3>
+            <ul class="ad-info">
+              <li><span>🗓</span><div><small>Intervalo de reservación</small><b>{{ intervaloLabel() }}</b></div></li>
+              <li><span>⏱</span><div><small>Máximo de reservas activas</small>
+                <b>{{ a.maxReservasPorUnidad === 0 ? 'Ilimitadas' : a.maxReservasPorUnidad + (a.maxReservasPorUnidad === 1 ? ' reserva' : ' reservas') }}
+                  {{ a.limiteMensual ? '(mensual)' : '(simultáneas)' }}</b></div></li>
+              @if (a.tieneCosto && a.tarifa) {
+                <li><span>💲</span><div><small>Precio</small><b>{{ moneda(a.tarifa) }}</b></div></li>
+              }
+              <li><span>✔</span><div><small>Requiere aprobación manual</small><b>{{ a.requiereAprobacion ? 'Sí' : 'No' }}</b></div></li>
+              <li><span>📆</span><div><small>Período de disponibilidad</small>
+                <b>{{ a.reservableDesde || 'Desde hoy' }} → sin fecha de fin</b></div></li>
+            </ul>
+          </div>
+        } @else {
+          <div class="ad-card"><p class="wz-muted">Amenidad de uso libre. No se reserva.</p></div>
+        }
+
+        <div class="ad-card">
+          <h3>Horario de apertura</h3>
+          <ul class="ad-horario">
+            @for (d of dias; track d.valor) {
+              <li>
+                <span>{{ d.label }}</span>
+                @if (horario(d.valor); as h) {
+                  @if (h.cerrado) { <em>Cerrado</em> }
+                  @else { <code>{{ horaLabel(h.abreMin) }} – {{ horaLabel(h.cierraMin) }}</code> }
+                } @else { <em>Cerrado</em> }
+              </li>
+            }
+          </ul>
+        </div>
+
+        @if (a.diasBloqueados.length) {
+          <div class="ad-card">
+            <h3 class="ad-blocked-title">{{ a.diasBloqueados.length }} días bloqueados</h3>
+            <div class="wz-chips">
+              @for (f of a.diasBloqueados; track f) {
+                <span class="wz-chip wz-chip--red">{{ f }}</span>
+              }
+            </div>
+          </div>
+        }
+
+        <div class="ad-card ad-meta">
+          <p>Creada: {{ a.creadoUtc | date:'d MMM y' }}</p>
+          @if (a.actualizadoUtc) { <p>Última actualización: {{ a.actualizadoUtc | date:'d MMM y' }}</p> }
+        </div>
+
+        <div class="ad-actions">
+          <button type="button" class="btn btn--ghost" (click)="editar()">✎ Editar amenidad</button>
+          <button type="button" class="btn ad-del" (click)="confirmar.set(true)">🗑 Eliminar amenidad</button>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  @if (confirmar()) {
+    <div class="wz-overlay" (click)="confirmar.set(false)">
+      <div class="wz-modal wz-modal--sm" (click)="$event.stopPropagation()">
+        <h3>Eliminar amenidad</h3>
+        <p class="wz-sub">¿Seguro que querés eliminar <b>{{ a.nombre }}</b>? Esta acción no se puede deshacer.</p>
+        <footer>
+          <button type="button" class="btn btn--ghost" (click)="confirmar.set(false)">Cancelar</button>
+          <button type="button" class="btn ad-del" (click)="eliminar()">Eliminar amenidad</button>
+        </footer>
+      </div>
+    </div>
+  }
+
+  @if (docModal()) {
+    <div class="wz-overlay" (click)="docModal.set(false)">
+      <div class="wz-modal" (click)="$event.stopPropagation()">
+        <header><h3>Subir documento</h3><button type="button" (click)="docModal.set(false)">✕</button></header>
+        <p class="wz-sub">Agregá reglas, reglamentos o lineamientos para esta amenidad</p>
+        @if (!docPendiente()) {
+          <label class="wz-drop wz-drop--doc">
+            <input type="file" hidden accept="application/pdf" (change)="onDocElegido($event)" />
+            <span class="wz-drop__ic">⬆</span>
+            <b>Subir archivos</b>
+            <span>Solo archivos PDF (máx 10MB)</span>
+          </label>
+        } @else {
+          <div class="wz-docrow wz-docrow--sel">
+            <span class="wz-docrow__ic">📄</span>
+            <b>{{ docPendiente()!.name }}</b>
+            <button type="button" (click)="docPendiente.set(null)">✕</button>
+          </div>
+          <label class="wz-label" style="margin-top:12px">Nombre del documento</label>
+          <input class="wz-input" [ngModel]="docNombre()" (ngModelChange)="docNombre.set($event)" />
+        }
+        <footer>
+          <button type="button" class="btn btn--ghost" (click)="docModal.set(false)">Cancelar</button>
+          <button type="button" class="btn btn--primary" [disabled]="!docPendiente() || subiendoDoc()" (click)="subirDoc()">
+            {{ subiendoDoc() ? 'Subiendo…' : 'Subir documento' }}
+          </button>
+        </footer>
+      </div>
+    </div>
+  }
+
+  @if (docAEliminar(); as doc) {
+    <div class="wz-overlay" (click)="docAEliminar.set(null)">
+      <div class="wz-modal wz-modal--sm" (click)="$event.stopPropagation()">
+        <h3>Eliminar documento</h3>
+        <p class="wz-sub">¿Seguro que querés eliminar este documento? Esta acción no se puede deshacer.</p>
+        <footer>
+          <button type="button" class="btn btn--ghost" (click)="docAEliminar.set(null)">Cancelar</button>
+          <button type="button" class="btn ad-del" (click)="eliminarDoc()">Eliminar</button>
+        </footer>
+      </div>
+    </div>
+  }
+} @else if (cargando()) {
+  <p class="am-loading">Cargando…</p>
+}

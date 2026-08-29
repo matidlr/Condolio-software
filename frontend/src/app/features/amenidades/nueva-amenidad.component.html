@@ -1,0 +1,348 @@
+<section class="am">
+  <header class="am-head am-head--wizard">
+    <button type="button" class="am-back" (click)="volver()" aria-label="Volver">←</button>
+    <div>
+      <h1>{{ editarId() ? 'Editar amenidad' : 'Crear nueva amenidad' }}</h1>
+      <p>{{ pasos[paso() - 1] }}</p>
+    </div>
+  </header>
+
+  <div class="am-panel">
+    <ol class="wz-steps">
+      @for (p of pasos; track p; let i = $index) {
+        <li [class.is-done]="paso() > i + 1" [class.is-active]="paso() === i + 1">
+          <button type="button" (click)="irA(i + 1)">
+            <span class="wz-num">{{ paso() > i + 1 ? '✓' : i + 1 }}</span>
+            <span class="wz-label">{{ p }}</span>
+          </button>
+        </li>
+      }
+    </ol>
+
+    <!-- ===== Paso 1 ===== -->
+    @if (paso() === 1) {
+      <h2 class="wz-title">Información básica</h2>
+      <p class="wz-sub">Agregá los detalles esenciales de la amenidad</p>
+
+      <div class="wz-grid2">
+        <div>
+          <label class="wz-label">Imagen de la amenidad</label>
+          <label class="wz-drop">
+            <input type="file" hidden accept="image/*" multiple (change)="onImagenes($event)" />
+            @if (imagenes().length === 0) {
+              <span class="wz-drop__ic">🖼</span>
+              <b>Agregar imagen</b>
+              <span>PNG, JPG hasta 5MB</span>
+            } @else {
+              <img class="wz-drop__preview" [src]="imagenes()[0].url" alt="" />
+              <span class="wz-portada">Portada</span>
+            }
+          </label>
+          @if (imagenes().length) {
+            <p class="wz-hint">Arrastrá para reordenar. La primera imagen es la portada.</p>
+            <div class="wz-thumbs">
+              @for (img of imagenes(); track img.url; let i = $index) {
+                <div class="wz-thumb" [class.is-cover]="i === 0">
+                  <img [src]="img.url" alt="" (click)="hacerPortada(i)" />
+                  <button type="button" class="wz-thumb__x" (click)="quitarImagen(i)">✕</button>
+                </div>
+              }
+              <label class="wz-thumb wz-thumb--add">
+                <input type="file" hidden accept="image/*" multiple (change)="onImagenes($event)" />
+                +
+              </label>
+            </div>
+          }
+        </div>
+
+        <div>
+          <label class="wz-label">Nombre <span class="wz-req">*</span></label>
+          <input class="wz-input" placeholder="ej., Piscina, Gimnasio, SUM"
+            [ngModel]="nombre()" (ngModelChange)="nombre.set($event)" />
+          <label class="wz-label" style="margin-top:16px">Descripción</label>
+          <textarea class="wz-input" rows="7" placeholder="Describí la amenidad, sus características y reglas…"
+            [ngModel]="descripcion()" (ngModelChange)="descripcion.set($event)"></textarea>
+        </div>
+      </div>
+    }
+
+    <!-- ===== Paso 2 ===== -->
+    @if (paso() === 2) {
+      <h2 class="wz-title">Configuración de reservaciones</h2>
+      <p class="wz-sub">Configurá cómo los residentes pueden reservar esta amenidad</p>
+
+      <div class="wz-toggle-box">
+        <div>
+          <b>Puede ser reservada</b>
+          <p>Controla si los residentes pueden reservar esta amenidad. Las que se reservan por turno
+            (cancha de tenis, pádel, SUM…) van como reservables; las de uso libre (piscina, gimnasio…) no.</p>
+        </div>
+        <button type="button" class="wz-switch" [class.on]="reservable()" (click)="reservable.set(!reservable())">
+          <span></span>
+        </button>
+      </div>
+
+      @if (!reservable()) {
+        <div class="wz-placeholder">
+          <span>📅</span>
+          <p>Activá las reservaciones arriba para configurar los ajustes.</p>
+        </div>
+      } @else {
+        <h3 class="wz-section">Reglas de reservación</h3>
+        <div class="wz-grid3">
+          <div>
+            <label class="wz-label">Intervalo de reservación</label>
+            <select class="wz-input" [ngModel]="intervaloMinutos()" (ngModelChange)="intervaloMinutos.set(+$event)">
+              @for (o of intervalos; track o.valor) { <option [value]="o.valor">{{ o.label }}</option> }
+            </select>
+          </div>
+          <div>
+            <label class="wz-label">Límite de reservaciones</label>
+            <select class="wz-input" [ngModel]="limiteMensual()" (ngModelChange)="limiteMensual.set($event === 'true' || $event === true)">
+              <option [ngValue]="false">Simultáneas (por residente)</option>
+              <option [ngValue]="true">Mensual (por unidad)</option>
+            </select>
+            <select class="wz-input" style="margin-top:8px" [ngModel]="maxReservas()" (ngModelChange)="maxReservas.set(+$event)">
+              @for (n of [1,2,3,4,5,6]; track n) { <option [value]="n">{{ n }} {{ n === 1 ? 'reservación' : 'reservaciones' }}</option> }
+              <option [value]="0">Ilimitadas</option>
+            </select>
+          </div>
+          <div>
+            <label class="wz-label">¿Tiene costo?</label>
+            <div class="wz-cost">
+              <button type="button" class="wz-switch wz-switch--sm" [class.on]="tieneCosto()" (click)="tieneCosto.set(!tieneCosto())"><span></span></button>
+              <span>{{ tieneCosto() ? 'Sí' : 'No' }}</span>
+              <input class="wz-input" type="number" min="0" step="100" placeholder="0.00"
+                [disabled]="!tieneCosto()" [ngModel]="tarifa()" (ngModelChange)="tarifa.set($event === '' ? null : +$event)" />
+            </div>
+          </div>
+        </div>
+
+        <h3 class="wz-section">Configuración de aprobación</h3>
+        <div class="wz-toggle-box">
+          <div>
+            <b>Requiere aprobación manual</b>
+            <p>Cuando está habilitado, cada solicitud de reserva debe ser aprobada por un administrador
+              antes de confirmarse. El residente recibe un aviso al aprobarse o rechazarse.</p>
+            @if (requiereAprobacion()) {
+              <p class="wz-note">Las solicitudes quedan en estado pendiente hasta que un administrador las apruebe o rechace.</p>
+            }
+          </div>
+          <button type="button" class="wz-switch" [class.on]="requiereAprobacion()" (click)="requiereAprobacion.set(!requiereAprobacion())"><span></span></button>
+        </div>
+
+        <h3 class="wz-section">Período de disponibilidad</h3>
+        <div class="wz-grid2">
+          <div>
+            <label class="wz-label">Reservable desde</label>
+            <input class="wz-input" type="date" [ngModel]="reservableDesde()" (ngModelChange)="reservableDesde.set($event)" />
+          </div>
+          <div>
+            <label class="wz-label">Días bloqueados</label>
+            <div class="wz-cal">
+              <div class="wz-cal__head">
+                <button type="button" (click)="cambiarMes(-1)">‹</button>
+                <b>{{ mesLabel() }}</b>
+                <button type="button" (click)="cambiarMes(1)">›</button>
+              </div>
+              <div class="wz-cal__grid">
+                @for (d of ['L','M','M','J','V','S','D']; track $index) { <span class="wz-cal__dow">{{ d }}</span> }
+                @for (c of grillaMes(); track c.fecha) {
+                  <button type="button" class="wz-cal__day"
+                    [class.is-out]="c.otroMes" [class.is-blocked]="diasBloqueados().includes(c.fecha)"
+                    (click)="toggleBloqueado(c.fecha)">{{ c.dia }}</button>
+                }
+              </div>
+            </div>
+            @if (diasBloqueados().length) {
+              <div class="wz-chips">
+                @for (f of diasBloqueados(); track f) {
+                  <span class="wz-chip">{{ fechaChip(f) }} <button type="button" (click)="toggleBloqueado(f)">✕</button></span>
+                }
+              </div>
+            }
+          </div>
+        </div>
+
+        <label class="wz-label" style="margin-top:16px">Mensaje de reservación <span class="wz-opt">opcional</span></label>
+        <textarea class="wz-input" rows="3" placeholder="Mensaje opcional para mostrar al reservar"
+          [ngModel]="mensajeReserva()" (ngModelChange)="mensajeReserva.set($event)"></textarea>
+      }
+    }
+
+    <!-- ===== Paso 3 ===== -->
+    @if (paso() === 3) {
+      <h2 class="wz-title">Horario semanal</h2>
+      <p class="wz-sub">Configurá las horas disponibles para cada día de la semana</p>
+
+      @for (d of dias; track d.valor) {
+        @if (horarios()[$index]; as h) {
+          <div class="wz-hday" [class.is-off]="h.cerrado">
+            <button type="button" class="wz-switch wz-switch--sm" [class.on]="!h.cerrado" (click)="toggleDia(d.valor)"><span></span></button>
+            <b>{{ d.label }}</b>
+            @if (h.cerrado) {
+              <span class="wz-cerrado">Cerrado</span>
+            } @else {
+              <select class="wz-input wz-input--sm" [ngModel]="h.abreMin" (ngModelChange)="setHora(d.valor, 'abreMin', +$event)">
+                @for (o of horas; track o.min) { <option [value]="o.min">{{ o.label }}</option> }
+              </select>
+              <span>a</span>
+              <select class="wz-input wz-input--sm" [ngModel]="h.cierraMin" (ngModelChange)="setHora(d.valor, 'cierraMin', +$event)">
+                @for (o of horas; track o.min) { <option [value]="o.min">{{ o.label }}</option> }
+              </select>
+              <span class="wz-dur">{{ durLabel(h) }}</span>
+            }
+          </div>
+        }
+      }
+    }
+
+    <!-- ===== Paso 4 ===== -->
+    @if (paso() === 4) {
+      <h2 class="wz-title">Revisión y documentos</h2>
+      <p class="wz-sub">Revisá los detalles de la amenidad y agregá documentos</p>
+
+      <div class="wz-grid2">
+        <div class="wz-review">
+          <header><span>ⓘ Información básica</span><button type="button" (click)="irA(1)">✎ Editar</button></header>
+          @if (imagenes().length) { <img class="wz-review__img" [src]="imagenes()[0].url" alt="" /> }
+          <dl>
+            <dt>Nombre</dt><dd>{{ nombre() || '—' }}</dd>
+            <dt>Descripción</dt><dd>{{ descripcion() || '—' }}</dd>
+          </dl>
+        </div>
+
+        <div class="wz-review">
+          <header><span>⚙ Configuración de reservaciones</span><button type="button" (click)="irA(2)">✎ Editar</button></header>
+          @if (reservable()) {
+            <p class="wz-ok">✓ Reservaciones habilitadas</p>
+            <p>🕐 {{ intervaloLabel() }}</p>
+            <p>📊 {{ limiteLabel() }}</p>
+            <p>📅 Desde {{ reservableDesde() }}</p>
+            @if (diasBloqueados().length) { <p>🚫 {{ diasBloqueados().length }} fecha(s) bloqueada(s)</p> }
+            @if (tieneCosto() && tarifa()) { <p>💲 {{ tarifa() }}</p> }
+            @if (requiereAprobacion()) { <p>✔ Requiere aprobación manual</p> }
+          } @else {
+            <p class="wz-muted">Amenidad de uso libre (sin reservas)</p>
+          }
+        </div>
+      </div>
+
+      <div class="wz-review wz-review--full">
+        <header><span>📅 Horario semanal</span><button type="button" (click)="irA(3)">✎ Editar</button></header>
+        <div class="wz-hchips">
+          @for (d of dias; track d.valor) {
+            @if (horarios()[$index]; as h) {
+              <div class="wz-hchip" [class.is-off]="h.cerrado">
+                <b>{{ d.label.slice(0,3).toUpperCase() }}</b>
+                <span>{{ h.cerrado ? '—' : horaLabel(h.abreMin) + '–' + horaLabel(h.cierraMin) }}</span>
+              </div>
+            }
+          }
+        </div>
+        <p class="wz-hint">{{ diasActivos() }} día(s) activo(s)</p>
+      </div>
+
+      <div class="wz-review wz-review--full">
+        <header><span>📄 Documentos <span class="wz-opt">(opcional)</span></span>
+          <button type="button" class="wz-adddoc" (click)="abrirDocModal()">+ Agregar documento</button>
+        </header>
+        <p class="wz-muted">Reglas, reglamentos o lineamientos de la amenidad. Se muestran a todos los residentes.</p>
+        @if (documentos().length === 0) {
+          <div class="wz-nodocs"><span>📄</span><p>No hay documentos adjuntos</p></div>
+        } @else {
+          @for (doc of documentos(); track doc.name; let i = $index) {
+            <div class="wz-docrow">
+              <span class="wz-docrow__ic">📄</span>
+              <b>{{ doc.name }}</b>
+              <span class="wz-docrow__pend">⏱ Pendiente</span>
+              <span class="wz-docrow__size">{{ tamano(doc) }}</span>
+              <button type="button" (click)="renombrarDocumento(i)" aria-label="Renombrar">✎</button>
+              <button type="button" (click)="quitarDocumento(i)" aria-label="Eliminar">🗑</button>
+            </div>
+          }
+        }
+      </div>
+    }
+
+    <div class="wz-nav">
+      @if (paso() > 1) {
+        <button type="button" class="btn btn--ghost" (click)="atras()">‹ Atrás</button>
+      } @else { <span></span> }
+      @if (paso() < 4) {
+        <button type="button" class="btn btn--primary" [disabled]="!puedeAvanzar()" (click)="siguiente()">Siguiente ›</button>
+      } @else {
+        <button type="button" class="btn btn--primary" [disabled]="guardando() || !nombre().trim()" (click)="guardar()">
+          💾 {{ editarId() ? 'Guardar cambios' : 'Crear amenidad' }}
+        </button>
+      }
+    </div>
+  </div>
+</section>
+
+<!-- Modal subir documento -->
+@if (docModal()) {
+  <div class="wz-overlay" (click)="docModal.set(false)">
+    <div class="wz-modal" (click)="$event.stopPropagation()">
+      <header><h3>Subir documento</h3><button type="button" (click)="docModal.set(false)">✕</button></header>
+      <p class="wz-sub">Agregá reglas, reglamentos o lineamientos para esta amenidad</p>
+      @if (!docPendiente()) {
+        <label class="wz-drop wz-drop--doc">
+          <input type="file" hidden accept="application/pdf" (change)="onDocElegido($event)" />
+          <span class="wz-drop__ic">⬆</span>
+          <b>Subir archivos</b>
+          <span>Solo archivos PDF (máx 10MB)</span>
+        </label>
+      } @else {
+        <div class="wz-docrow wz-docrow--sel">
+          <span class="wz-docrow__ic">📄</span>
+          <b>{{ docPendiente()!.name }}</b>
+          <span class="wz-docrow__size">{{ tamano(docPendiente()!) }}</span>
+          <button type="button" (click)="docPendiente.set(null)">✕</button>
+        </div>
+        <label class="wz-label" style="margin-top:12px">Nombre del documento</label>
+        <input class="wz-input" [ngModel]="docNombre()" (ngModelChange)="docNombre.set($event)" />
+        <p class="wz-hint">El documento se subirá cuando guardes la amenidad.</p>
+      }
+      <footer>
+        <button type="button" class="btn btn--ghost" (click)="docModal.set(false)">Cancelar</button>
+        <button type="button" class="btn btn--primary" [disabled]="!docPendiente()" (click)="confirmarDoc()">Agregar documento</button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- Modal de progreso -->
+@if (progreso(); as items) {
+  <div class="wz-overlay">
+    <div class="wz-modal wz-modal--sm">
+      <h3>⟳ {{ editarId() ? 'Guardando' : 'Creando' }} amenidad…</h3>
+      <p class="wz-sub">Subiendo archivos ({{ progresoHechos() }}/{{ items.length }})</p>
+      <div class="wz-progress"><div [style.width.%]="items.length ? (progresoHechos() / items.length) * 100 : 100"></div></div>
+      @for (it of items; track it.label) {
+        <div class="wz-progrow">
+          <span>{{ it.icono }}</span><b>{{ it.label }}</b>
+          <span [class.wz-ok]="it.hecho">{{ it.hecho ? 'Completado ✓' : '…' }}</span>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+<!-- Modal de éxito -->
+@if (exito()) {
+  <div class="wz-overlay">
+    <div class="wz-modal wz-modal--sm wz-modal--center">
+      <button type="button" class="wz-modal__x" (click)="cerrarExito()">✕</button>
+      <div class="wz-check">
+        <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#16a34a" stroke-width="2">
+          <circle cx="12" cy="12" r="10" /><path d="m8 12 3 3 5-6" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </div>
+      <h3>Amenidad {{ editarId() ? 'actualizada' : 'creada' }} con éxito</h3>
+      <p class="wz-modal__name">{{ nombre() }}</p>
+      <p class="wz-sub">Tus cambios se guardaron correctamente.</p>
+      <button type="button" class="btn btn--primary" (click)="cerrarExito()">Volver a la lista de amenidades</button>
+    </div>
+  </div>
+}

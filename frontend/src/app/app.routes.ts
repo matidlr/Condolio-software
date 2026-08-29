@@ -89,6 +89,22 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/tickets/tickets-metricas.component').then((m) => m.TicketsMetricasComponent),
       },
+      { path: 'amenidades', pathMatch: 'full', redirectTo: 'amenidades/directorio' },
+      {
+        path: 'amenidades/directorio',
+        loadComponent: () =>
+          import('./features/amenidades/amenidades-directorio.component').then((m) => m.AmenidadesDirectorioComponent),
+      },
+      {
+        path: 'amenidades/nueva',
+        loadComponent: () =>
+          import('./features/amenidades/nueva-amenidad.component').then((m) => m.NuevaAmenidadComponent),
+      },
+      {
+        path: 'amenidades/:id',
+        loadComponent: () =>
+          import('./features/amenidades/amenidad-detalle.component').then((m) => m.AmenidadDetalleComponent),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

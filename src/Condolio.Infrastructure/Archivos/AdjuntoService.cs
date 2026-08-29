@@ -86,6 +86,24 @@ public class AdjuntoService : IAdjuntoService
             adjunto.NombreArchivo, adjunto.ContentType, _storage.Abrir(adjunto.RutaRelativa)));
     }
 
+    public async Task<Result<AdjuntoDto>> RenombrarAsync(Guid adjuntoId, string nombre, CancellationToken ct = default)
+    {
+        var adjunto = await _db.Adjuntos.FirstOrDefaultAsync(a => a.Id == adjuntoId, ct);
+        if (adjunto is null) return Result<AdjuntoDto>.Fail("Adjunto no encontrado.");
+
+        var limpio = nombre.Trim();
+        if (limpio.Length == 0) return Result<AdjuntoDto>.Fail("El nombre no puede estar vacío.");
+
+        var ext = System.IO.Path.GetExtension(adjunto.NombreArchivo);
+        if (!string.IsNullOrEmpty(ext) && !limpio.EndsWith(ext, StringComparison.OrdinalIgnoreCase))
+            limpio += ext;
+
+        adjunto.NombreArchivo = limpio.Length > 260 ? limpio[..260] : limpio;
+        await _db.SaveChangesAsync(ct);
+        return Result<AdjuntoDto>.Ok(new AdjuntoDto(
+            adjunto.Id, adjunto.NombreArchivo, adjunto.ContentType, adjunto.Tamano, adjunto.EsImagen, adjunto.CreadoUtc));
+    }
+
     public async Task<Result> EliminarAsync(Guid adjuntoId, CancellationToken ct = default)
     {
         var adjunto = await _db.Adjuntos.FirstOrDefaultAsync(a => a.Id == adjuntoId, ct);
@@ -103,6 +121,7 @@ public class AdjuntoService : IAdjuntoService
         TipoAdjuntoOwner.Nota => _db.UnidadNotas.AnyAsync(n => n.Id == ownerId, ct),
         TipoAdjuntoOwner.Incidencia => _db.UnidadIncidencias.AnyAsync(i => i.Id == ownerId, ct),
         TipoAdjuntoOwner.Ticket => _db.Tickets.AnyAsync(t => t.Id == ownerId, ct),
+        TipoAdjuntoOwner.Amenidad => _db.Amenidades.AnyAsync(a => a.Id == ownerId, ct),
         _ => Task.FromResult(false),
     };
 }
