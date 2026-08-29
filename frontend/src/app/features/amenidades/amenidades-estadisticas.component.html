@@ -1,0 +1,165 @@
+<section class="am">
+  <header class="am-head am-head--wizard">
+    <button type="button" class="am-back" (click)="volver()" aria-label="Volver">←</button>
+    <div>
+      <h1>Estadísticas de amenidades</h1>
+      <p>Información y métricas sobre las reservaciones de amenidades</p>
+    </div>
+  </header>
+
+  <div class="est-periodos">
+    @for (p of periodos; track p.k) {
+      <button type="button" [class.is-active]="periodo() === p.k" (click)="periodo.set(p.k)">{{ p.l }}</button>
+    }
+  </div>
+
+  @if (cargando()) {
+    <p class="am-loading">Cargando…</p>
+  } @else {
+    <div class="est-kpis">
+      <div class="am-kpi"><span class="am-kpi__ic am-kpi__ic--blue">📅</span><span class="am-kpi__l">Total de reservaciones</span><b>{{ total() }}</b></div>
+      <div class="am-kpi"><span class="am-kpi__ic am-kpi__ic--green">✓</span><span class="am-kpi__l">Tasa de aprobación</span><b>{{ tasaAprobacion() }}%</b></div>
+      <div class="am-kpi"><span class="am-kpi__ic am-kpi__ic--green">⏱</span><span class="am-kpi__l">Tiempo promedio de aprobación</span><b>{{ tiempoPromAprob() ?? '—' }}</b></div>
+      <div class="am-kpi"><span class="am-kpi__ic am-kpi__ic--green">$</span><span class="am-kpi__l">Ingresos generados</span><b>{{ ingresos() ? moneda(ingresos()) : '—' }}</b></div>
+      <div class="am-kpi"><span class="am-kpi__ic am-kpi__ic--amber">⏳</span><span class="am-kpi__l">Aprobaciones pendientes</span><b>{{ pendientesGlobal() }}</b></div>
+      <div class="am-kpi"><span class="am-kpi__ic am-kpi__ic--red">✕</span><span class="am-kpi__l">Tasa de rechazo</span><b>{{ tasaRechazo() }}%</b></div>
+      <div class="am-kpi"><span class="am-kpi__ic am-kpi__ic--amber">★</span><span class="am-kpi__l">Más popular</span><b>{{ masPopular() }}</b></div>
+      <div class="am-kpi"><span class="am-kpi__ic am-kpi__ic--blue">%</span><span class="am-kpi__l">Tasa de utilización</span><b>{{ tasaUtilizacion() }}%</b></div>
+    </div>
+
+    <div class="est-grid">
+      <div class="ad-card">
+        <h3>↗ Tendencias de reservaciones</h3>
+        <p class="est-sub">Volumen diario de reservaciones por estado</p>
+        <div class="est-chartwrap">
+          <svg [attr.viewBox]="'0 0 ' + W + ' ' + H" class="est-chart">
+            @for (t of serieTendencias().ejeY; track t.v) {
+              <line [attr.x1]="PAD" [attr.x2]="W - PAD" [attr.y1]="t.y" [attr.y2]="t.y" class="est-grid-line" />
+              <text [attr.x]="PAD - 8" [attr.y]="t.y + 3" text-anchor="end" class="est-ytick">{{ t.v }}</text>
+            }
+            <path [attr.d]="serieTendencias().lineaApr" class="est-line est-line--apr" />
+            <path [attr.d]="serieTendencias().lineaPen" class="est-line est-line--pen" />
+            <path [attr.d]="serieTendencias().lineaRec" class="est-line est-line--rec" />
+            @for (t of serieTendencias().ticks; track t.label) {
+              @if (t.mostrar) {
+                <text [attr.x]="t.x" [attr.y]="H - 6" text-anchor="middle" class="est-xtick">{{ t.label }}</text>
+              }
+            }
+          </svg>
+        </div>
+        <div class="est-legend">
+          <span class="est-legend--apr">● Aprobadas</span>
+          <span class="est-legend--pen">● Pendientes</span>
+          <span class="est-legend--rec">● Rechazadas</span>
+        </div>
+      </div>
+
+      <div class="ad-card">
+        <h3>$ Ingresos por amenidad</h3>
+        <p class="est-sub">Desglose de ingresos de reservaciones pagas</p>
+        @if (ingresosPorAmenidad().length === 0) {
+          <div class="est-empty"><span>$</span><p>Sin datos de ingresos</p>
+            <small>Los ingresos se generan de las reservaciones de amenidades pagas.</small></div>
+        } @else {
+          @for (i of ingresosPorAmenidad(); track i.nombre) {
+            <div class="est-bar">
+              <div class="est-bar__top"><span>{{ i.nombre }}</span><b>{{ moneda(i.monto) }}</b></div>
+              <div class="est-bar__track"><div class="est-bar__fill est-bar__fill--green" [style.width.%]="i.pct"></div></div>
+            </div>
+          }
+        }
+      </div>
+    </div>
+
+    <div class="ad-card">
+      <h3>🗓 Horas pico de reservaciones</h3>
+      <p class="est-sub">Densidad de reservaciones por día y hora</p>
+      <div class="est-heatwrap">
+        <div class="est-heat">
+          <div class="est-heat__corner"></div>
+          @for (h of horasEje; track h) { <div class="est-heat__hlabel" [style.grid-column]="h + 2">{{ h }}:00</div> }
+          @for (d of diasSemana; track d; let di = $index) {
+            <div class="est-heat__dlabel" [style.grid-row]="di + 2">{{ d }}</div>
+            @for (n of heatmap().grid[di]; track $index) {
+              <div class="est-heat__cell" [style.background]="heatColor(n, heatmap().max)"
+                [title]="d + ' ' + $index + ':00 — ' + n + ' reserva(s)'"></div>
+            }
+          }
+        </div>
+      </div>
+      <div class="est-heat__legend">
+        <span>Baja actividad</span>
+        <i style="background:#dbeafe"></i><i style="background:#93c5fd"></i><i style="background:#60a5fa"></i><i style="background:#2563eb"></i>
+        <span>Alta actividad</span>
+      </div>
+    </div>
+
+    <div class="est-grid">
+      <div class="ad-card">
+        <h3>🕐 Distribución de tiempo de aprobación</h3>
+        <p class="est-sub">Qué tan rápido se aprueban las reservaciones</p>
+        <div class="est-buckets">
+          @for (b of distAprobacion(); track b.label) {
+            <div class="est-bucket">
+              <div class="est-bucket__bar" [style.height.%]="b.pct" [title]="b.n + ' reserva(s)'"></div>
+              <span>{{ b.label }}</span>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="ad-card">
+        <h3>📊 Reservaciones por amenidad</h3>
+        @if (reservasPorAmenidad().length === 0) {
+          <p class="est-sub">Sin reservaciones en el período.</p>
+        } @else {
+          @for (a of reservasPorAmenidad(); track a.nombre) {
+            <div class="est-bar">
+              <div class="est-bar__top"><span>{{ a.nombre }}</span><b>{{ a.tot }}</b></div>
+              <div class="est-bar__track est-bar__track--stack">
+                <div class="est-seg est-seg--apr" [style.width.%]="a.wApr"></div>
+                <div class="est-seg est-seg--pen" [style.width.%]="a.wPen"></div>
+                <div class="est-seg est-seg--rec" [style.width.%]="a.wRec"></div>
+              </div>
+            </div>
+          }
+          <div class="est-legend">
+            <span class="est-legend--apr">● Aprobadas</span>
+            <span class="est-legend--pen">● Pendientes</span>
+            <span class="est-legend--rec">● Rechazadas</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="ad-card">
+      <h3>▦ Rendimiento de amenidades</h3>
+      @if (rendimiento().length === 0) {
+        <p class="est-sub">Sin datos en el período.</p>
+      } @else {
+        <div class="est-tablewrap">
+          <table class="est-table">
+            <thead><tr>
+              <th>Amenidad</th><th>Total</th><th>Aprobadas</th><th>Pendientes</th>
+              <th>Rechazadas</th><th>% Aprobación</th><th>Ingresos</th><th>Tiempo prom.</th>
+            </tr></thead>
+            <tbody>
+              @for (f of rendimiento(); track f.nombre) {
+                <tr>
+                  <td><b>{{ f.nombre }}</b></td>
+                  <td>{{ f.total }}</td>
+                  <td class="est-td--green">{{ f.apr }}</td>
+                  <td class="est-td--amber">{{ f.pen }}</td>
+                  <td class="est-td--red">{{ f.rec }}</td>
+                  <td class="est-td--green">{{ f.pctAprob }}%</td>
+                  <td>{{ f.ingresos ? moneda(f.ingresos) : '—' }}</td>
+                  <td>{{ f.tiempoProm }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+</section>

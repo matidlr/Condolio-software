@@ -126,5 +126,5 @@ public class ReservaService : IReservaService
     private static ReservaDto Mapear(Reserva r, string amenidadNombre, string? unidadNombre) => new(
         r.Id, r.AmenidadId, amenidadNombre, r.UnidadId, unidadNombre,
         string.IsNullOrWhiteSpace(r.SolicitanteNombre) ? "—" : r.SolicitanteNombre,
-        r.Inicio, r.Fin, r.Estado, r.Importe, r.Nota, r.CreadoUtc);
+        r.Inicio, r.Fin, r.Estado, r.Importe, r.Nota, r.CreadoUtc, r.ResueltaUtc);
 }

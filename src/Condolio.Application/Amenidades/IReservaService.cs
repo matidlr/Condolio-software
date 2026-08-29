@@ -15,7 +15,8 @@ public record ReservaDto(
     EstadoReserva Estado,
     decimal? Importe,
     string? Nota,
-    DateTime CreadoUtc);
+    DateTime CreadoUtc,
+    DateTime? ResueltaUtc);
 
 public record ReservaListaDto(
     IReadOnlyList<ReservaDto> Reservas,

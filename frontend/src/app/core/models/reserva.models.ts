@@ -20,6 +20,7 @@ export interface Reserva {
   importe?: number | null;
   nota?: string | null;
   creadoUtc: string;
+  resueltaUtc?: string | null;
 }
 
 export interface ReservaLista {
