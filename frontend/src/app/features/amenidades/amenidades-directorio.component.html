@@ -61,24 +61,9 @@
       } @else {
         <div class="am-grid">
           @for (a of visibles(); track a.id) {
-            <button type="button" class="am-card" (click)="abrir(a)">
-              <div class="am-card__img" [class.is-empty]="!portada(a)">
-                @if (portada(a); as url) { <img [src]="url" alt="" /> }
-                <span class="am-card__name">{{ a.nombre }}</span>
-                @if (!a.reservable) { <span class="am-card__badge">No reservable</span> }
-              </div>
-              <div class="am-card__body">
-                <p>{{ a.descripcion || 'Sin descripción' }}</p>
-                <div class="am-card__meta">
-                  @if (a.reservable) {
-                    <span>📅 {{ a.reservasProximas }} próximas</span>
-                    @if (a.tieneCosto && a.tarifa) { <span>💲 {{ moneda(a.tarifa) }}</span> }
-                    @if (a.requiereAprobacion) { <span>✔ con aprobación</span> }
-                  } @else {
-                    <span>Solo informativa</span>
-                  }
-                </div>
-              </div>
+            <button type="button" class="am-card" [class.is-empty]="!portada(a)" (click)="abrir(a)">
+              @if (portada(a); as url) { <img [src]="url" alt="" /> }
+              <span class="am-card__name">{{ a.nombre }}</span>
             </button>
           }
         </div>
