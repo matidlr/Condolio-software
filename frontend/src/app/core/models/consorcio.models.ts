@@ -71,7 +71,7 @@ export interface NotaUnidad {
   actualizadoUtc?: string | null;
 }
 
-export type AdjuntoOwner = 'Nota' | 'Incidencia' | 'Ticket' | 'Amenidad';
+export type AdjuntoOwner = 'Nota' | 'Incidencia' | 'Ticket' | 'Amenidad' | 'Anuncio';
 
 export interface Adjunto {
   id: string;

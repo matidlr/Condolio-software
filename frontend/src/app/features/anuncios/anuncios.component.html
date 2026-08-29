@@ -1,0 +1,289 @@
+<section class="an">
+  <header class="an-head">
+    <div>
+      <h1>Comunicaciones comunitarias</h1>
+      <p>Gestioná anuncios y comunicaciones para tus residentes</p>
+    </div>
+    <button type="button" class="btn btn--primary" (click)="abrirNuevo()">+ Nueva comunicación</button>
+  </header>
+
+  <div class="an-layout">
+    <aside class="an-filtros">
+      <div class="an-filtros__head">
+        <b>▽ Filtros</b>
+        @if (filtro() !== 'todos' || busqueda()) {
+          <button type="button" (click)="limpiarFiltros()">✕ Limpiar</button>
+        }
+      </div>
+      <div class="an-search">
+        <span>⌕</span>
+        <input type="search" placeholder="Buscar comunicaciones…"
+          [value]="busqueda()" (input)="busqueda.set($any($event.target).value)" />
+      </div>
+
+      <p class="an-filtros__label">Categorías</p>
+      <button type="button" class="an-cat" [class.is-active]="filtro() === 'todos'" (click)="filtro.set('todos')">
+        <span class="an-cat__ic">✉</span> Todos <b>{{ conteo('todos') }}</b>
+      </button>
+      @for (c of categorias; track c.value) {
+        <button type="button" class="an-cat" [class.is-active]="filtro() === c.value"
+          [style.--cat]="c.color" (click)="filtro.set(c.value)">
+          <span class="an-cat__ic" [style.color]="c.color" [innerHTML]="icono(c.value)"></span>
+          {{ c.label }} <b>{{ conteo(c.value) }}</b>
+        </button>
+      }
+
+      <p class="an-filtros__label">Ordenar por</p>
+      <select class="an-input" [ngModel]="orden()" (ngModelChange)="orden.set($event)">
+        <option value="recientes">Más recientes</option>
+        <option value="antiguos">Más antiguos</option>
+      </select>
+    </aside>
+
+    <div class="an-feed">
+      @if (cargando()) {
+        <p class="an-loading">Cargando…</p>
+      } @else if (visibles().length === 0) {
+        <div class="an-empty">
+          @if (filtro() === 'todos') {
+            <div class="an-empty__ic">💬</div>
+            <h2>Tu feed está vacío</h2>
+            <p>Todavía no hay publicaciones. Empezá a crear contenido para mantener a tu comunidad informada.</p>
+            <button type="button" class="btn btn--primary" (click)="abrirNuevo()">+ Crear primera publicación</button>
+            <div class="an-empty__hint">
+              <b>¿Qué podés publicar?</b>
+              <ul>
+                <li>Anuncios importantes para la comunidad</li>
+                <li>Eventos y actividades próximas</li>
+                <li>Actualizaciones de mantenimiento</li>
+                <li>Noticias y comunicados oficiales</li>
+              </ul>
+            </div>
+          } @else {
+            @if (filtroCat(); as fc) {
+              <div class="an-empty__ic" [style.color]="meta[fc].color" [innerHTML]="icono(fc)"></div>
+              <h2>No hay publicaciones de {{ meta[fc].label }} aún</h2>
+              <p>No hay comunicaciones en esta categoría. ¡Creá la primera!</p>
+              <button type="button" class="btn btn--primary" (click)="abrirNuevo(fc)">
+                + Crear publicación de {{ meta[fc].label }}
+              </button>
+            }
+          }
+        </div>
+      } @else {
+        <div class="an-list">
+          @for (a of visibles(); track a.id) {
+            <article class="an-row" [class.is-pinned]="a.fijado" (click)="abrirDetalle(a)">
+              <span class="an-row__ic" [style.color]="meta[a.categoria].color"
+                [style.background]="meta[a.categoria].color + '1a'" [innerHTML]="icono(a.categoria)"></span>
+
+              <div class="an-row__main">
+                <div class="an-row__top">
+                  @if (a.fijado) { <span class="an-row__pin">📌</span> }
+                  <b>{{ a.titulo || a.cuerpo }}</b>
+                  <span class="an-row__cat" [style.color]="meta[a.categoria].color">{{ meta[a.categoria].label }}</span>
+                </div>
+                <p class="an-row__excerpt">{{ a.cuerpo }}</p>
+                <p class="an-row__meta">
+                  {{ a.autor }} · {{ a.publicadoUtc | date:'d MMM y, HH:mm' }}
+                  @if (a.categoria === 'Evento' && a.eventoFechaUtc) {
+                    · 📅 {{ a.eventoFechaUtc | date:'d MMM HH:mm' }}
+                  }
+                  · 👍 {{ a.totalLikes }} · 💬 {{ a.totalComentarios }}
+                </p>
+              </div>
+
+              @if (portada(a); as url) { <img class="an-row__thumb" [src]="url" alt="" /> }
+
+              <div class="an-row__acc" (click)="$event.stopPropagation()">
+                <button type="button" class="an-row__kebab"
+                  (click)="menuAbierto.set(menuAbierto() === a.id ? null : a.id)">⋮</button>
+                @if (menuAbierto() === a.id) {
+                  <div class="an-menu">
+                    <button type="button" (click)="toggleFijar(a); menuAbierto.set(null)">{{ a.fijado ? 'Desfijar' : 'Fijar arriba' }}</button>
+                    <button type="button" (click)="editar(a); menuAbierto.set(null)">Editar</button>
+                    <button type="button" class="an-menu__del" (click)="eliminar(a); menuAbierto.set(null)">Eliminar</button>
+                  </div>
+                }
+              </div>
+            </article>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</section>
+
+@if (detalle(); as d) {
+  <div class="an-overlay" (click)="cerrarDetalle()">
+    <div class="an-detalle" (click)="$event.stopPropagation()">
+      <header>
+        <span class="an-detalle__avatar">{{ (d.anuncio.autor || '?').slice(0,2).toUpperCase() }}</span>
+        <div>
+          <b>{{ d.anuncio.autor }}</b>
+          <p>{{ d.anuncio.publicadoUtc | date:'d MMM y, HH:mm' }} ·
+            <span [style.color]="meta[d.anuncio.categoria].color">{{ meta[d.anuncio.categoria].label }}</span></p>
+        </div>
+        <button type="button" class="an-detalle__edit" (click)="editarDesdeDetalle()">✎ Editar</button>
+        <button type="button" class="an-detalle__x" (click)="cerrarDetalle()">✕</button>
+      </header>
+
+      <div class="an-detalle__grid">
+        <div class="an-detalle__cuerpo">
+          @if (d.anuncio.titulo && d.anuncio.titulo !== d.anuncio.cuerpo) { <h3>{{ d.anuncio.titulo }}</h3> }
+          <p>{{ d.anuncio.cuerpo }}</p>
+          @if (d.anuncio.categoria === 'Evento' && d.anuncio.eventoFechaUtc) {
+            <p class="an-detalle__evento">📅 {{ d.anuncio.eventoFechaUtc | date:'EEEE d MMMM, HH:mm' }}</p>
+          }
+          @if (d.anuncio.imagenesIds.length) {
+            <div class="an-detalle__adj">
+              <b>Archivos adjuntos <span>{{ d.anuncio.imagenesIds.length }}</span></b>
+              <div class="an-thumbs">
+                @for (id of d.anuncio.imagenesIds; track id) {
+                  @if (portada(d.anuncio); as url) { <div class="an-thumb"><img [src]="url" alt="" /></div> }
+                }
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="an-detalle__side">
+          <div class="an-detalle__likes">
+            <div>
+              <b>{{ d.anuncio.totalLikes === 0 ? 'Nadie dio me gusta todavía' :
+                    (d.anuncio.totalLikes === 1 ? 'A 1 persona le gusta' : 'A ' + d.anuncio.totalLikes + ' personas les gusta') }}</b>
+              @if (d.likes.length) { <p>{{ d.likes[0].nombre }}{{ d.likes.length > 1 ? ' y ' + (d.likes.length - 1) + ' más' : '' }}</p> }
+            </div>
+            <button type="button" class="an-detalle__like" [class.is-on]="d.anuncio.yoDiLike" (click)="like()">
+              👍 {{ d.anuncio.yoDiLike ? 'Te gusta' : 'Me gusta' }}
+            </button>
+          </div>
+
+          <div class="an-detalle__coms">
+            <b>💬 Comentarios <span>{{ d.comentarios.length }}</span></b>
+            @if (d.comentarios.length === 0) {
+              <div class="an-detalle__nocom">
+                <span>💬</span>
+                <b>No hay comentarios aún</b>
+                <p>¡Sé el primero en comentar!</p>
+              </div>
+            } @else {
+              @for (c of d.comentarios; track c.id) {
+                <div class="an-com">
+                  <span class="an-detalle__avatar an-detalle__avatar--sm">{{ (c.autor || '?').slice(0,2).toUpperCase() }}</span>
+                  <div>
+                    <p class="an-com__head"><b>{{ c.autor }}</b></p>
+                    @if (comEditId() === c.id) {
+                      <textarea rows="2" class="an-input" [ngModel]="comEditTexto()" (ngModelChange)="comEditTexto.set($event)"></textarea>
+                      <div class="an-com__editbtns">
+                        <button type="button" (click)="guardarEdicionComentario()">Guardar</button>
+                        <button type="button" (click)="comEditId.set(null)">Cancelar</button>
+                      </div>
+                    } @else {
+                      <p class="an-com__txt">{{ c.texto }}</p>
+                      <p class="an-com__meta">
+                        {{ c.fechaUtc | date:'d MMM HH:mm' }}
+                        @if (c.autor === miNombre()) {
+                          · <button type="button" (click)="empezarEdicionComentario(c)">Editar</button>
+                          · <button type="button" class="an-com__del" (click)="borrarComentario(c)">Eliminar</button>
+                        }
+                      </p>
+                    }
+                  </div>
+                </div>
+              }
+            }
+          </div>
+
+          <div class="an-detalle__combox">
+            <textarea rows="2" placeholder="Escribí un comentario…"
+              [ngModel]="comentarioTexto()" (ngModelChange)="comentarioTexto.set($event)"
+              (keydown.control.enter)="enviarComentario()"></textarea>
+            <button type="button" [disabled]="!comentarioTexto().trim() || enviandoComentario()" (click)="enviarComentario()">➤</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+@if (modalAbierto()) {
+  <div class="an-overlay" (click)="modalAbierto.set(false)">
+    <div class="an-modal" (click)="$event.stopPropagation()">
+      <header>
+        <div>
+          <h3>{{ editandoId() ? 'Editar comunicación' : 'Nueva comunicación' }}</h3>
+          <p>{{ editandoId() ? 'Modificá el contenido de tu comunicación a los residentes.' : 'Creá una comunicación importante para los residentes de tu consorcio.' }}</p>
+        </div>
+        <button type="button" (click)="modalAbierto.set(false)">✕</button>
+      </header>
+
+      <div class="an-modal__body">
+        <label class="an-label">Categoría</label>
+        <div class="an-cats">
+          @for (c of categorias; track c.value) {
+            <button type="button" class="an-catpill" [class.is-sel]="fCategoria() === c.value"
+              [style.--cat]="c.color" (click)="fCategoria.set(c.value)">
+              <span [style.color]="fCategoria() === c.value ? c.color : 'inherit'" [innerHTML]="icono(c.value)"></span>
+              {{ c.label }}
+            </button>
+          }
+        </div>
+
+        @if (fCategoria() === 'Evento') {
+          <label class="an-label" style="margin-top:12px">Fecha del evento</label>
+          <input type="datetime-local" class="an-input" [ngModel]="fEventoFecha()" (ngModelChange)="fEventoFecha.set($event)" />
+        }
+
+        <label class="an-label" style="margin-top:14px">Mensaje</label>
+        <div class="an-rt">
+          <button type="button" (click)="aplicarFormato('b')" title="Negrita"><b>B</b></button>
+          <button type="button" (click)="aplicarFormato('i')" title="Cursiva"><i>I</i></button>
+          <button type="button" (click)="aplicarFormato('li')" title="Lista">☰</button>
+          <button type="button" (click)="aplicarFormato('quote')" title="Cita">❝</button>
+        </div>
+        <textarea rows="7" class="an-input an-textarea" placeholder="Escribí el contenido detallado de tu comunicación…"
+          [ngModel]="fCuerpo()" (ngModelChange)="fCuerpo.set($event)"></textarea>
+
+        <label class="an-check">
+          <input type="checkbox" [ngModel]="fFijado()" (ngModelChange)="fFijado.set($event)" />
+          Fijar arriba del feed
+        </label>
+
+        <label class="an-label" style="margin-top:14px">Archivos adjuntos</label>
+        <div class="an-adjbtns">
+          <label class="an-adjbtn">
+            <input type="file" hidden accept="image/*" multiple (change)="onArchivos($event)" />
+            🖼 Agregar imágenes
+          </label>
+          <label class="an-adjbtn">
+            <input type="file" hidden accept="video/*" (change)="onArchivos($event)" />
+            🎬 Agregar video
+          </label>
+          <label class="an-adjbtn">
+            <input type="file" hidden accept="application/pdf" (change)="onArchivos($event)" />
+            📄 Agregar PDF
+          </label>
+        </div>
+        @if (fImagenes().length) {
+          <div class="an-thumbs">
+            @for (i of fImagenes(); track i.url || i.adjuntoId; let idx = $index) {
+              <div class="an-thumb">
+                @if (esImg(i)) { <img [src]="i.url" alt="" /> } @else { <span>📄</span> }
+                <button type="button" (click)="quitarArchivo(idx)">✕</button>
+              </div>
+            }
+          </div>
+          <p class="an-hint">{{ fImagenes().length }} de 5 archivos</p>
+        }
+      </div>
+
+      <footer>
+        <button type="button" class="btn btn--ghost" (click)="modalAbierto.set(false)">Cancelar</button>
+        <button type="button" class="btn btn--primary" [disabled]="!puedeEnviar()" (click)="enviar()">
+          {{ enviando() ? 'Guardando…' : (editandoId() ? '➤ Actualizar' : '➤ Enviar') }}
+        </button>
+      </footer>
+    </div>
+  </div>
+}

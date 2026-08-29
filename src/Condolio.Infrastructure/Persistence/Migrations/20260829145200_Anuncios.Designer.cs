@@ -4,6 +4,7 @@ using Condolio.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Condolio.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(CondolioDbContext))]
-    partial class CondolioDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260829145200_Anuncios")]
+    partial class Anuncios
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -417,84 +420,6 @@ namespace Condolio.Infrastructure.Persistence.Migrations
                     b.HasIndex("AdministradorId", "ConsorcioId", "Fijado", "PublicadoUtc");
 
                     b.ToTable("Anuncios");
-                });
-
-            modelBuilder.Entity("Condolio.Domain.Comunicaciones.AnuncioComentario", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime?>("ActualizadoUtc")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<Guid>("AdministradorId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid>("AnuncioId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<string>("AutorNombre")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
-
-                    b.Property<string>("AutorUsuarioId")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("varchar(450)");
-
-                    b.Property<DateTime>("CreadoUtc")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("Texto")
-                        .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("varchar(4000)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AnuncioId");
-
-                    b.HasIndex("AdministradorId", "AnuncioId");
-
-                    b.ToTable("AnuncioComentarios");
-                });
-
-            modelBuilder.Entity("Condolio.Domain.Comunicaciones.AnuncioLike", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime?>("ActualizadoUtc")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<Guid>("AdministradorId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid>("AnuncioId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("CreadoUtc")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("UsuarioId")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("varchar(450)");
-
-                    b.Property<string>("UsuarioNombre")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AnuncioId", "UsuarioId")
-                        .IsUnique();
-
-                    b.ToTable("AnuncioLikes");
                 });
 
             modelBuilder.Entity("Condolio.Domain.Consorcios.Consorcio", b =>
@@ -1340,28 +1265,6 @@ namespace Condolio.Infrastructure.Persistence.Migrations
                     b.Navigation("Plan");
                 });
 
-            modelBuilder.Entity("Condolio.Domain.Comunicaciones.AnuncioComentario", b =>
-                {
-                    b.HasOne("Condolio.Domain.Comunicaciones.Anuncio", "Anuncio")
-                        .WithMany("Comentarios")
-                        .HasForeignKey("AnuncioId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Anuncio");
-                });
-
-            modelBuilder.Entity("Condolio.Domain.Comunicaciones.AnuncioLike", b =>
-                {
-                    b.HasOne("Condolio.Domain.Comunicaciones.Anuncio", "Anuncio")
-                        .WithMany("Likes")
-                        .HasForeignKey("AnuncioId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Anuncio");
-                });
-
             modelBuilder.Entity("Condolio.Domain.Residentes.Invitacion", b =>
                 {
                     b.HasOne("Condolio.Domain.Consorcios.Consorcio", "Consorcio")
@@ -1509,13 +1412,6 @@ namespace Condolio.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Condolio.Domain.Billing.Plan", b =>
                 {
                     b.Navigation("Tramos");
-                });
-
-            modelBuilder.Entity("Condolio.Domain.Comunicaciones.Anuncio", b =>
-                {
-                    b.Navigation("Comentarios");
-
-                    b.Navigation("Likes");
                 });
 
             modelBuilder.Entity("Condolio.Domain.Consorcios.Consorcio", b =>

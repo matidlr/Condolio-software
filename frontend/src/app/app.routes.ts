@@ -94,6 +94,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/tickets/ticket-detalle.component').then((m) => m.TicketDetalleComponent),
       },
+      {
+        path: 'anuncios',
+        loadComponent: () =>
+          import('./features/anuncios/anuncios.component').then((m) => m.AnunciosComponent),
+      },
       { path: 'amenidades', pathMatch: 'full', redirectTo: 'amenidades/directorio' },
       {
         path: 'amenidades/directorio',

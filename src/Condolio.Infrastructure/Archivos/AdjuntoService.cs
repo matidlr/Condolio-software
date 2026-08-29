@@ -122,6 +122,7 @@ public class AdjuntoService : IAdjuntoService
         TipoAdjuntoOwner.Incidencia => _db.UnidadIncidencias.AnyAsync(i => i.Id == ownerId, ct),
         TipoAdjuntoOwner.Ticket => _db.Tickets.AnyAsync(t => t.Id == ownerId, ct),
         TipoAdjuntoOwner.Amenidad => _db.Amenidades.AnyAsync(a => a.Id == ownerId, ct),
+        TipoAdjuntoOwner.Anuncio => _db.Anuncios.AnyAsync(a => a.Id == ownerId, ct),
         _ => Task.FromResult(false),
     };
 }

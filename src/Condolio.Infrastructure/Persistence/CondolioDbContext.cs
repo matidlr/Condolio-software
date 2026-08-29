@@ -2,6 +2,7 @@ using Condolio.Application.Common;
 using Condolio.Domain.Amenidades;
 using Condolio.Domain.Archivos;
 using Condolio.Domain.Billing;
+using Condolio.Domain.Comunicaciones;
 using Condolio.Domain.Common;
 using Condolio.Domain.Consorcios;
 using Condolio.Domain.Residentes;
@@ -45,6 +46,9 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Amenidad> Amenidades => Set<Amenidad>();
     public DbSet<AmenidadHorario> AmenidadHorarios => Set<AmenidadHorario>();
     public DbSet<Reserva> Reservas => Set<Reserva>();
+    public DbSet<Anuncio> Anuncios => Set<Anuncio>();
+    public DbSet<AnuncioComentario> AnuncioComentarios => Set<AnuncioComentario>();
+    public DbSet<AnuncioLike> AnuncioLikes => Set<AnuncioLike>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -219,6 +223,35 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
             e.HasIndex(x => new { x.AdministradorId, x.ConsorcioId, x.Estado });
             e.HasIndex(x => new { x.AmenidadId, x.Inicio });
             e.HasOne(x => x.Amenidad).WithMany().HasForeignKey(x => x.AmenidadId);
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
+        });
+
+        builder.Entity<Anuncio>(e =>
+        {
+            e.Property(x => x.Titulo).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Cuerpo).HasMaxLength(8000).IsRequired();
+            e.Property(x => x.AutorUsuarioId).HasMaxLength(450);
+            e.Property(x => x.AutorNombre).HasMaxLength(200);
+            e.HasIndex(x => new { x.AdministradorId, x.ConsorcioId, x.Fijado, x.PublicadoUtc });
+            e.HasMany(x => x.Comentarios).WithOne(x => x.Anuncio).HasForeignKey(x => x.AnuncioId);
+            e.HasMany(x => x.Likes).WithOne(x => x.Anuncio).HasForeignKey(x => x.AnuncioId);
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
+        });
+
+        builder.Entity<AnuncioComentario>(e =>
+        {
+            e.Property(x => x.Texto).HasMaxLength(4000).IsRequired();
+            e.Property(x => x.AutorUsuarioId).HasMaxLength(450);
+            e.Property(x => x.AutorNombre).HasMaxLength(200);
+            e.HasIndex(x => new { x.AdministradorId, x.AnuncioId });
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
+        });
+
+        builder.Entity<AnuncioLike>(e =>
+        {
+            e.Property(x => x.UsuarioId).HasMaxLength(450);
+            e.Property(x => x.UsuarioNombre).HasMaxLength(200);
+            e.HasIndex(x => new { x.AnuncioId, x.UsuarioId }).IsUnique();
             e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
         });
     }
