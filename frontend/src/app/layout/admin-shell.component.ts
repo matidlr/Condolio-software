@@ -5,6 +5,7 @@ import { AuthService } from '../core/services/auth.service';
 import { ConsorcioService } from '../core/services/consorcio.service';
 import { ResidenteService } from '../core/services/residente.service';
 import { TicketService } from '../core/services/ticket.service';
+import { EncuestaService } from '../core/services/encuesta.service';
 
 interface NavHijo {
   label: string;
@@ -18,6 +19,7 @@ interface NavItem {
   ruta?: string;
   icon: keyof typeof ICONOS;
   disponible: boolean;
+  badge?: number;
   hijos?: NavHijo[];
 }
 
@@ -33,6 +35,7 @@ const ICONOS = {
   amenity: '<path d="M3 15c1.5 0 1.5 1 3 1s1.5-1 3-1 1.5 1 3 1 1.5-1 3-1 1.5 1 3 1 1.5-1 3-1"/><path d="M3 19c1.5 0 1.5 1 3 1s1.5-1 3-1 1.5 1 3 1 1.5-1 3-1 1.5 1 3 1 1.5-1 3-1"/><path d="M7 12V6a2 2 0 0 1 4 0M7 9h4"/>',
   megaphone: '<path d="M3 11l14-6v14L3 13z"/><path d="M3 11v2M7 12v5a2 2 0 0 0 4 0v-3"/>',
   calendar: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>',
+  poll: '<path d="M5 21V10M12 21V4M19 21v-7"/>',
 } as const;
 
 @Component({
@@ -49,6 +52,7 @@ export class AdminShellComponent {
   consorcios = inject(ConsorcioService);
   private residentes = inject(ResidenteService);
   private ticketsApi = inject(TicketService);
+  private encuestasApi = inject(EncuestaService);
 
   colapsado = signal(false);
   menuAbierto = signal(false);
@@ -61,6 +65,7 @@ export class AdminShellComponent {
   readonly nav = computed<NavItem[]>(() => {
     const pend = this.residentes.pendientes();
     const tks = this.ticketsApi.activos();
+    const enc = this.encuestasApi.activas();
     return [
       { label: 'Panel', ruta: '/panel/inicio', icon: 'grid', disponible: true },
       { label: 'Unidades', ruta: '/panel/unidades', icon: 'building', disponible: true },
@@ -90,6 +95,7 @@ export class AdminShellComponent {
       },
       { label: 'Anuncios', ruta: '/panel/anuncios', icon: 'megaphone', disponible: true },
       { label: 'Calendario', ruta: '/panel/calendario', icon: 'calendar', disponible: true },
+      { label: 'Encuestas', ruta: '/panel/encuestas', icon: 'poll', disponible: true, badge: enc || undefined },
       { label: 'Expensas', ruta: '/panel/expensas', icon: 'receipt', disponible: false },
       { label: 'Gastos', ruta: '/panel/gastos', icon: 'wallet', disponible: false },
       { label: 'Reclamos', ruta: '/panel/reclamos', icon: 'chat', disponible: false },
@@ -122,6 +128,7 @@ export class AdminShellComponent {
       if (id) {
         this.residentes.refrescarPendientes(id);
         this.ticketsApi.refrescarActivos(id);
+        this.encuestasApi.refrescarActivas(id);
       }
     });
   }

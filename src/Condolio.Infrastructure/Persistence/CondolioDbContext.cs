@@ -5,6 +5,7 @@ using Condolio.Domain.Billing;
 using Condolio.Domain.Calendario;
 using Condolio.Domain.Comunicaciones;
 using Condolio.Domain.Documentos;
+using Condolio.Domain.Encuestas;
 using Condolio.Domain.Common;
 using Condolio.Domain.Consorcios;
 using Condolio.Domain.Residentes;
@@ -55,6 +56,9 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<CarpetaDocumento> CarpetasDocumento => Set<CarpetaDocumento>();
     public DbSet<Documento> Documentos => Set<Documento>();
     public DbSet<DocumentoAcceso> DocumentosAcceso => Set<DocumentoAcceso>();
+    public DbSet<Encuesta> Encuestas => Set<Encuesta>();
+    public DbSet<OpcionEncuesta> OpcionesEncuesta => Set<OpcionEncuesta>();
+    public DbSet<VotoEncuesta> VotosEncuesta => Set<VotoEncuesta>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -294,6 +298,33 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
         {
             e.Property(x => x.UsuarioId).HasMaxLength(450);
             e.HasIndex(x => new { x.AdministradorId, x.ConsorcioId, x.DocumentoId });
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
+        });
+
+        builder.Entity<Encuesta>(e =>
+        {
+            e.Property(x => x.Titulo).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Descripcion).HasMaxLength(4000);
+            e.Property(x => x.AutorUsuarioId).HasMaxLength(450);
+            e.Property(x => x.AutorNombre).HasMaxLength(200);
+            e.HasIndex(x => new { x.AdministradorId, x.ConsorcioId, x.Estado });
+            e.HasMany(x => x.Opciones).WithOne(x => x.Encuesta).HasForeignKey(x => x.EncuestaId);
+            e.HasMany(x => x.Votos).WithOne(x => x.Encuesta).HasForeignKey(x => x.EncuestaId);
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
+        });
+
+        builder.Entity<OpcionEncuesta>(e =>
+        {
+            e.Property(x => x.Texto).HasMaxLength(300).IsRequired();
+            e.HasIndex(x => new { x.AdministradorId, x.EncuestaId });
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
+        });
+
+        builder.Entity<VotoEncuesta>(e =>
+        {
+            e.Property(x => x.UsuarioId).HasMaxLength(450);
+            e.Property(x => x.UsuarioNombre).HasMaxLength(200);
+            e.HasIndex(x => new { x.EncuestaId, x.UsuarioId, x.OpcionId }).IsUnique();
             e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
         });
     }

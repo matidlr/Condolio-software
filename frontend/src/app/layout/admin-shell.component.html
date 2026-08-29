@@ -34,6 +34,7 @@
           <a class="shell__nav-item" [routerLink]="item.ruta" routerLinkActive="is-active">
             <span class="shell__nav-icon" [innerHTML]="icono(item.icon)"></span>
             <span class="shell__nav-label">{{ item.label }}</span>
+            @if (item.badge) { <span class="shell__badge">{{ item.badge }}</span> }
           </a>
         } @else {
           <span class="shell__nav-item is-disabled" title="Próximamente">

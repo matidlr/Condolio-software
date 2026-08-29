@@ -109,6 +109,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/documentos/documentos.component').then((m) => m.DocumentosComponent),
       },
+      {
+        path: 'encuestas',
+        loadComponent: () =>
+          import('./features/encuestas/encuestas.component').then((m) => m.EncuestasComponent),
+      },
       { path: 'amenidades', pathMatch: 'full', redirectTo: 'amenidades/directorio' },
       {
         path: 'amenidades/directorio',
