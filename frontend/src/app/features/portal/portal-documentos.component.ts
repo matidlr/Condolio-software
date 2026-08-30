@@ -18,12 +18,23 @@ const CHIPS: { value: CategoriaDocumento | 'todos'; label: string }[] = [
   { value: 'General', label: 'General' },
 ];
 
+type Orden = 'recientes' | 'antiguos' | 'az' | 'za' | 'grandes' | 'chicos';
+const ORDENES: { value: Orden; label: string }[] = [
+  { value: 'recientes', label: 'Más recientes' },
+  { value: 'antiguos', label: 'Más antiguos' },
+  { value: 'az', label: 'Nombre (A-Z)' },
+  { value: 'za', label: 'Nombre (Z-A)' },
+  { value: 'grandes', label: 'Más grandes' },
+  { value: 'chicos', label: 'Más pequeños' },
+];
+
 @Component({
   selector: 'app-portal-documentos',
   standalone: true,
   imports: [DatePipe, FormsModule],
   templateUrl: './portal-documentos.component.html',
   styleUrl: './portal-documentos.component.scss',
+  host: { '(document:click)': 'ordenMenu.set(false)' },
 })
 export class PortalDocumentosComponent {
   private api = inject(MiDocumentoService);
@@ -34,11 +45,16 @@ export class PortalDocumentosComponent {
 
   cargando = signal(true);
   contenido = signal<Contenido | null>(null);
+  sel = signal<Documento | null>(null);
   ruta = signal<{ id: string | null; nombre: string }[]>([{ id: null, nombre: 'Documentos' }]);
   busqueda = signal('');
   chip = signal<CategoriaDocumento | 'todos'>('todos');
-  orden = signal<'nombre' | 'fecha'>('nombre');
+  ordenes = ORDENES;
+  orden = signal<Orden>('recientes');
+  ordenMenu = signal(false);
   vista = signal<'lista' | 'grid'>('lista');
+
+  ordenLabel = computed(() => ORDENES.find((o) => o.value === this.orden())?.label ?? '');
 
   carpetaActual = computed(() => this.ruta()[this.ruta().length - 1].id);
 
@@ -49,12 +65,19 @@ export class PortalDocumentosComponent {
   docsVis = computed(() => {
     const q = this.busqueda().trim().toLowerCase();
     const cat = this.chip();
-    let l = (this.contenido()?.documentos ?? [])
+    const l = (this.contenido()?.documentos ?? [])
       .filter((d) => (cat === 'todos' || d.categoria === cat) && (!q || d.nombre.toLowerCase().includes(q)));
-    l = [...l].sort((a, b) => this.orden() === 'nombre'
-      ? a.nombre.localeCompare(b.nombre)
-      : b.creadoUtc.localeCompare(a.creadoUtc));
-    return l;
+    const o = this.orden();
+    return [...l].sort((a, b) => {
+      switch (o) {
+        case 'recientes': return b.creadoUtc.localeCompare(a.creadoUtc);
+        case 'antiguos': return a.creadoUtc.localeCompare(b.creadoUtc);
+        case 'az': return a.nombre.localeCompare(b.nombre);
+        case 'za': return b.nombre.localeCompare(a.nombre);
+        case 'grandes': return b.tamano - a.tamano;
+        case 'chicos': return a.tamano - b.tamano;
+      }
+    });
   });
 
   constructor() {
@@ -91,7 +114,20 @@ export class PortalDocumentosComponent {
     return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   }
 
-  abrir(d: Documento): void {
+  abrir(d: Documento): void { this.sel.set(d); }
+  cerrarDetalle(): void { this.sel.set(null); }
+
+  tipoArchivo(ct: string): string {
+    if (ct === 'application/pdf') return 'PDF';
+    if (ct.startsWith('image/')) return 'Imagen';
+    if (ct.includes('word') || ct.includes('document')) return 'Word';
+    if (ct.includes('sheet') || ct.includes('excel')) return 'Excel';
+    if (ct.startsWith('text/')) return 'Texto';
+    return ct || 'Archivo';
+  }
+  esPdf(ct: string): boolean { return ct === 'application/pdf'; }
+
+  ver(d: Documento): void {
     this.api.descargar(d.id, false).subscribe({
       next: (blob) => {
         const url = URL.createObjectURL(blob);
@@ -101,8 +137,8 @@ export class PortalDocumentosComponent {
       error: () => this.toasts.error('No se pudo abrir el documento.'),
     });
   }
-  descargar(d: Documento, ev: Event): void {
-    ev.stopPropagation();
+  descargar(d: Documento, ev?: Event): void {
+    ev?.stopPropagation();
     this.api.descargar(d.id, true).subscribe({
       next: (blob) => {
         const url = URL.createObjectURL(blob);
@@ -112,5 +148,29 @@ export class PortalDocumentosComponent {
       },
       error: () => this.toasts.error('No se pudo descargar.'),
     });
+  }
+  async compartir(d: Documento): Promise<void> {
+    const nav = navigator as Navigator & { canShare?: (x: ShareData) => boolean };
+    this.api.descargar(d.id, false).subscribe({
+      next: async (blob) => {
+        const file = new File([blob], d.nombre, { type: d.contentType || 'application/octet-stream' });
+        try {
+          if (nav.canShare?.({ files: [file] })) {
+            await nav.share({ files: [file], title: d.nombre });
+            return;
+          }
+          if (navigator.share) { await navigator.share({ title: d.nombre, text: d.nombre }); return; }
+        } catch { return; }
+        this.descargar(d);
+      },
+      error: () => this.toasts.error('No se pudo compartir.'),
+    });
+  }
+  copiarEnlace(d: Documento): void {
+    const url = `${location.origin}/portal/documentos?doc=${d.id}`;
+    navigator.clipboard?.writeText(url).then(
+      () => this.toasts.exito('Enlace copiado'),
+      () => this.toasts.info(url),
+    );
   }
 }

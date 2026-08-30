@@ -1,3 +1,34 @@
+@if (sel(); as d) {
+  <div class="pd-detbg" (click)="cerrarDetalle()"></div>
+  <div class="pd-det">
+    <header>
+      <span></span>
+      <h3>Detalles del archivo</h3>
+      <button type="button" (click)="cerrarDetalle()">✕</button>
+    </header>
+
+    <div class="pd-det__body">
+      <div class="pd-det__ic">{{ icono(d.contentType) }}</div>
+      <span class="pd-det__cat">🏷 {{ labelCat[d.categoria] }}</span>
+      <h2>{{ d.nombre }}</h2>
+
+      <div class="pd-det__info">
+        <div><span class="pd-det__k">📅 Subido el</span><b>{{ d.creadoUtc | date:'d \'de\' MMMM \'de\' y' }}</b></div>
+        <div><span class="pd-det__k">💾 Tamaño del archivo</span><b>{{ tamano(d.tamano) }}</b></div>
+        <div><span class="pd-det__k">📄 Tipo de archivo</span><b>{{ tipoArchivo(d.contentType) }}</b></div>
+      </div>
+
+      <div class="pd-det__acts">
+        <button type="button" class="pd-det__ver" (click)="ver(d)">↗ Ver {{ tipoArchivo(d.contentType) }}</button>
+        <button type="button" (click)="compartir(d)" title="Compartir">🔗</button>
+        <button type="button" (click)="copiarEnlace(d)" title="Copiar enlace">⛓</button>
+        <button type="button" (click)="descargar(d)" title="Descargar">⬇</button>
+      </div>
+      <button type="button" class="pd-det__big" (click)="ver(d)">👁 Ver {{ tipoArchivo(d.contentType) }}</button>
+    </div>
+  </div>
+}
+
 <section class="pd">
   <header class="pd-top"><h1>Documentos</h1></header>
 
@@ -7,8 +38,19 @@
       <input type="search" placeholder="Buscar archivos y carpetas…"
         [value]="busqueda()" (input)="busqueda.set($any($event.target).value)" />
     </div>
-    <button type="button" class="pd-icobtn" (click)="orden.set(orden() === 'nombre' ? 'fecha' : 'nombre')"
-      [title]="orden() === 'nombre' ? 'Ordenar por fecha' : 'Ordenar por nombre'">↑↓</button>
+    <div class="pd-ordenwrap" (click)="$event.stopPropagation()">
+      <button type="button" class="pd-icobtn" (click)="ordenMenu.set(!ordenMenu())">↑↓</button>
+      @if (ordenMenu()) {
+        <div class="pd-ordenmenu">
+          <p>Ordenar por</p>
+          @for (o of ordenes; track o.value) {
+            <button type="button" [class.is-sel]="orden() === o.value" (click)="orden.set(o.value); ordenMenu.set(false)">
+              {{ o.label }} @if (orden() === o.value) { <b>✓</b> }
+            </button>
+          }
+        </div>
+      }
+    </div>
     <button type="button" class="pd-icobtn" (click)="vista.set(vista() === 'lista' ? 'grid' : 'lista')">
       {{ vista() === 'lista' ? '▦' : '☰' }}
     </button>
@@ -34,41 +76,54 @@
   } @else if (carpetasVis().length === 0 && docsVis().length === 0) {
     <div class="pd-empty"><div class="pd-empty__ic">📂</div><h3>No hay documentos</h3>
       <p>Todavía no hay documentos disponibles para vos.</p></div>
+  } @else if (vista() === 'grid') {
+    <div class="pd-cards">
+      @for (c of carpetasVis(); track c.id) {
+        <button type="button" class="pd-card" (click)="abrirCarpeta(c)">
+          <span class="pd-card__ic pd-card__ic--folder">📁</span>
+          <b>{{ c.nombre }}</b>
+          <small>{{ c.elementos }} elemento{{ c.elementos === 1 ? '' : 's' }}</small>
+        </button>
+      }
+      @for (d of docsVis(); track d.id) {
+        <button type="button" class="pd-card" (click)="abrir(d)">
+          <span class="pd-card__ic">{{ icono(d.contentType) }}</span>
+          <b>{{ d.nombre }}</b>
+          <small class="pd-cat">{{ labelCat[d.categoria] }}</small>
+        </button>
+      }
+    </div>
   } @else {
     @if (carpetasVis().length) {
       <p class="pd-group">Carpetas</p>
-      <div [class.pd-grid]="vista() === 'grid'">
-        @for (c of carpetasVis(); track c.id) {
-          <button type="button" class="pd-row pd-row--folder" (click)="abrirCarpeta(c)">
-            <span class="pd-row__ic">📁</span>
-            <span class="pd-row__body">
-              <b>{{ c.nombre }}</b>
-              <small>{{ c.elementos }} elemento{{ c.elementos === 1 ? '' : 's' }}</small>
-            </span>
-            <span class="pd-row__go">›</span>
-          </button>
-        }
-      </div>
+      @for (c of carpetasVis(); track c.id) {
+        <button type="button" class="pd-row pd-row--folder" (click)="abrirCarpeta(c)">
+          <span class="pd-row__ic">📁</span>
+          <span class="pd-row__body">
+            <b>{{ c.nombre }}</b>
+            <small>{{ c.elementos }} elemento{{ c.elementos === 1 ? '' : 's' }}</small>
+          </span>
+          <span class="pd-row__go">›</span>
+        </button>
+      }
     }
 
     @if (docsVis().length) {
       <p class="pd-group">Archivos</p>
-      <div [class.pd-grid]="vista() === 'grid'">
-        @for (d of docsVis(); track d.id) {
-          <button type="button" class="pd-row" (click)="abrir(d)">
-            <span class="pd-row__ic pd-row__ic--file">{{ icono(d.contentType) }}</span>
-            <span class="pd-row__body">
-              <b>{{ d.nombre }}</b>
-              <small>
-                <span class="pd-cat">{{ labelCat[d.categoria] }}</span>
-                {{ tamano(d.tamano) }} · {{ d.creadoUtc | date:'d MMM y' }}
-                @if (d.destacado) { · ⭐ }
-              </small>
-            </span>
-            <span class="pd-row__dl" (click)="descargar(d, $event)">⬇</span>
-          </button>
-        }
-      </div>
+      @for (d of docsVis(); track d.id) {
+        <button type="button" class="pd-row" (click)="abrir(d)">
+          <span class="pd-row__ic pd-row__ic--file">{{ icono(d.contentType) }}</span>
+          <span class="pd-row__body">
+            <b>{{ d.nombre }}</b>
+            <small>
+              <span class="pd-cat">{{ labelCat[d.categoria] }}</span>
+              {{ tamano(d.tamano) }} · {{ d.creadoUtc | date:'d MMM y' }}
+              @if (d.destacado) { · ⭐ }
+            </small>
+          </span>
+          <span class="pd-row__dl" (click)="descargar(d, $event)">⬇</span>
+        </button>
+      }
     }
   }
 </section>
