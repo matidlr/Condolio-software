@@ -85,7 +85,10 @@ export class TicketsListaComponent {
     { key: 'unidad', label: 'Unidad' },
     { key: 'ultimaActividad', label: 'Última actividad' },
   ];
-  columnasVisibles = signal<Set<string>>(new Set(this.columnasDef.map((c) => c.key)));
+  // Por defecto se muestran todas menos "Días abierto" (redundante con Fecha) para que la tabla entre sin scroll.
+  columnasVisibles = signal<Set<string>>(
+    new Set(this.columnasDef.map((c) => c.key).filter((k) => k !== 'diasAbierto')),
+  );
 
   verCol(key: string): boolean {
     return this.columnasVisibles().has(key);
@@ -335,6 +338,18 @@ export class TicketsListaComponent {
     return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000));
   }
 
+  iniciales(nombre: string): string {
+    const p = (nombre || '').trim().split(/\s+/).filter(Boolean);
+    return ((p[0]?.[0] ?? '') + (p[1]?.[0] ?? '')).toUpperCase() || '?';
+  }
+
+  private readonly avatarPalette = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#ef4444', '#6366f1'];
+  colorAvatar(nombre: string): string {
+    let h = 0;
+    for (let i = 0; i < (nombre || '').length; i++) h = (h * 31 + nombre.charCodeAt(i)) | 0;
+    return this.avatarPalette[Math.abs(h) % this.avatarPalette.length];
+  }
+
   // ---- selección ----
   toggleUno(id: string): void {
     const s = new Set(this.seleccion());
@@ -352,9 +367,12 @@ export class TicketsListaComponent {
   }
 
   // ---- fechas / duración ----
+  private readonly MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
   fechaCorta(iso: string): string {
-    return new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })
-      + ' ' + new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+    const d = new Date(iso);
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${d.getDate()} ${this.MESES[d.getMonth()]} ${hh}:${mm}`;
   }
 
   desde(iso: string): string {

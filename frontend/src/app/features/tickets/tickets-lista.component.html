@@ -197,13 +197,13 @@
             @if (verCol('estado')) { <th>Estado</th> }
             @if (verCol('prioridad')) { <th>Prioridad</th> }
             @if (verCol('descripcion')) { <th>Descripción</th> }
-            @if (verCol('reportadoPor')) { <th>Reportado por</th> }
+            @if (verCol('reportadoPor')) { <th>Reportó</th> }
             @if (verCol('fecha')) { <th>Fecha</th> }
-            @if (verCol('tiempoEstado')) { <th>Tiempo en estado</th> }
-            @if (verCol('diasAbierto')) { <th>Días abierto</th> }
+            @if (verCol('tiempoEstado')) { <th>En estado</th> }
+            @if (verCol('diasAbierto')) { <th>Días</th> }
             @if (verCol('asignado')) { <th>Asignado a</th> }
             @if (verCol('unidad')) { <th>Unidad</th> }
-            @if (verCol('ultimaActividad')) { <th>Última actividad</th> }
+            @if (verCol('ultimaActividad')) { <th>Actividad</th> }
             <th class="tk-c-acc">Acciones</th>
           </tr>
         </thead>
@@ -216,7 +216,7 @@
               @if (verCol('categoria')) {
                 <td class="tk-cat-cell">
                   <span class="tk-cat-ic" [innerHTML]="icono(t.categoria)"></span>
-                  {{ labelCategoria[t.categoria] }}
+                  <span class="tk-cat-lbl">{{ labelCategoria[t.categoria] }}</span>
                 </td>
               }
               @if (verCol('estado')) {
@@ -226,21 +226,41 @@
                 <td><span class="tk-prio tk-prio--{{ t.prioridad.toLowerCase() }}">{{ labelPrioridad[t.prioridad] }}</span></td>
               }
               @if (verCol('descripcion')) {
-                <td class="tk-desc">{{ t.titulo ? t.titulo + ' — ' : '' }}{{ t.descripcion }}</td>
+                <td class="tk-desc" [title]="(t.titulo ? t.titulo + ' — ' : '') + t.descripcion">
+                  {{ t.titulo ? t.titulo + ' — ' : '' }}{{ t.descripcion }}
+                </td>
               }
-              @if (verCol('reportadoPor')) { <td>{{ t.reportadoPor }}</td> }
-              @if (verCol('fecha')) { <td>{{ fechaCorta(t.reportadoUtc) }}</td> }
-              @if (verCol('tiempoEstado')) {
+              @if (verCol('reportadoPor')) {
                 <td>
+                  <span class="tk-user">
+                    <span class="tk-ava" [style.background]="colorAvatar(t.reportadoPor)">{{ iniciales(t.reportadoPor) }}</span>
+                    <span class="tk-user__n">{{ t.reportadoPor }}</span>
+                  </span>
+                </td>
+              }
+              @if (verCol('fecha')) { <td class="tk-nowrap tk-soft">{{ fechaCorta(t.reportadoUtc) }}</td> }
+              @if (verCol('tiempoEstado')) {
+                <td class="tk-nowrap">
                   <span class="tk-dur" [class.is-warn]="vencido(t)">
                     @if (vencido(t)) { ⚠ }{{ desde(t.estadoDesdeUtc) }}
                   </span>
                 </td>
               }
-              @if (verCol('diasAbierto')) { <td>{{ diasAbierto(t.reportadoUtc) }}d</td> }
-              @if (verCol('asignado')) { <td>{{ t.asignadoA || 'Por asignar' }}</td> }
-              @if (verCol('unidad')) { <td>{{ t.unidadNombre || '—' }}</td> }
-              @if (verCol('ultimaActividad')) { <td>hace {{ desde(t.ultimaActividadUtc) }}</td> }
+              @if (verCol('diasAbierto')) { <td class="tk-soft">{{ diasAbierto(t.reportadoUtc) }}d</td> }
+              @if (verCol('asignado')) {
+                <td>
+                  @if (t.asignadoA) {
+                    <span class="tk-user">
+                      <span class="tk-ava" [style.background]="colorAvatar(t.asignadoA)">{{ iniciales(t.asignadoA) }}</span>
+                      <span class="tk-user__n">{{ t.asignadoA }}</span>
+                    </span>
+                  } @else {
+                    <span class="tk-unassigned">Por asignar</span>
+                  }
+                </td>
+              }
+              @if (verCol('unidad')) { <td class="tk-nowrap">{{ t.unidadNombre || '—' }}</td> }
+              @if (verCol('ultimaActividad')) { <td class="tk-nowrap tk-soft">hace {{ desde(t.ultimaActividadUtc) }}</td> }
               <td class="tk-c-acc" (click)="$event.stopPropagation()">
                 <div class="tk-rowacc">
                   <button type="button" title="Cambiar estado"
