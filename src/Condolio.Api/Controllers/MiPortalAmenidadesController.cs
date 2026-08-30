@@ -61,6 +61,20 @@ public class MiPortalAmenidadesController : ApiControllerBase
         return File(r.Valor!.Contenido, r.Valor.ContentType, r.Valor.Nombre);
     }
 
+    public record VotarBody(List<Guid> OpcionesIds);
+
+    [HttpGet("encuestas")]
+    public async Task<IActionResult> Encuestas(CancellationToken ct) =>
+        ToResult(await _portal.EncuestasAsync(Uid, ct));
+
+    [HttpGet("encuestas/{encuestaId:guid}")]
+    public async Task<IActionResult> Encuesta(Guid encuestaId, CancellationToken ct) =>
+        ToResult(await _portal.EncuestaAsync(Uid, encuestaId, ct));
+
+    [HttpPost("encuestas/{encuestaId:guid}/votar")]
+    public async Task<IActionResult> Votar(Guid encuestaId, VotarBody body, CancellationToken ct) =>
+        ToResult(await _portal.VotarAsync(Uid, encuestaId, body.OpcionesIds ?? new(), ct));
+
     [HttpPost("reservas")]
     public async Task<IActionResult> Solicitar(SolicitarReservaBody body, CancellationToken ct) =>
         ToResult(await _portal.SolicitarReservaAsync(Uid, body.AmenidadId, body.Inicio, body.Fin, body.Nota, ct));

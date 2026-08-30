@@ -1,0 +1,166 @@
+@switch (vista()) {
+
+  @case ('lista') {
+    <section class="pi">
+      <header class="pi-top">
+        <h1>Incidencias</h1>
+        <button type="button" class="pi-link" (click)="nuevo()">Nuevo</button>
+      </header>
+
+      <div class="pi-tabs">
+        <button type="button" [class.is-active]="tab() === 'activo'" (click)="tab.set('activo')">Activo</button>
+        <button type="button" [class.is-active]="tab() === 'resuelto'" (click)="tab.set('resuelto')">Resuelto</button>
+      </div>
+
+      @if (cargando()) {
+        <p class="pi-loading">Cargando…</p>
+      } @else if (filtradas().length === 0) {
+        <div class="pi-empty">
+          <span class="pi-empty__chip">💬 Línea directa con tus administradores</span>
+          <div class="pi-empty__ic" [class.pi-empty__ic--ok]="tab() === 'resuelto'">
+            {{ tab() === 'resuelto' ? '✦' : '🔧' }}
+          </div>
+          <h3>{{ tab() === 'resuelto' ? '¡Todo en orden!' : 'No hay reportes activos' }}</h3>
+          <p>
+            {{ tab() === 'resuelto'
+              ? 'Cuando la administración resuelva tus reportes, vas a poder seguir su progreso acá.'
+              : 'Reportá problemas de mantenimiento, fallas del edificio o cualquier inquietud directamente a la administración de tu comunidad.' }}
+          </p>
+          @if (tab() === 'activo') {
+            <button type="button" class="pi-report" (click)="nuevo()">🔧 Reportar un problema</button>
+          }
+        </div>
+      } @else {
+        @for (i of filtradas(); track i.id) {
+          <button type="button" class="pi-card" (click)="abrir(i)">
+            <span class="pi-card__ic" [style.background]="colorCat(i.categoria)">{{ iconoCat(i.categoria) }}</span>
+            <div class="pi-card__body">
+              <div class="pi-card__head">
+                <b>{{ i.categoria }}</b>
+                <span class="pi-badge" [style.color]="colorEstado(i.estado)"
+                  [style.background]="colorEstado(i.estado) + '22'">🕐 {{ i.estado }}</span>
+              </div>
+              <small>🏠 {{ hace(i.creadoUtc) }}</small>
+              <p>{{ i.descripcion }}</p>
+            </div>
+          </button>
+        }
+      }
+    </section>
+  }
+
+  @case ('nuevo') {
+    <section class="pi">
+      <header class="pi-top">
+        <button type="button" class="pi-link" (click)="vista.set('lista')">Cancelar</button>
+        <h1>Reportar</h1><span></span>
+      </header>
+
+      <div class="pi-block">
+        <h4>Categoría</h4>
+        <div class="pi-cats">
+          @for (c of categorias; track c.value) {
+            <button type="button" class="pi-cat" [class.is-sel]="fCategoria() === c.value" (click)="fCategoria.set(c.value)">
+              <span>{{ c.icon }}</span>{{ c.label }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="pi-block">
+        <h4>Descripción</h4>
+        <textarea rows="4" placeholder="Describí el problema en detalle…"
+          [ngModel]="fDescripcion()" (ngModelChange)="fDescripcion.set($event)"></textarea>
+      </div>
+
+      <div class="pi-adjbtns">
+        <label class="pi-adjbtn">
+          + 🖼 Imagen{{ imagenes() ? ' (' + imagenes() + ')' : '' }}
+          <input type="file" hidden accept="image/*" multiple (change)="onArchivos($event)" />
+        </label>
+        <label class="pi-adjbtn">
+          + 🎥 Video{{ videos() ? ' (' + videos() + ')' : '' }}
+          <input type="file" hidden accept="video/*" multiple (change)="onArchivos($event)" />
+        </label>
+      </div>
+      @if (fArchivos().length) {
+        <div class="pi-thumbs">
+          @for (a of fArchivos(); track a.url; let idx = $index) {
+            <div class="pi-thumb">
+              @if (a.file.type.startsWith('image/')) { <img [src]="a.url" alt="" /> }
+              @else { <span class="pi-thumb__vid">🎥</span> }
+              <button type="button" (click)="quitarArchivo(idx)">✕</button>
+            </div>
+          }
+        </div>
+      }
+
+      <button type="button" class="pi-enviar" [disabled]="fDescripcion().trim().length === 0 || enviando()" (click)="enviar()">
+        {{ enviando() ? 'Enviando…' : 'Enviar' }}
+      </button>
+    </section>
+  }
+
+  @case ('detalle') {
+    <section class="pi pi-det">
+      <header class="pi-top">
+        <button type="button" class="pi-link" (click)="vista.set('lista')">‹ Atrás</button>
+        <h1>Detalles del reporte</h1><span></span>
+      </header>
+
+      @if (!detalle()) {
+        <p class="pi-loading">Cargando…</p>
+      } @else {
+        @if (detalle()!; as d) {
+          <div class="pi-detcard">
+            <div class="pi-detcard__head">
+              <span class="pi-card__ic" [style.background]="colorCat(d.incidencia.categoria)">{{ iconoCat(d.incidencia.categoria) }}</span>
+              <b>{{ d.incidencia.categoria }}</b>
+              <span class="pi-badge" [style.color]="colorEstado(d.incidencia.estado)"
+                [style.background]="colorEstado(d.incidencia.estado) + '22'">🕐 {{ d.incidencia.estado }}</span>
+            </div>
+            <p class="pi-detcard__meta">🏠 {{ hace(d.incidencia.creadoUtc) }} · 📅 {{ d.incidencia.creadoUtc | date:'d MMM' }}</p>
+
+            <p class="pi-detcard__label">Descripción</p>
+            <p class="pi-detcard__desc">{{ d.incidencia.descripcion }}</p>
+
+            @if (d.adjuntos.length) {
+              <p class="pi-detcard__label">Archivos adjuntos</p>
+              <div class="pi-adjs">
+                @for (a of d.adjuntos; track a.id) {
+                  @if (a.esImagen && imgUrls()[a.id]) {
+                    <a class="pi-adj" [href]="imgUrls()[a.id]" target="_blank"><img [src]="imgUrls()[a.id]" [alt]="a.nombre" /></a>
+                  } @else {
+                    <span class="pi-adj pi-adj--file">📎 {{ a.nombre }}</span>
+                  }
+                }
+              </div>
+            }
+          </div>
+
+          <div class="pi-timeline">
+            <h4>🕐 Línea de tiempo</h4>
+            <div class="pi-evt">
+              <span class="pi-evt__ic">ⓘ</span>
+              <b>Reporte creado</b>
+              <small>{{ hace(d.incidencia.creadoUtc) }}</small>
+            </div>
+            @for (m of d.mensajes; track $index) {
+              <div class="pi-msg" [class.is-mine]="!m.esAdministracion">
+                @if (m.esAdministracion) { <span class="pi-msg__from">Administración</span> }
+                <p>{{ m.texto }}</p>
+                <small>{{ m.fechaUtc | date:'HH:mm' }}</small>
+              </div>
+            }
+          </div>
+
+          <div class="pi-compose">
+            <textarea rows="1" placeholder="Escribí un comentario…"
+              [ngModel]="comentario()" (ngModelChange)="comentario.set($event)"></textarea>
+            <button type="button" [disabled]="comentario().trim().length === 0 || comentando()" (click)="comentar()">➤</button>
+          </div>
+        }
+      }
+    </section>
+  }
+}

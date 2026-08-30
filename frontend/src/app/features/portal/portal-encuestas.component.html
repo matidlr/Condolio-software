@@ -1,0 +1,129 @@
+@switch (vista()) {
+
+  @case ('lista') {
+    <section class="pe">
+      <header class="pe-top"><h1>Encuestas</h1></header>
+
+      <div class="pe-search">
+        <span>⌕</span>
+        <input type="search" placeholder="Buscar encuestas…"
+          [value]="busqueda()" (input)="busqueda.set($any($event.target).value)" />
+      </div>
+
+      <div class="pe-tabs">
+        <button type="button" [class.is-active]="tab() === 'curso'" (click)="tab.set('curso')">En curso</button>
+        <button type="button" [class.is-active]="tab() === 'terminadas'" (click)="tab.set('terminadas')">Terminadas</button>
+      </div>
+
+      @if (cargando()) {
+        <p class="pe-loading">Cargando…</p>
+      } @else if (filtradas().length === 0) {
+        <div class="pe-empty">
+          <div class="pe-empty__ic">🗳️</div>
+          <h3>{{ tab() === 'curso' ? 'No hay encuestas en curso' : 'No hay encuestas terminadas' }}</h3>
+        </div>
+      } @else {
+        @for (e of filtradas(); track e.id) {
+          <button type="button" class="pe-card" (click)="abrir(e)">
+            <div class="pe-card__head">
+              <span class="pe-card__ic">📊</span>
+              <div>
+                <b>{{ e.titulo }}</b>
+                @if (e.yoVote) { <span class="pe-voted">✓ Votado</span> }
+              </div>
+            </div>
+            @if (e.yoVote) {
+              @for (o of e.opciones; track o.id) {
+                <div class="pe-opt pe-opt--mini" [class.is-mine]="o.yoVote">
+                  <span class="pe-opt__fill" [style.width.%]="o.porcentaje"></span>
+                  <span class="pe-opt__txt">{{ o.texto }}</span>
+                  <span class="pe-opt__pct">{{ o.porcentaje | number:'1.0-0' }}%</span>
+                </div>
+              }
+            }
+            <div class="pe-card__foot">
+              <span>👥 {{ e.totalVotos }} voto{{ e.totalVotos === 1 ? '' : 's' }}</span>
+              <span>🕐 {{ textoCierre(e) }}</span>
+            </div>
+          </button>
+        }
+      }
+    </section>
+  }
+
+  @case ('detalle') {
+    <section class="pe">
+      <header class="pe-top">
+        <button type="button" class="pe-back" (click)="vista.set('lista')">‹ Atrás</button>
+        <h1>Detalles de la encuesta</h1>
+        <span></span>
+      </header>
+
+      @if (!detalle()) {
+        <p class="pe-loading">Cargando…</p>
+      } @else {
+        @if (detalle()!; as d) {
+        <div class="pe-det">
+          <div class="pe-det__head">
+            <h2>{{ d.encuesta.titulo }}</h2>
+            <span class="pe-badge" [class.is-open]="d.encuesta.estado === 'Activa'">
+              {{ d.encuesta.estado === 'Activa' ? 'Activa' : 'Cerrada' }}
+            </span>
+          </div>
+          <p class="pe-det__meta">
+            🕐 {{ textoCierre(d.encuesta) }} · 👥 {{ d.encuesta.totalVotos }} votos totales
+          </p>
+          @if (d.encuesta.descripcion) { <p class="pe-det__desc">{{ d.encuesta.descripcion }}</p> }
+
+          @if (mostrarResultados()) {
+            @for (o of d.encuesta.opciones; track o.id) {
+              <div class="pe-opt" [class.is-mine]="o.yoVote">
+                <div class="pe-opt__row">
+                  <b>{{ o.texto }}</b>
+                  <span>{{ o.porcentaje | number:'1.0-0' }}% <em>({{ o.votos }})</em></span>
+                </div>
+                <div class="pe-opt__bar"><span [style.width.%]="o.porcentaje"></span></div>
+                @if (o.yoVote) { <small class="pe-opt__me">● Tu elección</small> }
+              </div>
+            }
+            <p class="pe-total">● {{ d.encuesta.totalVotos }} votos totales ●</p>
+
+            @if (d.encuesta.estado === 'Activa') {
+              <div class="pe-gracias">
+                <b>✓ ¡Gracias por votar!</b>
+                <span>Tu voto ha sido registrado</span>
+                <small>Votado por: {{ miNombre() }}</small>
+                <button type="button" (click)="confirmarCambio.set(true)">Cambiar voto</button>
+              </div>
+            }
+          } @else {
+            <p class="pe-elegi">Seleccioná una opción</p>
+            @for (o of d.encuesta.opciones; track o.id) {
+              <button type="button" class="pe-choice" [class.is-sel]="elegida(o.id)" (click)="toggleOpcion(o.id)">
+                <span class="pe-choice__radio">{{ elegida(o.id) ? '◉' : '○' }}</span>
+                {{ o.texto }}
+              </button>
+            }
+            <button type="button" class="pe-votar" [disabled]="!puedeVotar() || votando()" (click)="votar()">
+              {{ votando() ? 'Enviando…' : 'Enviar voto' }}
+            </button>
+          }
+        </div>
+        }
+      }
+    </section>
+
+    @if (confirmarCambio()) {
+      <div class="pe-modal-bg" (click)="confirmarCambio.set(false)">
+        <div class="pe-modal" (click)="$event.stopPropagation()">
+          <b>⚠ Confirmar cambio de voto</b>
+          <p>¿Seguro que querés cambiar tu voto? Tu selección actual será eliminada y podrás votar nuevamente.</p>
+          <footer>
+            <button type="button" class="pe-modal__cancel" (click)="confirmarCambio.set(false)">Cancelar</button>
+            <button type="button" class="pe-modal__ok" (click)="cambiarVoto()">Confirmar</button>
+          </footer>
+        </div>
+      </div>
+    }
+  }
+}

@@ -82,10 +82,19 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/portal/portal-contactos.component').then((m) => m.PortalContactosComponent),
       },
+      {
+        path: 'encuestas',
+        loadComponent: () =>
+          import('./features/portal/portal-encuestas.component').then((m) => m.PortalEncuestasComponent),
+      },
+      {
+        path: 'incidencias',
+        loadComponent: () =>
+          import('./features/portal/portal-incidencias.component').then((m) => m.PortalIncidenciasComponent),
+      },
       ...[
         'muro', 'notificaciones', 'config',
-        'finanzas', 'historial-visitas', 'encuestas', 'informacion',
-        'incidencias', 'paquetes',
+        'finanzas', 'historial-visitas', 'informacion', 'paquetes',
       ].map((p) => ({
         path: p,
         loadComponent: () =>

@@ -1,6 +1,7 @@
 using Condolio.Application.Amenidades;
 using Condolio.Application.Common;
 using Condolio.Application.Documentos;
+using Condolio.Application.Encuestas;
 
 namespace Condolio.Application.Residentes;
 
@@ -38,6 +39,31 @@ public record PortalCasaDto(
     int PaquetesPendientes,
     int NotificacionesNoLeidas);
 
+public record IncidenciaResidenteDto(
+    Guid Id,
+    int Numero,
+    string Titulo,
+    string Descripcion,
+    string Categoria,
+    string Estado,
+    string Prioridad,
+    string? Ubicacion,
+    DateTime CreadoUtc,
+    DateTime UltimaActividadUtc);
+
+public record IncidenciaMensajeDto(string Texto, string Autor, bool EsAdministracion, DateTime FechaUtc);
+
+public record IncidenciaAdjuntoDto(Guid Id, string Nombre, string ContentType, bool EsImagen);
+
+public record IncidenciaDetalleResidenteDto(
+    IncidenciaResidenteDto Incidencia,
+    IReadOnlyList<IncidenciaMensajeDto> Mensajes,
+    IReadOnlyList<IncidenciaAdjuntoDto> Adjuntos);
+
+public record ArchivoSubidaDto(string Nombre, string ContentType, long Tamano, Stream Contenido);
+
+public record CrearIncidenciaResidenteDto(string Descripcion, string Categoria, IReadOnlyList<ArchivoSubidaDto>? Archivos = null);
+
 public record SlotDto(DateTime Inicio, DateTime Fin);
 
 public record MiReservaDto(
@@ -70,4 +96,14 @@ public interface IMiPortalService
 
     Task<Result<ContenidoDto>> DocumentosAsync(string usuarioId, Guid? carpetaId, CancellationToken ct = default);
     Task<Result<ArchivoDocumento>> DescargarDocumentoAsync(string usuarioId, Guid documentoId, bool registrarDescarga, CancellationToken ct = default);
+
+    Task<Result<IReadOnlyList<EncuestaDto>>> EncuestasAsync(string usuarioId, CancellationToken ct = default);
+    Task<Result<EncuestaDetalleDto>> EncuestaAsync(string usuarioId, Guid encuestaId, CancellationToken ct = default);
+    Task<Result<EncuestaDto>> VotarAsync(string usuarioId, Guid encuestaId, IReadOnlyList<Guid> opcionesIds, CancellationToken ct = default);
+
+    Task<Result<IReadOnlyList<IncidenciaResidenteDto>>> IncidenciasAsync(string usuarioId, CancellationToken ct = default);
+    Task<Result<IncidenciaDetalleResidenteDto>> IncidenciaAsync(string usuarioId, Guid ticketId, CancellationToken ct = default);
+    Task<Result<IncidenciaResidenteDto>> CrearIncidenciaAsync(string usuarioId, CrearIncidenciaResidenteDto dto, CancellationToken ct = default);
+    Task<Result> ComentarIncidenciaAsync(string usuarioId, Guid ticketId, string texto, CancellationToken ct = default);
+    Task<Result<ArchivoDocumento>> DescargarAdjuntoIncidenciaAsync(string usuarioId, Guid adjuntoId, CancellationToken ct = default);
 }

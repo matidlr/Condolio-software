@@ -2,12 +2,16 @@ using Condolio.Application.Amenidades;
 using Condolio.Application.Calendario;
 using Condolio.Application.Common;
 using Condolio.Application.Documentos;
+using Condolio.Application.Encuestas;
 using Condolio.Application.Residentes;
 using Condolio.Domain.Amenidades;
+using Condolio.Domain.Archivos;
 using Condolio.Domain.Calendario;
 using Condolio.Domain.Documentos;
 using Condolio.Domain.Encuestas;
+using Condolio.Domain.Tickets;
 using Condolio.Domain.Unidades;
+using Condolio.Infrastructure.Archivos;
 using Condolio.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,14 +26,29 @@ public class MiPortalService : IMiPortalService
     private readonly IAmenidadService _amenidades;
     private readonly IEventoService _eventos;
     private readonly IDocumentoService _documentos;
+    private readonly IEncuestaService _encuestas;
+    private readonly IFileStorage _storage;
 
-    public MiPortalService(CondolioDbContext db, IAmenidadService amenidades, IEventoService eventos, IDocumentoService documentos)
+    public MiPortalService(CondolioDbContext db, IAmenidadService amenidades, IEventoService eventos,
+        IDocumentoService documentos, IEncuestaService encuestas, IFileStorage storage)
     {
         _db = db;
         _amenidades = amenidades;
         _eventos = eventos;
         _documentos = documentos;
+        _encuestas = encuestas;
+        _storage = storage;
     }
+
+    private static string EstadoIncidencia(EstadoTicket e) => e switch
+    {
+        EstadoTicket.Nuevo => "Pendiente",
+        EstadoTicket.EnProgreso => "En progreso",
+        EstadoTicket.EsperandoInformacion => "Necesita info",
+        EstadoTicket.PendienteAprobacion => "En revisión",
+        EstadoTicket.Resuelto => "Resuelto",
+        _ => e.ToString(),
+    };
 
     private async Task<Origen?> OrigenAsync(string usuarioId, CancellationToken ct) =>
         await _db.UnidadPersonas.IgnoreQueryFilters()
@@ -323,6 +342,170 @@ public class MiPortalService : IMiPortalService
             return Result<ArchivoDocumento>.Fail("No tenés acceso a este documento.");
 
         return await _documentos.DescargarAsync(o.ConsorcioId, documentoId, registrarDescarga, ct);
+    }
+
+    public async Task<Result<IReadOnlyList<EncuestaDto>>> EncuestasAsync(string usuarioId, CancellationToken ct = default)
+    {
+        var o = await OrigenAsync(usuarioId, ct);
+        if (o is null) return Result<IReadOnlyList<EncuestaDto>>.Fail("No tenés una unidad asignada.");
+
+        var res = await _encuestas.ListarAsync(o.ConsorcioId, ct);
+        if (!res.Exito) return Result<IReadOnlyList<EncuestaDto>>.Fail(res.Error!);
+
+        // El residente no ve borradores.
+        var visibles = res.Valor!.Encuestas.Where(e => e.Estado != EstadoEncuesta.Borrador).ToList();
+        return Result<IReadOnlyList<EncuestaDto>>.Ok(visibles);
+    }
+
+    public async Task<Result<EncuestaDetalleDto>> EncuestaAsync(string usuarioId, Guid encuestaId, CancellationToken ct = default)
+    {
+        var o = await OrigenAsync(usuarioId, ct);
+        if (o is null) return Result<EncuestaDetalleDto>.Fail("No tenés una unidad asignada.");
+        return await _encuestas.ObtenerAsync(o.ConsorcioId, encuestaId, ct);
+    }
+
+    public async Task<Result<EncuestaDto>> VotarAsync(string usuarioId, Guid encuestaId, IReadOnlyList<Guid> opcionesIds, CancellationToken ct = default)
+    {
+        var o = await OrigenAsync(usuarioId, ct);
+        if (o is null) return Result<EncuestaDto>.Fail("No tenés una unidad asignada.");
+        return await _encuestas.VotarAsync(o.ConsorcioId, encuestaId, opcionesIds, ct);
+    }
+
+    public async Task<Result<IReadOnlyList<IncidenciaResidenteDto>>> IncidenciasAsync(string usuarioId, CancellationToken ct = default)
+    {
+        var o = await OrigenAsync(usuarioId, ct);
+        if (o is null) return Result<IReadOnlyList<IncidenciaResidenteDto>>.Fail("No tenés una unidad asignada.");
+
+        var lista = await _db.Tickets.IgnoreQueryFilters()
+            .Where(t => t.ConsorcioId == o.ConsorcioId && t.ReportadoPorUsuarioId == usuarioId)
+            .OrderByDescending(t => t.UltimaActividadUtc)
+            .Select(t => new IncidenciaResidenteDto(
+                t.Id, t.Numero, t.Titulo ?? t.Categoria.ToString(), t.Descripcion,
+                t.Categoria.ToString(), EstadoIncidencia(t.Estado), t.Prioridad.ToString(),
+                t.Ubicacion, t.CreadoUtc, t.UltimaActividadUtc))
+            .ToListAsync(ct);
+        return Result<IReadOnlyList<IncidenciaResidenteDto>>.Ok(lista);
+    }
+
+    public async Task<Result<IncidenciaDetalleResidenteDto>> IncidenciaAsync(string usuarioId, Guid ticketId, CancellationToken ct = default)
+    {
+        var o = await OrigenAsync(usuarioId, ct);
+        if (o is null) return Result<IncidenciaDetalleResidenteDto>.Fail("No tenés una unidad asignada.");
+
+        var t = await _db.Tickets.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.Id == ticketId && x.ConsorcioId == o.ConsorcioId && x.ReportadoPorUsuarioId == usuarioId, ct);
+        if (t is null) return Result<IncidenciaDetalleResidenteDto>.Fail("Reporte no encontrado.");
+
+        var dto = new IncidenciaResidenteDto(
+            t.Id, t.Numero, t.Titulo ?? t.Categoria.ToString(), t.Descripcion,
+            t.Categoria.ToString(), EstadoIncidencia(t.Estado), t.Prioridad.ToString(),
+            t.Ubicacion, t.CreadoUtc, t.UltimaActividadUtc);
+
+        var mensajes = await _db.TicketComentarios.IgnoreQueryFilters()
+            .Where(c => c.TicketId == ticketId && !c.EsInterna)
+            .OrderBy(c => c.CreadoUtc)
+            .Select(c => new IncidenciaMensajeDto(
+                c.Texto,
+                c.AutorUsuarioId == usuarioId ? "Vos" : "Administración",
+                c.AutorUsuarioId != usuarioId,
+                c.CreadoUtc))
+            .ToListAsync(ct);
+
+        var adjuntos = await _db.Adjuntos.IgnoreQueryFilters()
+            .Where(a => a.OwnerTipo == TipoAdjuntoOwner.Ticket && a.OwnerId == ticketId)
+            .Select(a => new IncidenciaAdjuntoDto(a.Id, a.NombreArchivo, a.ContentType, a.ContentType.StartsWith("image/")))
+            .ToListAsync(ct);
+
+        return Result<IncidenciaDetalleResidenteDto>.Ok(new IncidenciaDetalleResidenteDto(dto, mensajes, adjuntos));
+    }
+
+    public async Task<Result<IncidenciaResidenteDto>> CrearIncidenciaAsync(string usuarioId, CrearIncidenciaResidenteDto dto, CancellationToken ct = default)
+    {
+        var o = await OrigenAsync(usuarioId, ct);
+        if (o is null) return Result<IncidenciaResidenteDto>.Fail("No tenés una unidad asignada.");
+        if (string.IsNullOrWhiteSpace(dto.Descripcion)) return Result<IncidenciaResidenteDto>.Fail("Describí el problema.");
+
+        Enum.TryParse<CategoriaTicket>(dto.Categoria, true, out var cat);
+
+        var numero = await _db.Tickets.IgnoreQueryFilters()
+            .Where(t => t.ConsorcioId == o.ConsorcioId).Select(t => (int?)t.Numero).MaxAsync(ct) ?? 0;
+
+        var t = new Ticket
+        {
+            AdministradorId = o.AdministradorId,
+            ConsorcioId = o.ConsorcioId,
+            Numero = numero + 1,
+            Titulo = cat.ToString(),
+            Descripcion = dto.Descripcion.Trim(),
+            Categoria = cat,
+            Estado = EstadoTicket.Nuevo,
+            Prioridad = PrioridadTicket.Media,
+            UnidadId = o.UnidadId,
+            ReportadoPorUsuarioId = usuarioId,
+            ReportadoPorNombre = string.IsNullOrWhiteSpace(o.Nombre) ? "Residente" : o.Nombre,
+            ReportadoUtc = DateTime.UtcNow,
+            UltimaActividadUtc = DateTime.UtcNow,
+            EstadoDesdeUtc = DateTime.UtcNow,
+        };
+        _db.Tickets.Add(t);
+        await _db.SaveChangesAsync(ct);
+
+        foreach (var archivo in dto.Archivos ?? Array.Empty<ArchivoSubidaDto>())
+        {
+            if (archivo.Tamano <= 0 || archivo.Tamano > 25L * 1024 * 1024) continue;
+            var ext = Path.GetExtension(archivo.Nombre);
+            var ruta = $"incidencias/{o.ConsorcioId:N}/{Guid.CreateVersion7():N}{ext}";
+            await _storage.GuardarAsync(ruta, archivo.Contenido, ct);
+            _db.Adjuntos.Add(new Adjunto
+            {
+                AdministradorId = o.AdministradorId,
+                OwnerTipo = TipoAdjuntoOwner.Ticket,
+                OwnerId = t.Id,
+                NombreArchivo = archivo.Nombre,
+                ContentType = archivo.ContentType,
+                Tamano = archivo.Tamano,
+                RutaRelativa = ruta,
+            });
+        }
+        await _db.SaveChangesAsync(ct);
+
+        return Result<IncidenciaResidenteDto>.Ok(new IncidenciaResidenteDto(
+            t.Id, t.Numero, t.Titulo!, t.Descripcion, t.Categoria.ToString(), EstadoIncidencia(t.Estado),
+            t.Prioridad.ToString(), t.Ubicacion, t.CreadoUtc, t.UltimaActividadUtc));
+    }
+
+    public async Task<Result> ComentarIncidenciaAsync(string usuarioId, Guid ticketId, string texto, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(texto)) return Result.Fail("El comentario no puede estar vacío.");
+        var t = await _db.Tickets.IgnoreQueryFilters().AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == ticketId && x.ReportadoPorUsuarioId == usuarioId, ct);
+        if (t is null) return Result.Fail("Reporte no encontrado.");
+
+        _db.TicketComentarios.Add(new TicketComentario
+        {
+            TicketId = ticketId,
+            AdministradorId = t.AdministradorId,
+            Texto = texto.Trim(),
+            AutorUsuarioId = usuarioId,
+            EsInterna = false,
+        });
+        await _db.SaveChangesAsync(ct);
+        await _db.Tickets.Where(x => x.Id == ticketId)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.UltimaActividadUtc, DateTime.UtcNow), ct);
+        return Result.Ok();
+    }
+
+    public async Task<Result<ArchivoDocumento>> DescargarAdjuntoIncidenciaAsync(string usuarioId, Guid adjuntoId, CancellationToken ct = default)
+    {
+        var a = await _db.Adjuntos.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.Id == adjuntoId && x.OwnerTipo == TipoAdjuntoOwner.Ticket, ct);
+        if (a is null) return Result<ArchivoDocumento>.Fail("Adjunto no encontrado.");
+
+        var esMio = await _db.Tickets.IgnoreQueryFilters()
+            .AnyAsync(t => t.Id == a.OwnerId && t.ReportadoPorUsuarioId == usuarioId, ct);
+        if (!esMio) return Result<ArchivoDocumento>.Fail("No tenés acceso a este archivo.");
+
+        return Result<ArchivoDocumento>.Ok(new ArchivoDocumento(a.NombreArchivo, a.ContentType, _storage.Abrir(a.RutaRelativa)));
     }
 
     private static IReadOnlyList<Guid> Adjuntos(string? ids) =>
