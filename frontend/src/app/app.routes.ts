@@ -102,9 +102,15 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/portal/portal-visitas.component').then((m) => m.PortalVisitasComponent),
       },
+      {
+        path: 'informacion',
+        loadComponent: () =>
+          import('./features/portal/portal-informacion.component').then((m) => m.PortalInformacionComponent),
+      },
+      { path: 'config', pathMatch: 'full', redirectTo: 'informacion' },
       ...[
-        'notificaciones', 'config',
-        'finanzas', 'informacion', 'paquetes',
+        'notificaciones',
+        'finanzas', 'paquetes',
       ].map((p) => ({
         path: p,
         loadComponent: () =>

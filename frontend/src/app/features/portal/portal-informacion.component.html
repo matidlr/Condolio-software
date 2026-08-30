@@ -1,0 +1,75 @@
+<section class="pi">
+  @if (cargando()) {
+    <p class="pi-loading">Cargando…</p>
+  } @else if (info()) {
+    @if (info()!; as i) {
+    <div class="pi-header">
+      <span class="pi-header__ph">{{ inicial() }}</span>
+      <div>
+        <h1>{{ i.nombre }}</h1>
+        <p>Unidad {{ i.unidadNombre }} · {{ i.rolEnUnidad }}</p>
+      </div>
+    </div>
+
+    @if (vista() === 'lista') {
+      <h2 class="pi-secttl">General</h2>
+      <article class="pi-card">
+        <div class="pi-row">
+          <span class="pi-row__ic">🏢</span>
+          <div class="pi-row__body">
+            <small>Nombre de la comunidad</small>
+            <b>{{ i.nombre }}</b>
+          </div>
+        </div>
+      </article>
+
+      <h2 class="pi-secttl">Ubicación</h2>
+      <article class="pi-card">
+        <button type="button" class="pi-row pi-row--link" (click)="vista.set('direccion')">
+          <span class="pi-row__ic">📍</span>
+          <div class="pi-row__body">
+            <small>Dirección</small>
+            <b>{{ direccionResumen() }}</b>
+          </div>
+          <span class="pi-row__go">›</span>
+        </button>
+      </article>
+    } @else {
+      <button type="button" class="pi-back" (click)="vista.set('lista')">‹ Volver</button>
+      <h2 class="pi-secttl">Dirección</h2>
+      <article class="pi-card">
+        <div class="pi-row">
+          <span class="pi-row__ic">📍</span>
+          <div class="pi-row__body"><small>Dirección</small><b>{{ i.direccion || 'Sin definir' }}</b></div>
+        </div>
+        <div class="pi-row">
+          <span class="pi-row__ic">🏙️</span>
+          <div class="pi-row__body"><small>Ciudad</small><b>{{ i.localidad || 'Sin definir' }}</b></div>
+        </div>
+        <div class="pi-row">
+          <span class="pi-row__ic">🗺️</span>
+          <div class="pi-row__body"><small>Provincia</small><b>{{ i.provincia || 'Sin definir' }}</b></div>
+        </div>
+        <div class="pi-row">
+          <span class="pi-row__ic">🌎</span>
+          <div class="pi-row__body"><small>País</small><b>{{ paisLabel() }}</b></div>
+        </div>
+        <div class="pi-row">
+          <span class="pi-row__ic">✉️</span>
+          <div class="pi-row__body"><small>Código postal</small><b>{{ i.codigoPostal || 'Sin definir' }}</b></div>
+        </div>
+      </article>
+    }
+
+    <p class="pi-note">
+      Para cambiar estos datos, comunicate con la administración de tu comunidad.
+    </p>
+    }
+  } @else {
+    <div class="pi-card pi-empty">
+      <h2>No tenés una unidad asignada</h2>
+      <p>Cuando la administración te asigne una unidad vas a ver la información de tu comunidad acá.</p>
+      <a class="btn btn--ghost" routerLink="/portal/casa">Volver al inicio</a>
+    </div>
+  }
+</section>

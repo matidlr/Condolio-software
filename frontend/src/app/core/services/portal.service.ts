@@ -46,9 +46,45 @@ export interface PortalCasa {
   notificacionesNoLeidas: number;
 }
 
+export interface ComunidadInfo {
+  nombre: string;
+  direccion?: string | null;
+  localidad?: string | null;
+  provincia?: string | null;
+  pais?: string | null;
+  codigoPostal?: string | null;
+  unidadNombre: string;
+  rolEnUnidad: string;
+}
+
+export interface MiUnidadPersona {
+  nombre: string;
+  rol: string;
+  esContactoPrincipal: boolean;
+}
+
+export interface MiUnidadDetalle {
+  unidadNombre: string;
+  piso: number;
+  tipoUnidad: string;
+  ocupacion: string;
+  totalResidentes: number;
+  consorcioNombre: string;
+  propietarios: MiUnidadPersona[];
+  inquilinos: MiUnidadPersona[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class PortalService {
   private http = inject(HttpClient);
+
+  comunidad(): Observable<ComunidadInfo> {
+    return this.http.get<ComunidadInfo>(`${environment.apiUrl}/mi-portal/comunidad`);
+  }
+
+  unidad(): Observable<MiUnidadDetalle> {
+    return this.http.get<MiUnidadDetalle>(`${environment.apiUrl}/mi-portal/unidad`);
+  }
 
   readonly panel = signal<MiPanel | null>(null);
   readonly unidadActivaId = signal<string | null>(null);

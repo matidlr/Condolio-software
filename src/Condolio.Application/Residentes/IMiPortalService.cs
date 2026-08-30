@@ -65,6 +65,28 @@ public record ArchivoSubidaDto(string Nombre, string ContentType, long Tamano, S
 
 public record CrearIncidenciaResidenteDto(string Descripcion, string Categoria, IReadOnlyList<ArchivoSubidaDto>? Archivos = null);
 
+public record ComunidadInfoDto(
+    string Nombre,
+    string? Direccion,
+    string? Localidad,
+    string? Provincia,
+    string? Pais,
+    string? CodigoPostal,
+    string UnidadNombre,
+    string RolEnUnidad);
+
+public record MiUnidadPersonaDto(string Nombre, string Rol, bool EsContactoPrincipal);
+
+public record MiUnidadDetalleDto(
+    string UnidadNombre,
+    int Piso,
+    string TipoUnidad,
+    string Ocupacion,
+    int TotalResidentes,
+    string ConsorcioNombre,
+    IReadOnlyList<MiUnidadPersonaDto> Propietarios,
+    IReadOnlyList<MiUnidadPersonaDto> Inquilinos);
+
 public record SlotDto(DateTime Inicio, DateTime Fin);
 
 public record MiReservaDto(
@@ -83,6 +105,8 @@ public record MisReservasDto(IReadOnlyList<MiReservaDto> Activas, IReadOnlyList<
 public interface IMiPortalService
 {
     Task<Result<PortalCasaDto>> CasaAsync(string usuarioId, CancellationToken ct = default);
+    Task<Result<ComunidadInfoDto>> ComunidadAsync(string usuarioId, CancellationToken ct = default);
+    Task<Result<MiUnidadDetalleDto>> UnidadAsync(string usuarioId, CancellationToken ct = default);
 
     Task<Result<IReadOnlyList<AmenidadDto>>> AmenidadesAsync(string usuarioId, CancellationToken ct = default);
     Task<Result<AmenidadDto>> AmenidadAsync(string usuarioId, Guid amenidadId, CancellationToken ct = default);

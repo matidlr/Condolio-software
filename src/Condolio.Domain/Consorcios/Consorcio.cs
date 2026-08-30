@@ -13,6 +13,7 @@ public class Consorcio : Entity, ITenantOwned
     public string? Localidad { get; set; }
     public string? Provincia { get; set; }
     public string Pais { get; set; } = "AR";
+    public string? CodigoPostal { get; set; }
     public string? Cuit { get; set; }
 
     public bool Activo { get; set; } = true;

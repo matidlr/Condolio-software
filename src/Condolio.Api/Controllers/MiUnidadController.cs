@@ -34,4 +34,18 @@ public class MiUnidadController : ApiControllerBase
         var uid = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "";
         return ToResult(await _portal.CasaAsync(uid, ct));
     }
+
+    [HttpGet("~/api/mi-portal/comunidad")]
+    public async Task<IActionResult> Comunidad(CancellationToken ct)
+    {
+        var uid = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "";
+        return ToResult(await _portal.ComunidadAsync(uid, ct));
+    }
+
+    [HttpGet("~/api/mi-portal/unidad")]
+    public async Task<IActionResult> Unidad(CancellationToken ct)
+    {
+        var uid = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "";
+        return ToResult(await _portal.UnidadAsync(uid, ct));
+    }
 }

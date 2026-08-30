@@ -1,0 +1,59 @@
+:host { display: block; }
+
+.pi-loading { color: var(--c-text-muted); padding: 20px 0; }
+
+.pi-header {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 16px; padding: 16px 18px;
+  margin-bottom: 18px;
+}
+.pi-header__ph {
+  width: 56px; height: 56px; border-radius: 14px; flex-shrink: 0;
+  background: linear-gradient(140deg, #3a5568, #17263a); color: #fff;
+  display: grid; place-items: center; font-size: 1.4rem; font-weight: 700;
+}
+.pi-header h1 { margin: 0; font-size: 1.3rem; }
+.pi-header p { margin: 3px 0 0; color: var(--c-text-muted); font-size: 0.86rem; }
+
+.pi-secttl {
+  margin: 18px 0 8px; font-size: 0.78rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--c-text-soft);
+}
+
+.pi-card {
+  background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 16px;
+  overflow: hidden;
+}
+
+.pi-row {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 14px 16px; text-align: left;
+  background: transparent; border: 0; border-top: 1px solid var(--c-border);
+  color: var(--c-text); font: inherit;
+}
+.pi-row:first-child { border-top: 0; }
+.pi-row--link { cursor: pointer; }
+.pi-row--link:hover { background: var(--c-bg); }
+.pi-row__ic {
+  width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0;
+  display: grid; place-items: center; font-size: 1rem;
+  background: color-mix(in srgb, var(--c-primary) 12%, transparent);
+}
+.pi-row__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pi-row__body small { color: var(--c-text-muted); font-size: 0.76rem; }
+.pi-row__body b { font-size: 0.94rem; font-weight: 600; word-break: break-word; }
+.pi-row__go { color: var(--c-text-soft); font-size: 1.2rem; flex-shrink: 0; }
+
+.pi-back {
+  background: transparent; border: 0; color: var(--c-text-muted); font: inherit;
+  padding: 4px 0; cursor: pointer; margin-top: 4px;
+}
+.pi-back:hover { color: var(--c-text); }
+
+.pi-note {
+  margin: 16px 2px 0; color: var(--c-text-soft); font-size: 0.82rem; line-height: 1.5;
+}
+
+.pi-empty { padding: 28px 20px; text-align: center; }
+.pi-empty h2 { margin: 0 0 6px; font-size: 1.05rem; }
+.pi-empty p { margin: 0 0 16px; color: var(--c-text-muted); font-size: 0.9rem; }

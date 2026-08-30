@@ -1,108 +1,160 @@
-import { Component, inject, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
-import { environment } from '../../../environments/environment';
-import { AuthService } from '../../core/services/auth.service';
-
-interface MiUnidad {
-  unidadId: string;
-  unidadNombre: string;
-  consorcioNombre: string;
-  rol: string;
-  esContactoPrincipal: boolean;
-  cuotaMantenimiento?: number | null;
-  saldo: number;
-}
+import { Component, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { MiUnidadDetalle, MiUnidadPersona, PortalService } from '../../core/services/portal.service';
+import { ToastService } from '../../core/services/toast.service';
 
 @Component({
   selector: 'app-mi-unidad',
   standalone: true,
+  imports: [RouterLink],
   template: `
-    <div class="mp">
-      <main class="mp-body">
-        <h1>Mi unidad</h1>
+    <section class="mu">
+      @if (cargando()) {
+        <p class="mu-loading">Cargando…</p>
+      } @else if (u()) {
+        @if (u()!; as d) {
+        <div class="mu-header">
+          <span class="mu-header__ph">{{ d.unidadNombre.trim().charAt(0).toUpperCase() }}</span>
+          <div>
+            <h1>Unidad {{ d.unidadNombre }}</h1>
+            <p>{{ d.consorcioNombre }}</p>
+          </div>
+        </div>
 
-        @if (unidades().length) {
-          <p class="mp-sub">{{ unidades()[0].consorcioNombre }}</p>
-          <div class="mp-grid">
-            @for (u of unidades(); track u.unidadId) {
-              <article class="mp-card">
-                <div class="mp-card__head">
-                  <h2>Unidad {{ u.unidadNombre }}</h2>
-                  <span class="mp-tag">{{ u.rol }}</span>
+        <h2 class="mu-secttl">Información de la unidad</h2>
+        <article class="mu-card mu-card--grid">
+          <div><small>Unidad</small><b>{{ d.unidadNombre }}</b></div>
+          <div><small>Piso</small><b>{{ d.piso }}</b></div>
+          <div><small>Tipo</small><b>{{ d.tipoUnidad }}</b></div>
+          <div><small>Ocupación</small><b>{{ d.ocupacion }}</b></div>
+          <div><small>Total de residentes</small><b>{{ d.totalResidentes }}</b></div>
+        </article>
+
+        <h2 class="mu-secttl">Propietarios ({{ d.propietarios.length }})</h2>
+        <article class="mu-card">
+          @for (p of d.propietarios; track p.nombre) {
+            <div class="mu-person">
+              <span class="mu-person__av">{{ inicial(p) }}</span>
+              <div class="mu-person__body">
+                <b>{{ p.nombre || 'Sin nombre' }}</b>
+                <small>Propietario</small>
+              </div>
+              @if (p.esContactoPrincipal) { <span class="mu-person__tag">Contacto principal</span> }
+            </div>
+          } @empty {
+            <p class="mu-empty">Todavía no hay propietarios cargados.</p>
+          }
+        </article>
+
+        @if (d.inquilinos.length) {
+          <h2 class="mu-secttl">Inquilinos ({{ d.inquilinos.length }})</h2>
+          <article class="mu-card">
+            @for (p of d.inquilinos; track p.nombre) {
+              <div class="mu-person">
+                <span class="mu-person__av mu-person__av--alt">{{ inicial(p) }}</span>
+                <div class="mu-person__body">
+                  <b>{{ p.nombre || 'Sin nombre' }}</b>
+                  <small>Inquilino</small>
                 </div>
-                <dl>
-                  <div><dt>Cuota mensual</dt><dd>{{ u.cuotaMantenimiento != null ? money(u.cuotaMantenimiento) : '—' }}</dd></div>
-                  <div><dt>Saldo</dt><dd>{{ money(u.saldo) }}</dd></div>
-                </dl>
-                <div class="mp-soon">
-                  <span>Expensas</span><span>Reservas</span><span>Comunicados</span><span>Reclamos</span>
-                  <em>Próximamente</em>
-                </div>
-              </article>
+                @if (p.esContactoPrincipal) { <span class="mu-person__tag">Contacto principal</span> }
+              </div>
             }
-          </div>
-        } @else if (cargando()) {
-          <p>Cargando…</p>
-        } @else {
-          <div class="mp-card">
-            <h2>Todavía no tenés una unidad asignada</h2>
-            <p>Cuando el administrador te asigne una unidad, vas a verla acá.</p>
-          </div>
+          </article>
         }
-      </main>
-    </div>
+        }
+      } @else {
+        <div class="mu-card mu-empty-card">
+          <h2>Todavía no tenés una unidad asignada</h2>
+          <p>Cuando la administración te asigne una unidad, vas a verla acá.</p>
+          <a class="btn btn--ghost" routerLink="/portal/casa">Volver al inicio</a>
+        </div>
+      }
+    </section>
   `,
-  // eslint-disable-next-line
-  // (el header ahora lo provee portal-shell)
   styles: [`
-    :host { display: block; min-height: 100vh; background: var(--c-bg); }
-    .mp-top {
-      display: flex; align-items: center; justify-content: space-between;
-      height: 60px; padding: 0 24px; background: #fff; border-bottom: 1px solid var(--c-border);
+    :host { display: block; }
+    .mu-loading { color: var(--c-text-muted); padding: 20px 0; }
+
+    .mu-header {
+      display: flex; align-items: center; gap: 14px;
+      background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 16px; padding: 16px 18px;
+      margin-bottom: 6px;
     }
-    .mp-logo { display: flex; align-items: center; gap: 10px; font-weight: 700; }
-    .mp-logo span { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px;
-      background: linear-gradient(150deg, #2b3a4e, #0f1b2d); color: #fff; }
-    .mp-user { display: flex; align-items: center; gap: 12px; font-size: 0.9rem; }
-    .mp-user button { border: 1px solid var(--c-border); background: #fff; border-radius: 8px; padding: 6px 12px; }
-    .mp-body { max-width: 900px; margin: 0 auto; padding: 28px 24px; }
-    .mp-body h1 { margin: 0 0 4px; }
-    .mp-sub { margin: 0 0 22px; color: var(--c-text-muted); }
-    .mp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
-    .mp-card { background: #fff; border: 1px solid var(--c-border); border-radius: var(--radius-lg); padding: 20px; }
-    .mp-card__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-    .mp-card__head h2 { margin: 0; font-size: 1.1rem; }
-    .mp-tag { font-size: 0.75rem; font-weight: 600; background: #eef1f6; padding: 2px 10px; border-radius: 999px; }
-    .mp-card dl { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0 0 16px; }
-    .mp-card dt { font-size: 0.75rem; color: var(--c-text-soft); text-transform: uppercase; letter-spacing: 0.05em; }
-    .mp-card dd { margin: 4px 0 0; font-size: 1.3rem; letter-spacing: -0.02em; }
-    .mp-soon { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 14px; border-top: 1px solid var(--c-border); }
-    .mp-soon span { font-size: 0.78rem; background: var(--c-bg); padding: 4px 10px; border-radius: 999px; color: var(--c-text-muted); }
-    .mp-soon em { font-size: 0.72rem; color: var(--c-text-soft); align-self: center; }
+    .mu-header__ph {
+      width: 56px; height: 56px; border-radius: 14px; flex-shrink: 0;
+      background: linear-gradient(140deg, #3a5568, #17263a); color: #fff;
+      display: grid; place-items: center; font-size: 1.4rem; font-weight: 700;
+    }
+    .mu-header h1 { margin: 0; font-size: 1.3rem; }
+    .mu-header p { margin: 3px 0 0; color: var(--c-text-muted); font-size: 0.86rem; }
+
+    .mu-secttl {
+      margin: 18px 0 8px; font-size: 0.78rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--c-text-soft);
+    }
+
+    .mu-card {
+      background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 16px;
+      overflow: hidden;
+    }
+    .mu-card--grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px;
+      background: var(--c-border); padding: 1px;
+    }
+    .mu-card--grid > div {
+      background: var(--c-surface); padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 3px;
+    }
+    .mu-card--grid small { color: var(--c-text-muted); font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .mu-card--grid b { font-size: 0.98rem; }
+
+    .mu-person {
+      display: flex; align-items: center; gap: 12px; padding: 13px 16px;
+      border-top: 1px solid var(--c-border);
+    }
+    .mu-person:first-child { border-top: 0; }
+    .mu-person__av {
+      width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+      display: grid; place-items: center; font-weight: 700; font-size: 0.95rem;
+      background: linear-gradient(140deg, #3b82f6, #1d4ed8); color: #fff;
+    }
+    .mu-person__av--alt { background: linear-gradient(140deg, #a855f7, #7c3aed); }
+    .mu-person__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+    .mu-person__body b { font-size: 0.94rem; }
+    .mu-person__body small { color: var(--c-text-muted); font-size: 0.78rem; }
+    .mu-person__tag {
+      font-size: 0.7rem; font-weight: 600; padding: 3px 9px; border-radius: 999px; flex-shrink: 0;
+      background: color-mix(in srgb, var(--c-success) 15%, transparent); color: var(--c-success);
+    }
+
+    .mu-empty { padding: 20px 16px; text-align: center; color: var(--c-text-soft); font-size: 0.88rem; }
+    .mu-empty-card { padding: 28px 20px; text-align: center; }
+    .mu-empty-card h2 { margin: 0 0 6px; font-size: 1.05rem; }
+    .mu-empty-card p { margin: 0 0 16px; color: var(--c-text-muted); font-size: 0.9rem; }
+
+    @media (min-width: 600px) {
+      .mu-card--grid { grid-template-columns: repeat(3, 1fr); }
+    }
   `],
 })
 export class MiUnidadComponent {
-  auth = inject(AuthService);
-  private http = inject(HttpClient);
-  private router = inject(Router);
+  private api = inject(PortalService);
+  private toasts = inject(ToastService);
 
-  unidades = signal<MiUnidad[]>([]);
   cargando = signal(true);
+  u = signal<MiUnidadDetalle | null>(null);
 
-  ngOnInit(): void {
-    this.http.get<{ nombre: string; unidades: MiUnidad[] }>(`${environment.apiUrl}/mi-unidad`).subscribe({
-      next: (r) => { this.unidades.set(r.unidades); this.cargando.set(false); },
-      error: () => this.cargando.set(false),
+  constructor() {
+    this.api.unidad().subscribe({
+      next: (r) => { this.u.set(r); this.cargando.set(false); },
+      error: (e) => {
+        this.cargando.set(false);
+        this.toasts.error(e?.error?.message ?? 'No pudimos cargar tu unidad.');
+      },
     });
   }
 
-  money(n: number | null | undefined): string {
-    return '$' + (n ?? 0).toLocaleString('es-AR', { minimumFractionDigits: 2 });
-  }
-
-  salir(): void {
-    this.auth.logout();
-    this.router.navigate(['/login']);
+  inicial(p: MiUnidadPersona): string {
+    return (p.nombre || '?').trim().charAt(0).toUpperCase();
   }
 }

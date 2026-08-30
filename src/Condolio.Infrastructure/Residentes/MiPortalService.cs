@@ -100,6 +100,66 @@ public class MiPortalService : IMiPortalService
             encuestasPendientes, reservas, 0, 0));
     }
 
+    public async Task<Result<ComunidadInfoDto>> ComunidadAsync(string usuarioId, CancellationToken ct = default)
+    {
+        var info = await _db.UnidadPersonas.IgnoreQueryFilters()
+            .Where(p => p.UsuarioId == usuarioId)
+            .Select(p => new ComunidadInfoDto(
+                p.Unidad.Consorcio.Nombre,
+                p.Unidad.Consorcio.Direccion,
+                p.Unidad.Consorcio.Localidad,
+                p.Unidad.Consorcio.Provincia,
+                p.Unidad.Consorcio.Pais,
+                p.Unidad.Consorcio.CodigoPostal,
+                p.Unidad.Nombre,
+                p.Rol.ToString()))
+            .FirstOrDefaultAsync(ct);
+        return info is null
+            ? Result<ComunidadInfoDto>.Fail("No tenés una unidad asignada.")
+            : Result<ComunidadInfoDto>.Ok(info);
+    }
+
+    public async Task<Result<MiUnidadDetalleDto>> UnidadAsync(string usuarioId, CancellationToken ct = default)
+    {
+        var unidadId = await _db.UnidadPersonas.IgnoreQueryFilters()
+            .Where(p => p.UsuarioId == usuarioId).Select(p => (Guid?)p.UnidadId).FirstOrDefaultAsync(ct);
+        if (unidadId is not { } uid) return Result<MiUnidadDetalleDto>.Fail("No tenés una unidad asignada.");
+
+        var u = await _db.Unidades.IgnoreQueryFilters()
+            .Where(x => x.Id == uid)
+            .Select(x => new { x.Nombre, x.Piso, x.Tipo, x.Ocupacion, Consorcio = x.Consorcio.Nombre })
+            .FirstAsync(ct);
+
+        var personas = await _db.UnidadPersonas.IgnoreQueryFilters()
+            .Where(p => p.UnidadId == uid)
+            .Select(p => new { Nombre = (p.Nombre + " " + p.Apellido).Trim(), p.Rol, p.EsContactoPrincipal })
+            .ToListAsync(ct);
+
+        var propietarios = personas.Where(p => p.Rol == RolUnidad.Propietario)
+            .Select(p => new MiUnidadPersonaDto(p.Nombre, "Propietario", p.EsContactoPrincipal)).ToList();
+        var inquilinos = personas.Where(p => p.Rol == RolUnidad.Inquilino)
+            .Select(p => new MiUnidadPersonaDto(p.Nombre, "Inquilino", p.EsContactoPrincipal)).ToList();
+
+        var ocup = u.Ocupacion switch
+        {
+            TipoOcupacion.HabitadoPorPropietario => "Ocupado por propietario",
+            TipoOcupacion.Alquiler => "Alquilada",
+            _ => "Desocupada",
+        };
+        var tipo = u.Tipo switch
+        {
+            TipoUnidad.Local => "Local",
+            TipoUnidad.Cochera => "Cochera",
+            TipoUnidad.Baulera => "Baulera",
+            _ => "Departamento",
+        };
+
+        return Result<MiUnidadDetalleDto>.Ok(new MiUnidadDetalleDto(
+            u.Nombre, u.Piso, tipo, ocup,
+            personas.Count(p => p.Rol != RolUnidad.Gestor), u.Consorcio,
+            propietarios, inquilinos));
+    }
+
     public async Task<Result<IReadOnlyList<AmenidadDto>>> AmenidadesAsync(string usuarioId, CancellationToken ct = default)
     {
         var o = await OrigenAsync(usuarioId, ct);
