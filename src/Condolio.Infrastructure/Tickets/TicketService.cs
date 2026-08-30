@@ -286,5 +286,5 @@ public class TicketService : ITicketService
         t.Id, t.Numero, t.Titulo, t.Descripcion, t.Categoria, t.Estado, t.Prioridad,
         t.UnidadId, unidadNombre, SplitEtiquetas(t.Etiquetas), t.Ubicacion, t.FechaLimite,
         string.IsNullOrWhiteSpace(t.ReportadoPorNombre) ? "—" : t.ReportadoPorNombre,
-        t.ReportadoUtc, t.AsignadoANombre, t.EstadoDesdeUtc, t.UltimaActividadUtc, t.ArchivadoUtc != null);
+        t.ReportadoUtc, t.AsignadoANombre, t.AsignadoAUsuarioId, t.EstadoDesdeUtc, t.UltimaActividadUtc, t.ArchivadoUtc != null);
 }

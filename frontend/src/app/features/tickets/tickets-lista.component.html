@@ -263,11 +263,64 @@
               @if (verCol('ultimaActividad')) { <td class="tk-nowrap tk-soft">hace {{ desde(t.ultimaActividadUtc) }}</td> }
               <td class="tk-c-acc" (click)="$event.stopPropagation()">
                 <div class="tk-rowacc">
-                  <button type="button" title="Cambiar estado"
-                    (click)="seleccion.set(nuevaSeleccion(t.id)); abrirModal('estado')">⚑</button>
-                  <button type="button" title="Asignar"
-                    (click)="seleccion.set(nuevaSeleccion(t.id)); abrirModal('asignar')">👤</button>
-                  <button type="button" title="Ver detalle" (click)="abrirDetalle(t)">⋮</button>
+                  <div class="tk-rowacc__wrap">
+                    <button type="button" title="Cambiar estado"
+                      [class.is-open]="menuFila()?.id === t.id && menuFila()?.tipo === 'estado'"
+                      (click)="toggleMenuFila(t.id, 'estado', $event)">⚑</button>
+                    @if (menuFila()?.id === t.id && menuFila()?.tipo === 'estado') {
+                      <div class="tk-rowmenu" [style.top.px]="menuPos().top" [style.left.px]="menuPos().left">
+                        <div class="tk-rowmenu__ttl">Cambiar estado</div>
+                        @for (a of transicionesEstado(t); track a.estado) {
+                          <button type="button" (click)="cambioRapidoEstado(t, a.estado)">
+                            <span class="tk-rowmenu__ic">{{ a.icono }}</span> {{ a.label }}
+                          </button>
+                        }
+                      </div>
+                    }
+                  </div>
+
+                  <div class="tk-rowacc__wrap">
+                    <button type="button" title="Asignar"
+                      [class.is-open]="menuFila()?.id === t.id && menuFila()?.tipo === 'asignar'"
+                      (click)="toggleMenuFila(t.id, 'asignar', $event)">👤</button>
+                    @if (menuFila()?.id === t.id && menuFila()?.tipo === 'asignar') {
+                      <div class="tk-rowmenu" [style.top.px]="menuPos().top" [style.left.px]="menuPos().left">
+                        <div class="tk-rowmenu__ttl">Asignar reporte</div>
+                        <button type="button" [class.is-current]="!t.asignadoAUsuarioId"
+                          (click)="asignarRapido(t, '')">
+                          <span class="tk-rowmenu__ic">○</span> Por asignar
+                          @if (!t.asignadoAUsuarioId) { <span class="tk-rowmenu__ck">✓</span> }
+                        </button>
+                        @if (asignables().length) {
+                          <div class="tk-rowmenu__grp">Administradores</div>
+                          @for (a of asignables(); track a.id) {
+                            <button type="button" [class.is-current]="t.asignadoAUsuarioId === a.id"
+                              (click)="asignarRapido(t, a.id)">
+                              <span class="tk-ava tk-ava--menu" [style.background]="colorAvatar(a.nombre)">{{ iniciales(a.nombre) }}</span>
+                              {{ a.nombre }}
+                              @if (t.asignadoAUsuarioId === a.id) { <span class="tk-rowmenu__ck">✓</span> }
+                            </button>
+                          }
+                        }
+                      </div>
+                    }
+                  </div>
+
+                  <div class="tk-rowacc__wrap">
+                    <button type="button" title="Más acciones"
+                      [class.is-open]="menuFila()?.id === t.id && menuFila()?.tipo === 'mas'"
+                      (click)="toggleMenuFila(t.id, 'mas', $event)">⋮</button>
+                    @if (menuFila()?.id === t.id && menuFila()?.tipo === 'mas') {
+                      <div class="tk-rowmenu" [style.top.px]="menuPos().top" [style.left.px]="menuPos().left">
+                        <button type="button" (click)="gestionarReporte(t)">
+                          <span class="tk-rowmenu__ic">🗂</span> Gestionar reporte
+                        </button>
+                        <button type="button" class="is-danger" (click)="eliminarUno(t)">
+                          <span class="tk-rowmenu__ic">🗑</span> Eliminar
+                        </button>
+                      </div>
+                    }
+                  </div>
                 </div>
               </td>
             </tr>
@@ -366,14 +419,21 @@
 @if (modal() === 'eliminar') {
   <div class="tk-overlay" (click)="modal.set(null)">
     <div class="tk-dialog" (click)="$event.stopPropagation()">
-      <header><h3>Eliminar Reportes</h3><button type="button" (click)="modal.set(null)">✕</button></header>
+      <header>
+        <h3>{{ seleccion().size === 1 ? 'Eliminar reporte' : 'Eliminar reportes' }}</h3>
+        <button type="button" (click)="modal.set(null)">✕</button>
+      </header>
       <p class="tk-dialog__text">
-        ¿Estás seguro de que querés eliminar {{ seleccion().size }} reporte(s)? Esta acción no se puede deshacer.
+        @if (seleccion().size === 1) {
+          ¿Seguro que querés eliminar este reporte? Esta acción no se puede deshacer.
+        } @else {
+          ¿Seguro que querés eliminar {{ seleccion().size }} reportes? Esta acción no se puede deshacer.
+        }
       </p>
       <footer>
         <button type="button" class="btn btn--ghost" (click)="modal.set(null)">Cancelar</button>
         <button type="button" class="btn btn--danger" [disabled]="aplicando()" (click)="aplicarEliminar()">
-          Eliminar {{ seleccion().size }} reporte(s)
+          {{ seleccion().size === 1 ? 'Eliminar' : 'Eliminar ' + seleccion().size + ' reportes' }}
         </button>
       </footer>
     </div>

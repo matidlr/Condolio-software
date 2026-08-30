@@ -20,6 +20,7 @@ public record TicketDto(
     string ReportadoPor,
     DateTime ReportadoUtc,
     string? AsignadoA,
+    string? AsignadoAUsuarioId,
     DateTime EstadoDesdeUtc,
     DateTime UltimaActividadUtc,
     bool Archivado);

@@ -63,6 +63,7 @@ export interface Ticket {
   reportadoPor: string;
   reportadoUtc: string;
   asignadoA?: string | null;
+  asignadoAUsuarioId?: string | null;
   estadoDesdeUtc: string;
   ultimaActividadUtc: string;
   archivado: boolean;

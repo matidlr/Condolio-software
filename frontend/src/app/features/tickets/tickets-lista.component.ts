@@ -37,6 +37,7 @@ const SIN_FILTROS = (): FiltrosTicket => ({
   imports: [FormsModule, NuevoTicketComponent],
   templateUrl: './tickets-lista.component.html',
   styleUrl: './tickets-lista.component.scss',
+  host: { '(document:click)': 'menuFila.set(null)' },
 })
 export class TicketsListaComponent {
   private auth = inject(AuthService);
@@ -139,6 +140,10 @@ export class TicketsListaComponent {
       }
     }).length;
   }
+
+  // menú de acciones rápidas por fila (se posiciona fixed para no quedar recortado por el scroll de la tabla)
+  menuFila = signal<{ id: string; tipo: 'estado' | 'asignar' | 'mas' } | null>(null);
+  menuPos = signal<{ top: number; left: number }>({ top: 0, left: 0 });
 
   // modales de acción masiva
   modal = signal<'estado' | 'asignar' | 'prioridad' | 'eliminar' | null>(null);
@@ -402,13 +407,13 @@ export class TicketsListaComponent {
 
   aplicarEstado(): void {
     this.aplicarMasivo((cid, id, t) =>
-      this.api.actualizar(cid, id, { estado: this.nuevoEstado(), prioridad: t.prioridad, asignadoAUsuarioId: null }),
+      this.api.actualizar(cid, id, { estado: this.nuevoEstado(), prioridad: t.prioridad, asignadoAUsuarioId: t.asignadoAUsuarioId ?? null }),
       'Estado actualizado');
   }
 
   aplicarPrioridad(): void {
     this.aplicarMasivo((cid, id, t) =>
-      this.api.actualizar(cid, id, { estado: t.estado, prioridad: this.nuevaPrioridad(), asignadoAUsuarioId: null }),
+      this.api.actualizar(cid, id, { estado: t.estado, prioridad: this.nuevaPrioridad(), asignadoAUsuarioId: t.asignadoAUsuarioId ?? null }),
       'Prioridad actualizada');
   }
 
@@ -456,5 +461,89 @@ export class TicketsListaComponent {
 
   abrirDetalle(t: Ticket): void {
     this.router.navigate(['/panel/tickets', t.id]);
+  }
+
+  // ---- menú de acciones rápidas por fila ----
+  toggleMenuFila(id: string, tipo: 'estado' | 'asignar' | 'mas', ev: Event): void {
+    ev.stopPropagation();
+    const actual = this.menuFila();
+    if (actual?.id === id && actual?.tipo === tipo) { this.menuFila.set(null); return; }
+    const r = (ev.currentTarget as HTMLElement).getBoundingClientRect();
+    const ancho = tipo === 'asignar' ? 230 : 200;
+    let left = tipo === 'mas' ? r.right - ancho : r.left;
+    left = Math.max(8, Math.min(left, window.innerWidth - ancho - 8));
+    this.menuPos.set({ top: r.bottom + 4, left });
+    this.menuFila.set({ id, tipo });
+  }
+
+  asignarRapido(t: Ticket, usuarioId: string): void {
+    this.menuFila.set(null);
+    if ((t.asignadoAUsuarioId ?? '') === usuarioId) return;
+    const cid = this.consorcioId();
+    if (!cid) return;
+    this.api.actualizar(cid, t.id, {
+      estado: t.estado, prioridad: t.prioridad, asignadoAUsuarioId: usuarioId || null,
+    }).subscribe({
+      next: () => {
+        this.toasts.exito(usuarioId
+          ? `Asignado a ${this.asignables().find((a) => a.id === usuarioId)?.nombre ?? '—'}`
+          : 'Sin asignar');
+        this.recargar();
+      },
+      error: (err) => this.toasts.error(err?.error?.message ?? 'No se pudo asignar.'),
+    });
+  }
+
+  /** Transiciones de estado ofrecidas según el estado actual del ticket. */
+  transicionesEstado(t: Ticket): { label: string; icono: string; estado: EstadoTicket }[] {
+    const trabajar = { label: 'Comenzar a trabajar', icono: '▶', estado: 'EnProgreso' as EstadoTicket };
+    const info = { label: 'Solicitar info', icono: '❔', estado: 'EsperandoInformacion' as EstadoTicket };
+    const aprob = { label: 'Solicitar aprobación', icono: '🕐', estado: 'PendienteAprobacion' as EstadoTicket };
+    const resolver = { label: 'Marcar resuelto', icono: '✓', estado: 'Resuelto' as EstadoTicket };
+    const pausar = { label: 'Pausar', icono: '⏸', estado: 'Nuevo' as EstadoTicket };
+    switch (t.estado) {
+      case 'Nuevo': return [trabajar, info, resolver];
+      case 'EnProgreso': return [info, aprob, resolver, pausar];
+      case 'EsperandoInformacion': return [trabajar, aprob, resolver];
+      case 'PendienteAprobacion': return [trabajar, resolver, pausar];
+      case 'Resuelto': return [{ label: 'Reabrir', icono: '↩', estado: 'EnProgreso' }];
+      default: return [trabajar, resolver];
+    }
+  }
+
+  cambioRapidoEstado(t: Ticket, estado: EstadoTicket): void {
+    this.menuFila.set(null);
+    if (t.estado === estado) return;
+    const cid = this.consorcioId();
+    if (!cid) return;
+    this.api.actualizar(cid, t.id, {
+      estado, prioridad: t.prioridad, asignadoAUsuarioId: t.asignadoAUsuarioId ?? null,
+    }).subscribe({
+      next: () => {
+        // Resolver archiva el ticket (sale de "Activos"); reabrir lo devuelve a "Activos".
+        const archivar = estado === 'Resuelto' ? true : (estado === 'EnProgreso' && t.archivado ? false : null);
+        if (archivar !== null) {
+          this.api.archivar(cid, t.id, archivar).subscribe({
+            next: () => { this.toasts.exito(archivar ? 'Reporte resuelto y archivado' : 'Reporte reabierto'); this.recargar(); },
+            error: () => { this.toasts.exito(`Estado: ${this.labelEstado[estado]}`); this.recargar(); },
+          });
+        } else {
+          this.toasts.exito(`Estado: ${this.labelEstado[estado]}`);
+          this.recargar();
+        }
+      },
+      error: (err) => this.toasts.error(err?.error?.message ?? 'No se pudo cambiar el estado.'),
+    });
+  }
+
+  gestionarReporte(t: Ticket): void {
+    this.menuFila.set(null);
+    this.abrirDetalle(t);
+  }
+
+  eliminarUno(t: Ticket): void {
+    this.menuFila.set(null);
+    this.seleccion.set(this.nuevaSeleccion(t.id));
+    this.modal.set('eliminar');
   }
 }
