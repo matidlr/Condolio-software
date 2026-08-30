@@ -1,0 +1,163 @@
+@switch (vista()) {
+
+  @case ('lista') {
+    <section class="qr">
+      <header class="qr-top">
+        <h1>QR</h1>
+        <button type="button" class="btn btn--primary" (click)="nuevo()">+ Nuevo QR</button>
+      </header>
+
+      <div class="qr-tabs">
+        <button type="button" [class.is-active]="tab() === 'activos'" (click)="tab.set('activos')">QR activos</button>
+        <button type="button" [class.is-active]="tab() === 'expirados'" (click)="tab.set('expirados')">Expirados</button>
+      </div>
+
+      @if (cargando()) {
+        <p class="qr-loading">Cargando…</p>
+      } @else if (grupos().length === 0) {
+        <div class="qr-empty">
+          <div class="qr-empty__ic">▦</div>
+          <h3>{{ tab() === 'activos' ? 'No tenés QR activos' : 'No hay QR expirados' }}</h3>
+          @if (tab() === 'activos') {
+            <p>Generá un QR para que tu visita ingrese al barrio o edificio.</p>
+            <button type="button" class="btn btn--primary" (click)="nuevo()">+ Nuevo QR</button>
+          }
+        </div>
+      } @else {
+        @for (g of grupos(); track g.fecha) {
+          <p class="qr-fecha">{{ g.fecha | date:'d \'de\' MMMM \'de\' y' }}</p>
+          @for (p of g.items; track p.id) {
+            <button type="button" class="qr-row" (click)="abrir(p)">
+              <span class="qr-row__ico">👤</span>
+              <span class="qr-row__body">
+                <b>{{ p.visitanteNombre }}</b>
+                <small>{{ iconVisita[p.tipoVisita] }} {{ labelVisita[p.tipoVisita] }}</small>
+              </span>
+              @if (p.vehiculo !== 'SinVehiculo') { <span class="qr-row__veh">🚗</span> }
+              <span class="qr-row__go">›</span>
+            </button>
+          }
+        }
+      }
+    </section>
+  }
+
+  @case ('nuevo') {
+    <section class="qr">
+      <header class="qr-top">
+        <button type="button" class="qr-back" (click)="vista.set('lista')">‹ Atrás</button>
+        <h1>Nuevo QR</h1>
+        <span></span>
+      </header>
+
+      <div class="qr-block">
+        <h4>Tipo de QR</h4>
+        <div class="qr-opts qr-opts--3">
+          @for (t of tiposPase; track t.value) {
+            <button type="button" class="qr-opt" [class.is-sel]="form().tipoPase === t.value"
+              (click)="setForm('tipoPase', t.value)">
+              <span>{{ t.icon }}</span>{{ t.label }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="qr-block">
+        <h4>Tipo de visita</h4>
+        <div class="qr-opts qr-opts--3">
+          @for (t of tiposVisita; track t.value) {
+            <button type="button" class="qr-opt" [class.is-sel]="form().tipoVisita === t.value"
+              (click)="setForm('tipoVisita', t.value)">
+              <span>{{ t.icon }}</span>{{ t.label }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="qr-block">
+        <h4>Vehículo</h4>
+        <div class="qr-opts qr-opts--3">
+          @for (t of tiposVehiculo; track t.value) {
+            <button type="button" class="qr-opt" [class.is-sel]="form().vehiculo === t.value"
+              (click)="setForm('vehiculo', t.value)">
+              <span>{{ t.icon }}</span>{{ t.label }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="qr-block">
+        <h4>Fecha</h4>
+        <label class="qr-field">
+          <span>Fecha de entrada</span>
+          <input type="date" [ngModel]="form().fechaEntrada" (ngModelChange)="setForm('fechaEntrada', $event)" />
+        </label>
+        @if (form().tipoPase !== 'UnaEntrada') {
+          <label class="qr-field">
+            <span>Válido hasta</span>
+            <input type="date" [ngModel]="form().validoHasta" (ngModelChange)="setForm('validoHasta', $event)" />
+          </label>
+        }
+      </div>
+
+      <div class="qr-block">
+        <h4>Detalles del visitante</h4>
+        <label class="qr-field qr-field--col">
+          <span>Nombre del visitante</span>
+          <input type="text" placeholder="Nombre completo *"
+            [ngModel]="form().visitanteNombre" (ngModelChange)="setForm('visitanteNombre', $event)" />
+        </label>
+        @if (formConVehiculo()) {
+          <label class="qr-field qr-field--col">
+            <span>Placa</span>
+            <input type="text" placeholder="Placa (opcional)"
+              [ngModel]="form().patente" (ngModelChange)="setForm('patente', $event)" />
+          </label>
+        }
+      </div>
+
+      <button type="button" class="btn qr-generar" [disabled]="!formValido() || generando()" (click)="generar()">
+        {{ generando() ? 'Generando…' : 'Generar QR' }}
+      </button>
+    </section>
+  }
+
+  @case ('detalle') {
+    @if (seleccion(); as p) {
+      <section class="qr qr-det">
+        <header class="qr-top">
+          <button type="button" class="qr-back" (click)="cerrarDetalle()">Cerrar</button>
+          <h1>QR</h1>
+          <button type="button" class="qr-back" (click)="compartir()">⌘ Compartir</button>
+        </header>
+
+        <div class="qr-card">
+          <div class="qr-card__banner">CONDOLIO</div>
+          <div class="qr-card__body">
+            <h2>{{ p.consorcioNombre }}</h2>
+            <img class="qr-card__img" [src]="'data:image/png;base64,' + p.qrPngBase64" alt="QR de acceso" />
+
+            <p class="qr-card__label">Generado por</p>
+            <p class="qr-card__val">🏠 {{ p.unidadNombre }}</p>
+            <p class="qr-card__val">👤 {{ p.creadoPor }}</p>
+
+            <p class="qr-card__label">Visitante</p>
+            <p class="qr-card__val">👤 {{ p.visitanteNombre }}</p>
+            <p class="qr-card__val">{{ iconVisita[p.tipoVisita] }} {{ labelVisita[p.tipoVisita] }}</p>
+            @if (p.patente) { <p class="qr-card__val">🚗 {{ p.patente }}</p> }
+
+            <p class="qr-card__label">Fechas de acceso</p>
+            <p class="qr-card__val">📅 Entrada: {{ p.fechaEntrada | date:'d \'de\' MMMM \'de\' y' }}</p>
+            @if (p.validoHastaUtc) {
+              <p class="qr-card__val">📅 Hasta: {{ p.validoHastaUtc | date:'d \'de\' MMMM \'de\' y' }}</p>
+            }
+            <p class="qr-card__val qr-card__tipo">{{ labelPase[p.tipoPase] }}</p>
+          </div>
+        </div>
+
+        <button type="button" class="btn qr-compartir" (click)="compartir()">⌘ Compartir QR</button>
+        <button type="button" class="btn qr-eliminar" (click)="eliminar()">🗑 Eliminar</button>
+      </section>
+    }
+  }
+}

@@ -52,9 +52,14 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/residente-portal/mi-unidad.component').then((m) => m.MiUnidadComponent),
       },
+      {
+        path: 'qr',
+        loadComponent: () =>
+          import('./features/portal/portal-qr.component').then((m) => m.PortalQrComponent),
+      },
       ...[
         'muro', 'notificaciones', 'config', 'amenidades', 'calendario', 'contactos',
-        'documentos', 'finanzas', 'qr', 'historial-visitas', 'encuestas', 'informacion',
+        'documentos', 'finanzas', 'historial-visitas', 'encuestas', 'informacion',
         'incidencias', 'paquetes',
       ].map((p) => ({
         path: p,

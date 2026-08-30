@@ -1,4 +1,5 @@
 using Condolio.Application.Common;
+using Condolio.Domain.Accesos;
 using Condolio.Domain.Amenidades;
 using Condolio.Domain.Archivos;
 using Condolio.Domain.Billing;
@@ -61,6 +62,7 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<OpcionEncuesta> OpcionesEncuesta => Set<OpcionEncuesta>();
     public DbSet<VotoEncuesta> VotosEncuesta => Set<VotoEncuesta>();
     public DbSet<Notificacion> Notificaciones => Set<Notificacion>();
+    public DbSet<PaseAcceso> PasesAcceso => Set<PaseAcceso>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -336,6 +338,18 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.Cuerpo).HasMaxLength(1000).IsRequired();
             e.Property(x => x.Enlace).HasMaxLength(400);
             e.HasIndex(x => new { x.AdministradorId, x.ConsorcioId, x.LeidaUtc });
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
+        });
+
+        builder.Entity<PaseAcceso>(e =>
+        {
+            e.Property(x => x.CreadoPorUsuarioId).HasMaxLength(450);
+            e.Property(x => x.CreadoPorNombre).HasMaxLength(200);
+            e.Property(x => x.VisitanteNombre).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Patente).HasMaxLength(20);
+            e.Property(x => x.Token).HasMaxLength(64).IsRequired();
+            e.HasIndex(x => x.Token).IsUnique();
+            e.HasIndex(x => new { x.AdministradorId, x.ConsorcioId, x.Estado });
             e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
         });
     }
