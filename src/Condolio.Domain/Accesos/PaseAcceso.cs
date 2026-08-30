@@ -67,3 +67,25 @@ public class PaseAcceso : Entity, ITenantOwned
     /// <summary>Token opaco que viaja dentro del QR.</summary>
     public string Token { get; set; } = Guid.NewGuid().ToString("N");
 }
+
+/// <summary>Visita registrada en la caseta/portería para una unidad.</summary>
+public class RegistroVisita : Entity, ITenantOwned
+{
+    public Guid AdministradorId { get; set; }
+    public Guid ConsorcioId { get; set; }
+    public Guid UnidadId { get; set; }
+
+    public Guid? PaseAccesoId { get; set; }
+
+    public string VisitanteNombre { get; set; } = string.Empty;
+    public TipoVisita TipoVisita { get; set; } = TipoVisita.Familia;
+    public TipoVehiculo Vehiculo { get; set; } = TipoVehiculo.SinVehiculo;
+    public string? Patente { get; set; }
+
+    public DateTime IngresoUtc { get; set; } = DateTime.UtcNow;
+    public DateTime? EgresoUtc { get; set; }
+
+    public string RegistradoPorUsuarioId { get; set; } = string.Empty;
+    public string RegistradoPorNombre { get; set; } = string.Empty;
+    public string? Nota { get; set; }
+}

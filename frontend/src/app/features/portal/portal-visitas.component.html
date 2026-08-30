@@ -1,0 +1,45 @@
+<section class="hv">
+  <header class="hv-top"><h1>Historial de visitas</h1></header>
+
+  <div class="hv-search">
+    <span>⌕</span>
+    <input type="search" placeholder="Buscar por nombre, tipo o patente…"
+      [value]="busqueda()" (input)="busqueda.set($any($event.target).value)" />
+  </div>
+  <div class="hv-chips">
+    @for (r of [['todo','Todo'],['hoy','Hoy'],['semana','Semana'],['mes','Mes']]; track r[0]) {
+      <button type="button" [class.is-active]="rango() === r[0]" (click)="rango.set($any(r[0]))">{{ r[1] }}</button>
+    }
+  </div>
+
+  @if (cargando()) {
+    <p class="hv-loading">Cargando…</p>
+  } @else if (visitas().length === 0) {
+    <div class="hv-empty">
+      <div class="hv-empty__ic">🕓</div>
+      <h3>Aún no hay visitas</h3>
+      <p>Las visitas registradas en caseta para tu unidad aparecerán acá.</p>
+    </div>
+  } @else if (filtradas().length === 0) {
+    <p class="hv-noresult">No hay visitas que coincidan con la búsqueda.</p>
+  } @else {
+    @for (g of grupos(); track g.fecha) {
+      <p class="hv-fecha">{{ g.fecha + 'T12:00' | date:'EEEE d \'de\' MMMM' }}</p>
+      @for (v of g.items; track v.id) {
+        <div class="hv-row">
+          <span class="hv-row__ic">{{ iconVisita[v.tipoVisita] }}</span>
+          <div class="hv-row__body">
+            <b>{{ v.visitanteNombre }}</b>
+            <small>{{ labelVisita[v.tipoVisita] }}@if (v.patente) { · 🚗 {{ v.patente }} }</small>
+            <small class="hv-row__by">Registró: {{ v.registradoPor }}</small>
+          </div>
+          <div class="hv-row__times">
+            <span class="hv-in">↓ {{ v.ingresoUtc | date:'HH:mm' }}</span>
+            @if (v.egresoUtc) { <span class="hv-out">↑ {{ v.egresoUtc | date:'HH:mm' }}</span> }
+            @else { <span class="hv-here">Adentro</span> }
+          </div>
+        </div>
+      }
+    }
+  }
+</section>

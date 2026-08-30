@@ -32,4 +32,8 @@ public class MiPortalPasesController : ApiControllerBase
     [HttpDelete("{paseId:guid}")]
     public async Task<IActionResult> Revocar(Guid paseId, CancellationToken ct) =>
         ToResult(await _pases.RevocarAsync(Uid, paseId, ct));
+
+    [HttpGet("~/api/mi-portal/visitas")]
+    public async Task<IActionResult> MisVisitas(CancellationToken ct) =>
+        ToResult(await _pases.MisVisitasAsync(Uid, ct));
 }

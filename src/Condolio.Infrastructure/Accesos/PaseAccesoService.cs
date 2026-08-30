@@ -93,6 +93,78 @@ public class PaseAccesoService : IPaseAccesoService
         return n == 0 ? Result.Fail("Pase no encontrado.") : Result.Ok();
     }
 
+    public async Task<Result<IReadOnlyList<VisitaDto>>> MisVisitasAsync(string usuarioId, CancellationToken ct = default)
+    {
+        var unidadId = await _db.UnidadPersonas.IgnoreQueryFilters()
+            .Where(p => p.UsuarioId == usuarioId).Select(p => (Guid?)p.UnidadId).FirstOrDefaultAsync(ct);
+        if (unidadId is not { } uid) return Result<IReadOnlyList<VisitaDto>>.Fail("No tenés una unidad asignada.");
+
+        var visitas = await _db.RegistrosVisita.IgnoreQueryFilters()
+            .Where(v => v.UnidadId == uid)
+            .OrderByDescending(v => v.IngresoUtc)
+            .Take(200)
+            .Select(v => new VisitaDto(
+                v.Id, v.VisitanteNombre, v.TipoVisita, v.Vehiculo, v.Patente,
+                v.IngresoUtc, v.EgresoUtc,
+                string.IsNullOrWhiteSpace(v.RegistradoPorNombre) ? "Portería" : v.RegistradoPorNombre,
+                v.Nota))
+            .ToListAsync(ct);
+        return Result<IReadOnlyList<VisitaDto>>.Ok(visitas);
+    }
+
+    public async Task<Result<VerificarPaseResultado>> VerificarAsync(
+        Guid consorcioId, string token, string guardiaUsuarioId, string guardiaNombre, CancellationToken ct = default)
+    {
+        var p = await _db.PasesAcceso.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.Token == token && x.ConsorcioId == consorcioId, ct);
+        if (p is null)
+            return Result<VerificarPaseResultado>.Ok(new VerificarPaseResultado(
+                false, "El código QR no corresponde a este consorcio.", "", TipoVisita.Familia, null, "", "", 0));
+
+        var unidad = await _db.Unidades.IgnoreQueryFilters()
+            .Where(u => u.Id == p.UnidadId)
+            .Select(u => new { u.Nombre, Consorcio = u.Consorcio.Nombre })
+            .FirstOrDefaultAsync(ct);
+
+        string? motivo = p.Estado switch
+        {
+            EstadoPase.Revocado => "El pase fue revocado por el residente.",
+            EstadoPase.Vencido => "El pase está vencido.",
+            EstadoPase.Usado => "El pase ya fue utilizado.",
+            _ when p.ValidoHastaUtc is { } h && h < DateTime.UtcNow => "El pase está vencido.",
+            _ when p.UsosCount >= p.UsosMax => "El pase no tiene ingresos disponibles.",
+            _ => null,
+        };
+
+        var res = new VerificarPaseResultado(
+            motivo is null, motivo, p.VisitanteNombre, p.TipoVisita, p.Patente,
+            unidad?.Nombre ?? "—", unidad?.Consorcio ?? "—", Math.Max(0, p.UsosMax - p.UsosCount - 1));
+
+        if (motivo is not null) return Result<VerificarPaseResultado>.Ok(res);
+
+        p.UsosCount++;
+        p.PrimerUsoUtc ??= DateTime.UtcNow;
+        if (p.UsosCount >= p.UsosMax) p.Estado = EstadoPase.Usado;
+
+        _db.RegistrosVisita.Add(new RegistroVisita
+        {
+            AdministradorId = p.AdministradorId,
+            ConsorcioId = p.ConsorcioId,
+            UnidadId = p.UnidadId,
+            PaseAccesoId = p.Id,
+            VisitanteNombre = p.VisitanteNombre,
+            TipoVisita = p.TipoVisita,
+            Vehiculo = p.Vehiculo,
+            Patente = p.Patente,
+            IngresoUtc = DateTime.UtcNow,
+            RegistradoPorUsuarioId = guardiaUsuarioId,
+            RegistradoPorNombre = guardiaNombre,
+        });
+        await _db.SaveChangesAsync(ct);
+
+        return Result<VerificarPaseResultado>.Ok(res);
+    }
+
     // ---- helpers ----
 
     private async Task<(string consorcio, string unidad)> ContextoAsync(string usuarioId, CancellationToken ct)

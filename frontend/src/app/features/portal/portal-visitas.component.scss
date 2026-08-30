@@ -1,0 +1,41 @@
+:host { display: block; }
+
+.hv-top h1 { margin: 0 0 14px; font-size: 1.3rem; }
+
+.hv-search {
+  display: flex; align-items: center; gap: 6px;
+  border: 1px solid var(--c-border); border-radius: 12px; padding: 0 12px; background: var(--c-bg); margin-bottom: 10px;
+}
+.hv-search input { flex: 1; border: none; outline: none; background: none; padding: 11px 0; font: inherit; font-size: 0.88rem; }
+
+.hv-chips { display: flex; gap: 8px; margin-bottom: 16px; }
+.hv-chips button {
+  border: none; background: var(--c-bg); border-radius: 999px; padding: 7px 16px; font: inherit; font-size: 0.82rem;
+  color: var(--c-text-muted); cursor: pointer;
+}
+.hv-chips button.is-active { background: var(--c-navy-800); color: #fff; font-weight: 600; }
+
+.hv-loading, .hv-noresult { color: var(--c-text-muted); text-align: center; padding: 24px; font-size: 0.88rem; }
+
+.hv-empty { text-align: center; padding: 60px 20px; color: var(--c-text-muted); }
+.hv-empty__ic { font-size: 3rem; opacity: .6; }
+.hv-empty h3 { margin: 14px 0 8px; font-size: 1.4rem; color: var(--c-text); }
+.hv-empty p { margin: 0 auto; max-width: 320px; font-size: 0.92rem; }
+
+.hv-fecha { margin: 16px 0 8px; font-size: 0.9rem; font-weight: 700; text-transform: capitalize; color: var(--c-text-muted); }
+.hv-row {
+  display: flex; align-items: center; gap: 12px; background: var(--c-surface);
+  border: 1px solid var(--c-border); border-radius: 14px; padding: 12px 14px; margin-bottom: 8px;
+}
+.hv-row__ic {
+  width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0; display: grid; place-items: center;
+  font-size: 1.1rem; background: var(--c-bg);
+}
+.hv-row__body { flex: 1; min-width: 0; }
+.hv-row__body b { display: block; font-size: 0.95rem; }
+.hv-row__body small { display: block; color: var(--c-text-soft); font-size: 0.78rem; }
+.hv-row__by { opacity: .8; }
+.hv-row__times { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; font-size: 0.8rem; }
+.hv-in { color: #16a34a; font-weight: 600; }
+.hv-out { color: var(--c-text-muted); }
+.hv-here { background: #dcfce7; color: #15803d; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; }

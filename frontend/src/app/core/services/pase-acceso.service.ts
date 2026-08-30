@@ -2,7 +2,19 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { CrearPase, PaseAcceso } from '../models/pase-acceso.models';
+import { CrearPase, PaseAcceso, TipoVisita, TipoVehiculo } from '../models/pase-acceso.models';
+
+export interface Visita {
+  id: string;
+  visitanteNombre: string;
+  tipoVisita: TipoVisita;
+  vehiculo: TipoVehiculo;
+  patente?: string | null;
+  ingresoUtc: string;
+  egresoUtc?: string | null;
+  registradoPor: string;
+  nota?: string | null;
+}
 
 @Injectable({ providedIn: 'root' })
 export class PaseAccesoService {
@@ -23,5 +35,9 @@ export class PaseAccesoService {
 
   revocar(id: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/${id}`);
+  }
+
+  visitas(): Observable<Visita[]> {
+    return this.http.get<Visita[]>(`${environment.apiUrl}/mi-portal/visitas`);
   }
 }

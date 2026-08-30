@@ -97,9 +97,14 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/portal/portal-muro.component').then((m) => m.PortalMuroComponent),
       },
+      {
+        path: 'historial-visitas',
+        loadComponent: () =>
+          import('./features/portal/portal-visitas.component').then((m) => m.PortalVisitasComponent),
+      },
       ...[
         'notificaciones', 'config',
-        'finanzas', 'historial-visitas', 'informacion', 'paquetes',
+        'finanzas', 'informacion', 'paquetes',
       ].map((p) => ({
         path: p,
         loadComponent: () =>
