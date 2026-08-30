@@ -3,6 +3,7 @@ using Condolio.Application.Archivos;
 using Condolio.Application.Billing;
 using Condolio.Application.Common;
 using Condolio.Application.Consorcios;
+using Condolio.Application.Contactos;
 using Condolio.Application.Amenidades;
 using Condolio.Application.Calendario;
 using Condolio.Application.Comunicaciones;
@@ -82,6 +83,7 @@ public static class DependencyInjection
         services.AddScoped<IVistaResidenteService, Condolio.Infrastructure.Residentes.VistaResidenteService>();
         services.AddScoped<IMiPortalService, Condolio.Infrastructure.Residentes.MiPortalService>();
         services.AddScoped<IPaseAccesoService, Condolio.Infrastructure.Accesos.PaseAccesoService>();
+        services.AddScoped<IContactoService, Condolio.Infrastructure.Contactos.ContactoService>();
         services.AddScoped<ITicketService, Condolio.Infrastructure.Tickets.TicketService>();
         services.AddScoped<IAmenidadService, Condolio.Infrastructure.Amenidades.AmenidadService>();
         services.AddScoped<IReservaService, Condolio.Infrastructure.Amenidades.ReservaService>();

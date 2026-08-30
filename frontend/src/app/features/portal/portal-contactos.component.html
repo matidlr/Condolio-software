@@ -1,0 +1,142 @@
+@switch (vista()) {
+
+  @case ('lista') {
+    <section class="ct">
+      <header class="ct-top"><h1>Contactos</h1></header>
+
+      <div class="ct-search">
+        <span>⌕</span>
+        <input type="search" placeholder="Buscar contactos…"
+          [value]="busqueda()" (input)="busqueda.set($any($event.target).value)" />
+      </div>
+
+      <div class="ct-tabs">
+        <button type="button" [class.is-active]="tab() === 'todos'" (click)="tab.set('todos')">Todos</button>
+        <button type="button" [class.is-active]="tab() === 'servicios'" (click)="tab.set('servicios')">Servicios</button>
+        <button type="button" [class.is-active]="tab() === 'mantenimiento'" (click)="tab.set('mantenimiento')">Mantenimiento</button>
+      </div>
+
+      @if (cargando()) {
+        <p class="ct-loading">Cargando…</p>
+      } @else if (grupos().length === 0) {
+        <div class="ct-empty">
+          <div class="ct-empty__ic">☎️</div>
+          <h3>No hay contactos</h3>
+          <p>Todavía no hay contactos en la comunidad. Podés agregar uno con el botón de abajo.</p>
+          <button type="button" class="btn btn--primary" (click)="nuevo()">Agregar contacto</button>
+        </div>
+      } @else {
+        @for (g of grupos(); track g.cat) {
+          <p class="ct-group">{{ g.cat }} <b>{{ g.items.length }}</b></p>
+          @for (c of g.items; track c.id) {
+            <div class="ct-card" (click)="abrir(c)">
+              <span class="ct-card__av">{{ inicial(c.nombre) }}</span>
+              <div class="ct-card__body">
+                <b>{{ c.nombre }}</b>
+                <span class="ct-card__cat">{{ c.categoria }}</span>
+                <small>📞 {{ c.telefono }}</small>
+              </div>
+              <a class="ct-card__call" [href]="'tel:' + c.telefono" (click)="$event.stopPropagation()">📞</a>
+              <span class="ct-card__go">›</span>
+            </div>
+          }
+        }
+      }
+    </section>
+    <button type="button" class="ct-fab" (click)="nuevo()">+</button>
+  }
+
+  @case ('nuevo') {
+    <section class="ct">
+      <header class="ct-top">
+        <button type="button" class="ct-back" (click)="vista.set('lista')">Cancelar</button>
+        <h1>{{ editandoId() ? 'Editar contacto' : 'Agregar contacto' }}</h1>
+        <span></span>
+      </header>
+
+      <p class="ct-sec">Información de contacto</p>
+      <label class="ct-field">
+        <span>Nombre</span>
+        <input type="text" placeholder="Nombre" [ngModel]="form().nombre" (ngModelChange)="setForm('nombre', $event)" />
+      </label>
+      <label class="ct-field">
+        <span>Categoría</span>
+        <input type="text" list="ct-cats" [ngModel]="form().categoria" (ngModelChange)="setForm('categoria', $event)" />
+        <datalist id="ct-cats">
+          @for (c of categorias; track c) { <option [value]="c"></option> }
+        </datalist>
+      </label>
+      <label class="ct-field">
+        <span>Teléfono</span>
+        <input type="tel" placeholder="+54 …" [ngModel]="form().telefono" (ngModelChange)="setForm('telefono', $event)" />
+      </label>
+
+      <p class="ct-sec">Detalles adicionales</p>
+      <label class="ct-field ct-field--col">
+        <span>Empresa <em>(opcional)</em></span>
+        <input type="text" [ngModel]="form().empresa" (ngModelChange)="setForm('empresa', $event)" />
+      </label>
+      <label class="ct-field ct-field--col">
+        <span>Descripción <em>(opcional)</em></span>
+        <textarea rows="3" maxlength="500" placeholder="Descripción del contacto"
+          [ngModel]="form().notas" (ngModelChange)="setForm('notas', $event)"></textarea>
+        <small class="ct-count">{{ (form().notas || '').length }} / 500</small>
+      </label>
+
+      <button type="button" class="ct-guardar" [disabled]="!formValido() || guardando()" (click)="guardar()">
+        {{ guardando() ? 'Guardando…' : (editandoId() ? 'Guardar cambios' : 'Agregar contacto') }}
+      </button>
+    </section>
+  }
+
+  @case ('detalle') {
+    @if (sel(); as c) {
+      <section class="ct">
+        <header class="ct-top">
+          <button type="button" class="ct-back" (click)="vista.set('lista')">Cerrar</button>
+          <h1>{{ c.nombre }}</h1>
+          <button type="button" class="ct-back" (click)="compartir(c)">⤴</button>
+        </header>
+
+        <div class="ct-det">
+          <span class="ct-det__av">{{ inicial(c.nombre) }}</span>
+          <h2>{{ c.nombre }}</h2>
+          <span class="ct-det__cat">🏢 {{ c.categoria }}</span>
+
+          <div class="ct-det__card">
+            <p class="ct-sec ct-sec--card">Información de contacto</p>
+            <div class="ct-det__row">
+              <span class="ct-det__ic">👤</span>
+              <div><small>Nombre</small><b>{{ c.nombre }}</b></div>
+            </div>
+            @if (c.empresa) {
+              <div class="ct-det__row">
+                <span class="ct-det__ic">🏢</span>
+                <div><small>Empresa</small><b>{{ c.empresa }}</b></div>
+              </div>
+            }
+            <div class="ct-det__row">
+              <span class="ct-det__ic">📞</span>
+              <div><small>Teléfono</small><b>{{ c.telefono }}</b></div>
+              <button type="button" class="ct-det__copy" (click)="copiarTel(c)">⧉</button>
+            </div>
+            @if (c.notas) {
+              <div class="ct-det__row">
+                <span class="ct-det__ic">📝</span>
+                <div><small>Descripción</small><b>{{ c.notas }}</b></div>
+              </div>
+            }
+            <a class="ct-det__call" [href]="'tel:' + c.telefono">📞 Llamar</a>
+          </div>
+
+          @if (c.esMio) {
+            <div class="ct-det__mine">
+              <button type="button" (click)="editar(c)">✎ Editar</button>
+              <button type="button" class="ct-det__del" (click)="eliminar(c)">🗑 Eliminar</button>
+            </div>
+          }
+        </div>
+      </section>
+    }
+  }
+}

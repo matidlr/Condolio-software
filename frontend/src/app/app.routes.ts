@@ -77,8 +77,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/portal/portal-documentos.component').then((m) => m.PortalDocumentosComponent),
       },
+      {
+        path: 'contactos',
+        loadComponent: () =>
+          import('./features/portal/portal-contactos.component').then((m) => m.PortalContactosComponent),
+      },
       ...[
-        'muro', 'notificaciones', 'config', 'contactos',
+        'muro', 'notificaciones', 'config',
         'finanzas', 'historial-visitas', 'encuestas', 'informacion',
         'incidencias', 'paquetes',
       ].map((p) => ({
