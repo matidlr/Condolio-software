@@ -18,6 +18,7 @@ public class MiPortalIncidenciasController : ApiControllerBase
     private string Uid => User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
 
     public record ComentarioBody(string Texto);
+    public record RechazoBody(string? Motivo);
 
     [HttpGet]
     public async Task<IActionResult> Listar(CancellationToken ct) =>
@@ -55,6 +56,14 @@ public class MiPortalIncidenciasController : ApiControllerBase
     [HttpPost("{ticketId:guid}/comentarios")]
     public async Task<IActionResult> Comentar(Guid ticketId, ComentarioBody body, CancellationToken ct) =>
         ToResult(await _portal.ComentarIncidenciaAsync(Uid, ticketId, body.Texto, ct));
+
+    [HttpPost("{ticketId:guid}/confirmar")]
+    public async Task<IActionResult> Confirmar(Guid ticketId, CancellationToken ct) =>
+        ToResult(await _portal.ConfirmarIncidenciaAsync(Uid, ticketId, ct));
+
+    [HttpPost("{ticketId:guid}/rechazar")]
+    public async Task<IActionResult> Rechazar(Guid ticketId, RechazoBody body, CancellationToken ct) =>
+        ToResult(await _portal.RechazarIncidenciaAsync(Uid, ticketId, body?.Motivo, ct));
 
     [HttpGet("adjuntos/{adjuntoId:guid}")]
     public async Task<IActionResult> Adjunto(Guid adjuntoId, CancellationToken ct)

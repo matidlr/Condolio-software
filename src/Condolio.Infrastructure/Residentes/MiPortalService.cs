@@ -4,8 +4,10 @@ using Condolio.Application.Common;
 using Condolio.Application.Comunicaciones;
 using Condolio.Application.Documentos;
 using Condolio.Application.Encuestas;
+using Condolio.Application.Notificaciones;
 using Condolio.Application.Residentes;
 using Condolio.Domain.Comunicaciones;
+using Condolio.Domain.Notificaciones;
 using Condolio.Domain.Amenidades;
 using Condolio.Domain.Archivos;
 using Condolio.Domain.Calendario;
@@ -31,9 +33,11 @@ public class MiPortalService : IMiPortalService
     private readonly IEncuestaService _encuestas;
     private readonly IFileStorage _storage;
     private readonly IAnuncioService _anuncios;
+    private readonly INotificacionService _notificaciones;
 
     public MiPortalService(CondolioDbContext db, IAmenidadService amenidades, IEventoService eventos,
-        IDocumentoService documentos, IEncuestaService encuestas, IFileStorage storage, IAnuncioService anuncios)
+        IDocumentoService documentos, IEncuestaService encuestas, IFileStorage storage, IAnuncioService anuncios,
+        INotificacionService notificaciones)
     {
         _db = db;
         _amenidades = amenidades;
@@ -42,6 +46,7 @@ public class MiPortalService : IMiPortalService
         _encuestas = encuestas;
         _storage = storage;
         _anuncios = anuncios;
+        _notificaciones = notificaciones;
     }
 
     private static string EstadoIncidencia(EstadoTicket e) => e switch
@@ -556,6 +561,66 @@ public class MiPortalService : IMiPortalService
         await _db.SaveChangesAsync(ct);
         await _db.Tickets.Where(x => x.Id == ticketId)
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.UltimaActividadUtc, DateTime.UtcNow), ct);
+        return Result.Ok();
+    }
+
+    public async Task<Result> ConfirmarIncidenciaAsync(string usuarioId, Guid ticketId, CancellationToken ct = default)
+    {
+        var t = await _db.Tickets.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.Id == ticketId && x.ReportadoPorUsuarioId == usuarioId, ct);
+        if (t is null) return Result.Fail("Reporte no encontrado.");
+        if (t.Estado != EstadoTicket.PendienteAprobacion)
+            return Result.Fail("Este reporte no está esperando tu confirmación.");
+
+        t.Estado = EstadoTicket.Resuelto;
+        t.EstadoDesdeUtc = DateTime.UtcNow;
+        t.ArchivadoUtc = DateTime.UtcNow;
+        t.UltimaActividadUtc = DateTime.UtcNow;
+        _db.TicketComentarios.Add(new TicketComentario
+        {
+            TicketId = t.Id,
+            AdministradorId = t.AdministradorId,
+            Texto = "✅ Confirmé que el problema quedó resuelto. ¡Gracias!",
+            AutorUsuarioId = usuarioId,
+            EsInterna = false,
+        });
+        await _db.SaveChangesAsync(ct);
+
+        await _notificaciones.CrearAsync(t.ConsorcioId, TipoNotificacion.NuevoTicket,
+            $"Reporte #{t.Numero} confirmado",
+            $"{t.ReportadoPorNombre} confirmó que “{t.Titulo}” quedó resuelto.",
+            $"/panel/tickets/{t.Id}", ct);
+        return Result.Ok();
+    }
+
+    public async Task<Result> RechazarIncidenciaAsync(string usuarioId, Guid ticketId, string? motivo, CancellationToken ct = default)
+    {
+        var t = await _db.Tickets.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.Id == ticketId && x.ReportadoPorUsuarioId == usuarioId, ct);
+        if (t is null) return Result.Fail("Reporte no encontrado.");
+        if (t.Estado != EstadoTicket.PendienteAprobacion)
+            return Result.Fail("Este reporte no está esperando tu confirmación.");
+
+        t.Estado = EstadoTicket.EnProgreso;
+        t.EstadoDesdeUtc = DateTime.UtcNow;
+        t.UltimaActividadUtc = DateTime.UtcNow;
+        var texto = string.IsNullOrWhiteSpace(motivo)
+            ? "⚠️ El problema todavía no está resuelto."
+            : $"⚠️ El problema todavía no está resuelto: {motivo.Trim()}";
+        _db.TicketComentarios.Add(new TicketComentario
+        {
+            TicketId = t.Id,
+            AdministradorId = t.AdministradorId,
+            Texto = texto,
+            AutorUsuarioId = usuarioId,
+            EsInterna = false,
+        });
+        await _db.SaveChangesAsync(ct);
+
+        await _notificaciones.CrearAsync(t.ConsorcioId, TipoNotificacion.NuevoTicket,
+            $"Reporte #{t.Numero} reabierto",
+            $"{t.ReportadoPorNombre} indicó que “{t.Titulo}” todavía no está resuelto.",
+            $"/panel/tickets/{t.Id}", ct);
         return Result.Ok();
     }
 

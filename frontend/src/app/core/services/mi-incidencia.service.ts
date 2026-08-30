@@ -76,6 +76,12 @@ export class MiIncidenciaService {
   comentar(id: string, texto: string): Observable<void> {
     return this.http.post<void>(`${this.base}/${id}/comentarios`, { texto });
   }
+  confirmar(id: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/${id}/confirmar`, {});
+  }
+  rechazar(id: string, motivo: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/${id}/rechazar`, { motivo });
+  }
   adjuntoUrl(id: string): string {
     return `${this.base}/adjuntos/${id}`;
   }

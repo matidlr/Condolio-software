@@ -40,6 +40,11 @@ export class PortalIncidenciasComponent {
   comentario = signal('');
   comentando = signal(false);
 
+  // confirmación de resolución (ticket "En revisión")
+  mostrarRechazo = signal(false);
+  motivoRechazo = signal('');
+  resolviendo = signal(false);
+
   filtradas = computed(() =>
     this.incidencias().filter((i) => this.tab() === 'activo' ? i.estado !== 'Resuelto' : i.estado === 'Resuelto'));
 
@@ -119,6 +124,8 @@ export class PortalIncidenciasComponent {
     this.detalle.set(null);
     this.imgUrls.set({});
     this.comentario.set('');
+    this.mostrarRechazo.set(false);
+    this.motivoRechazo.set('');
     this.vista.set('detalle');
     this.api.obtener(i.id).subscribe({
       next: (d) => {
@@ -132,6 +139,38 @@ export class PortalIncidenciasComponent {
     this.http.get(`${environment.apiUrl}/mi-portal/incidencias/adjuntos/${id}`, { responseType: 'blob' }).subscribe({
       next: (b) => this.imgUrls.update((m) => ({ ...m, [id]: URL.createObjectURL(b) })),
       error: () => {},
+    });
+  }
+
+  confirmarResuelto(): void {
+    const d = this.detalle();
+    if (!d || this.resolviendo()) return;
+    this.resolviendo.set(true);
+    this.api.confirmar(d.incidencia.id).subscribe({
+      next: () => {
+        this.resolviendo.set(false);
+        this.toasts.exito('¡Gracias! Marcamos el reporte como resuelto.');
+        this.abrir(d.incidencia);
+        this.cargar();
+      },
+      error: (e) => { this.resolviendo.set(false); this.toasts.error(e?.error?.message ?? 'No se pudo confirmar.'); },
+    });
+  }
+
+  rechazarResuelto(): void {
+    const d = this.detalle();
+    if (!d || this.resolviendo()) return;
+    this.resolviendo.set(true);
+    this.api.rechazar(d.incidencia.id, this.motivoRechazo().trim()).subscribe({
+      next: () => {
+        this.resolviendo.set(false);
+        this.mostrarRechazo.set(false);
+        this.motivoRechazo.set('');
+        this.toasts.exito('Le avisamos a la administración.');
+        this.abrir(d.incidencia);
+        this.cargar();
+      },
+      error: (e) => { this.resolviendo.set(false); this.toasts.error(e?.error?.message ?? 'No se pudo enviar.'); },
     });
   }
 

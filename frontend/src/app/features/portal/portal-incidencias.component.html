@@ -138,6 +138,30 @@
             }
           </div>
 
+          @if (d.incidencia.estado === 'En revisión') {
+            <div class="pi-confirm">
+              <p class="pi-confirm__ttl">✅ La administración marcó tu reporte como resuelto</p>
+              <p class="pi-confirm__txt">¿Confirmás que el problema quedó solucionado?</p>
+              @if (!mostrarRechazo()) {
+                <div class="pi-confirm__btns">
+                  <button type="button" class="pi-cbtn pi-cbtn--ok" [disabled]="resolviendo()"
+                    (click)="confirmarResuelto()">Sí, quedó resuelto</button>
+                  <button type="button" class="pi-cbtn pi-cbtn--no"
+                    (click)="mostrarRechazo.set(true)">No, sigue el problema</button>
+                </div>
+              } @else {
+                <textarea class="pi-confirm__ta" rows="2" placeholder="Contanos qué sigue pasando (opcional)…"
+                  [ngModel]="motivoRechazo()" (ngModelChange)="motivoRechazo.set($event)"></textarea>
+                <div class="pi-confirm__btns">
+                  <button type="button" class="pi-cbtn pi-cbtn--no" [disabled]="resolviendo()"
+                    (click)="rechazarResuelto()">Reabrir el reporte</button>
+                  <button type="button" class="pi-cbtn pi-cbtn--ghost"
+                    (click)="mostrarRechazo.set(false)">Cancelar</button>
+                </div>
+              }
+            </div>
+          }
+
           <div class="pi-timeline">
             <h4>🕐 Línea de tiempo</h4>
             <div class="pi-evt">

@@ -130,6 +130,10 @@ public interface IMiPortalService
     Task<Result<IncidenciaDetalleResidenteDto>> IncidenciaAsync(string usuarioId, Guid ticketId, CancellationToken ct = default);
     Task<Result<IncidenciaResidenteDto>> CrearIncidenciaAsync(string usuarioId, CrearIncidenciaResidenteDto dto, CancellationToken ct = default);
     Task<Result> ComentarIncidenciaAsync(string usuarioId, Guid ticketId, string texto, CancellationToken ct = default);
+    /// <summary>El residente confirma que su reporte quedó resuelto (solo si está "En revisión").</summary>
+    Task<Result> ConfirmarIncidenciaAsync(string usuarioId, Guid ticketId, CancellationToken ct = default);
+    /// <summary>El residente indica que el problema sigue: el reporte vuelve a "En progreso".</summary>
+    Task<Result> RechazarIncidenciaAsync(string usuarioId, Guid ticketId, string? motivo, CancellationToken ct = default);
     Task<Result<ArchivoDocumento>> DescargarAdjuntoIncidenciaAsync(string usuarioId, Guid adjuntoId, CancellationToken ct = default);
 
     Task<Result<IReadOnlyList<AnuncioDto>>> MuroAsync(string usuarioId, CancellationToken ct = default);
