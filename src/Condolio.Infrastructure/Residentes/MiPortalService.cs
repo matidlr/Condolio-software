@@ -1,10 +1,13 @@
 using Condolio.Application.Amenidades;
 using Condolio.Application.Calendario;
 using Condolio.Application.Common;
+using Condolio.Application.Documentos;
 using Condolio.Application.Residentes;
 using Condolio.Domain.Amenidades;
 using Condolio.Domain.Calendario;
+using Condolio.Domain.Documentos;
 using Condolio.Domain.Encuestas;
+using Condolio.Domain.Unidades;
 using Condolio.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,12 +21,14 @@ public class MiPortalService : IMiPortalService
     private readonly CondolioDbContext _db;
     private readonly IAmenidadService _amenidades;
     private readonly IEventoService _eventos;
+    private readonly IDocumentoService _documentos;
 
-    public MiPortalService(CondolioDbContext db, IAmenidadService amenidades, IEventoService eventos)
+    public MiPortalService(CondolioDbContext db, IAmenidadService amenidades, IEventoService eventos, IDocumentoService documentos)
     {
         _db = db;
         _amenidades = amenidades;
         _eventos = eventos;
+        _documentos = documentos;
     }
 
     private async Task<Origen?> OrigenAsync(string usuarioId, CancellationToken ct) =>
@@ -278,6 +283,46 @@ public class MiPortalService : IMiPortalService
                 .SetProperty(r => r.Estado, EstadoReserva.Cancelada)
                 .SetProperty(r => r.ResueltaUtc, DateTime.UtcNow), ct);
         return n == 0 ? Result.Fail("Reserva no encontrada.") : Result.Ok();
+    }
+
+    public async Task<Result<ContenidoDto>> DocumentosAsync(string usuarioId, Guid? carpetaId, CancellationToken ct = default)
+    {
+        var o = await OrigenAsync(usuarioId, ct);
+        if (o is null) return Result<ContenidoDto>.Fail("No tenés una unidad asignada.");
+
+        var esPropietario = await _db.UnidadPersonas.IgnoreQueryFilters()
+            .AnyAsync(p => p.UsuarioId == usuarioId && p.Rol == RolUnidad.Propietario, ct);
+
+        bool Permitido(NivelAcceso n) =>
+            n == NivelAcceso.Todos || (esPropietario && n == NivelAcceso.Propietarios);
+
+        var res = await _documentos.ListarAsync(o.ConsorcioId, carpetaId, ct);
+        if (!res.Exito) return Result<ContenidoDto>.Fail(res.Error!);
+
+        var c = res.Valor!;
+        var carpetas = c.Carpetas.Where(x => Permitido(x.Nivel)).ToList();
+        var docs = c.Documentos.Where(x => Permitido(x.Nivel)).ToList();
+        return Result<ContenidoDto>.Ok(new ContenidoDto(
+            c.CarpetaActualId, c.CarpetaActualNombre, carpetas, docs, c.AlmacenamientoUsado, c.AlmacenamientoTotal));
+    }
+
+    public async Task<Result<ArchivoDocumento>> DescargarDocumentoAsync(
+        string usuarioId, Guid documentoId, bool registrarDescarga, CancellationToken ct = default)
+    {
+        var o = await OrigenAsync(usuarioId, ct);
+        if (o is null) return Result<ArchivoDocumento>.Fail("No tenés una unidad asignada.");
+
+        var esPropietario = await _db.UnidadPersonas.IgnoreQueryFilters()
+            .AnyAsync(p => p.UsuarioId == usuarioId && p.Rol == RolUnidad.Propietario, ct);
+
+        var doc = await _db.Documentos.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(d => d.Id == documentoId && d.ConsorcioId == o.ConsorcioId, ct);
+        if (doc is null) return Result<ArchivoDocumento>.Fail("Documento no encontrado.");
+        if (doc.Nivel == NivelAcceso.Admin || doc.Nivel == NivelAcceso.Junta
+            || (doc.Nivel == NivelAcceso.Propietarios && !esPropietario))
+            return Result<ArchivoDocumento>.Fail("No tenés acceso a este documento.");
+
+        return await _documentos.DescargarAsync(o.ConsorcioId, documentoId, registrarDescarga, ct);
     }
 
     private static IReadOnlyList<Guid> Adjuntos(string? ids) =>

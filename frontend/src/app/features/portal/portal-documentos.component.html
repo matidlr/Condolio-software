@@ -1,0 +1,74 @@
+<section class="pd">
+  <header class="pd-top"><h1>Documentos</h1></header>
+
+  <div class="pd-tools">
+    <div class="pd-search">
+      <span>⌕</span>
+      <input type="search" placeholder="Buscar archivos y carpetas…"
+        [value]="busqueda()" (input)="busqueda.set($any($event.target).value)" />
+    </div>
+    <button type="button" class="pd-icobtn" (click)="orden.set(orden() === 'nombre' ? 'fecha' : 'nombre')"
+      [title]="orden() === 'nombre' ? 'Ordenar por fecha' : 'Ordenar por nombre'">↑↓</button>
+    <button type="button" class="pd-icobtn" (click)="vista.set(vista() === 'lista' ? 'grid' : 'lista')">
+      {{ vista() === 'lista' ? '▦' : '☰' }}
+    </button>
+  </div>
+
+  <div class="pd-chips">
+    @for (c of chips; track c.value) {
+      <button type="button" [class.is-active]="chip() === c.value" (click)="chip.set(c.value)">{{ c.label }}</button>
+    }
+  </div>
+
+  @if (ruta().length > 1) {
+    <nav class="pd-crumbs">
+      @for (r of ruta(); track $index; let last = $last) {
+        <button type="button" [disabled]="last" (click)="irRuta($index)">{{ $index === 0 ? '🏠 ' : '' }}{{ r.nombre }}</button>
+        @if (!last) { <span>›</span> }
+      }
+    </nav>
+  }
+
+  @if (cargando()) {
+    <p class="pd-loading">Cargando…</p>
+  } @else if (carpetasVis().length === 0 && docsVis().length === 0) {
+    <div class="pd-empty"><div class="pd-empty__ic">📂</div><h3>No hay documentos</h3>
+      <p>Todavía no hay documentos disponibles para vos.</p></div>
+  } @else {
+    @if (carpetasVis().length) {
+      <p class="pd-group">Carpetas</p>
+      <div [class.pd-grid]="vista() === 'grid'">
+        @for (c of carpetasVis(); track c.id) {
+          <button type="button" class="pd-row pd-row--folder" (click)="abrirCarpeta(c)">
+            <span class="pd-row__ic">📁</span>
+            <span class="pd-row__body">
+              <b>{{ c.nombre }}</b>
+              <small>{{ c.elementos }} elemento{{ c.elementos === 1 ? '' : 's' }}</small>
+            </span>
+            <span class="pd-row__go">›</span>
+          </button>
+        }
+      </div>
+    }
+
+    @if (docsVis().length) {
+      <p class="pd-group">Archivos</p>
+      <div [class.pd-grid]="vista() === 'grid'">
+        @for (d of docsVis(); track d.id) {
+          <button type="button" class="pd-row" (click)="abrir(d)">
+            <span class="pd-row__ic pd-row__ic--file">{{ icono(d.contentType) }}</span>
+            <span class="pd-row__body">
+              <b>{{ d.nombre }}</b>
+              <small>
+                <span class="pd-cat">{{ labelCat[d.categoria] }}</span>
+                {{ tamano(d.tamano) }} · {{ d.creadoUtc | date:'d MMM y' }}
+                @if (d.destacado) { · ⭐ }
+              </small>
+            </span>
+            <span class="pd-row__dl" (click)="descargar(d, $event)">⬇</span>
+          </button>
+        }
+      </div>
+    }
+  }
+</section>

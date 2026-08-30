@@ -72,9 +72,14 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/portal/portal-calendario.component').then((m) => m.PortalCalendarioComponent),
       },
+      {
+        path: 'documentos',
+        loadComponent: () =>
+          import('./features/portal/portal-documentos.component').then((m) => m.PortalDocumentosComponent),
+      },
       ...[
         'muro', 'notificaciones', 'config', 'contactos',
-        'documentos', 'finanzas', 'historial-visitas', 'encuestas', 'informacion',
+        'finanzas', 'historial-visitas', 'encuestas', 'informacion',
         'incidencias', 'paquetes',
       ].map((p) => ({
         path: p,

@@ -49,6 +49,18 @@ public class MiPortalAmenidadesController : ApiControllerBase
         ToResult(await _portal.CrearEventoAsync(Uid,
             new Application.Residentes.CrearEventoResidenteDto(b.Titulo, b.Descripcion, b.Ubicacion, b.Categoria, b.Inicio, b.Fin, b.TodoElDia), ct));
 
+    [HttpGet("documentos")]
+    public async Task<IActionResult> Documentos([FromQuery] Guid? carpetaId, CancellationToken ct) =>
+        ToResult(await _portal.DocumentosAsync(Uid, carpetaId, ct));
+
+    [HttpGet("documentos/{documentoId:guid}/descargar")]
+    public async Task<IActionResult> DescargarDocumento(Guid documentoId, [FromQuery] bool descarga, CancellationToken ct)
+    {
+        var r = await _portal.DescargarDocumentoAsync(Uid, documentoId, descarga, ct);
+        if (!r.Exito) return NotFound(new { message = r.Error });
+        return File(r.Valor!.Contenido, r.Valor.ContentType, r.Valor.Nombre);
+    }
+
     [HttpPost("reservas")]
     public async Task<IActionResult> Solicitar(SolicitarReservaBody body, CancellationToken ct) =>
         ToResult(await _portal.SolicitarReservaAsync(Uid, body.AmenidadId, body.Inicio, body.Fin, body.Nota, ct));

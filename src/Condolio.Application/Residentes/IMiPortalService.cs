@@ -1,5 +1,6 @@
 using Condolio.Application.Amenidades;
 using Condolio.Application.Common;
+using Condolio.Application.Documentos;
 
 namespace Condolio.Application.Residentes;
 
@@ -66,4 +67,7 @@ public interface IMiPortalService
 
     Task<Result<IReadOnlyList<CalendarioItemDto>>> CalendarioAsync(string usuarioId, DateTime desde, DateTime hasta, CancellationToken ct = default);
     Task<Result<CalendarioItemDto>> CrearEventoAsync(string usuarioId, CrearEventoResidenteDto dto, CancellationToken ct = default);
+
+    Task<Result<ContenidoDto>> DocumentosAsync(string usuarioId, Guid? carpetaId, CancellationToken ct = default);
+    Task<Result<ArchivoDocumento>> DescargarDocumentoAsync(string usuarioId, Guid documentoId, bool registrarDescarga, CancellationToken ct = default);
 }
