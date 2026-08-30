@@ -1,9 +1,11 @@
 using Condolio.Application.Amenidades;
 using Condolio.Application.Calendario;
 using Condolio.Application.Common;
+using Condolio.Application.Comunicaciones;
 using Condolio.Application.Documentos;
 using Condolio.Application.Encuestas;
 using Condolio.Application.Residentes;
+using Condolio.Domain.Comunicaciones;
 using Condolio.Domain.Amenidades;
 using Condolio.Domain.Archivos;
 using Condolio.Domain.Calendario;
@@ -28,9 +30,10 @@ public class MiPortalService : IMiPortalService
     private readonly IDocumentoService _documentos;
     private readonly IEncuestaService _encuestas;
     private readonly IFileStorage _storage;
+    private readonly IAnuncioService _anuncios;
 
     public MiPortalService(CondolioDbContext db, IAmenidadService amenidades, IEventoService eventos,
-        IDocumentoService documentos, IEncuestaService encuestas, IFileStorage storage)
+        IDocumentoService documentos, IEncuestaService encuestas, IFileStorage storage, IAnuncioService anuncios)
     {
         _db = db;
         _amenidades = amenidades;
@@ -38,6 +41,7 @@ public class MiPortalService : IMiPortalService
         _documentos = documentos;
         _encuestas = encuestas;
         _storage = storage;
+        _anuncios = anuncios;
     }
 
     private static string EstadoIncidencia(EstadoTicket e) => e switch
@@ -504,6 +508,120 @@ public class MiPortalService : IMiPortalService
         var esMio = await _db.Tickets.IgnoreQueryFilters()
             .AnyAsync(t => t.Id == a.OwnerId && t.ReportadoPorUsuarioId == usuarioId, ct);
         if (!esMio) return Result<ArchivoDocumento>.Fail("No tenés acceso a este archivo.");
+
+        return Result<ArchivoDocumento>.Ok(new ArchivoDocumento(a.NombreArchivo, a.ContentType, _storage.Abrir(a.RutaRelativa)));
+    }
+
+    // ---- Muro (anuncios) ----
+
+    public async Task<Result<IReadOnlyList<AnuncioDto>>> MuroAsync(string usuarioId, CancellationToken ct = default)
+    {
+        var o = await OrigenAsync(usuarioId, ct);
+        if (o is null) return Result<IReadOnlyList<AnuncioDto>>.Fail("No tenés una unidad asignada.");
+        var res = await _anuncios.ListarAsync(o.ConsorcioId, ct);
+        return res.Exito
+            ? Result<IReadOnlyList<AnuncioDto>>.Ok(res.Valor!.Anuncios)
+            : Result<IReadOnlyList<AnuncioDto>>.Fail(res.Error!);
+    }
+
+    public async Task<Result<AnuncioDetalleDto>> PublicacionAsync(string usuarioId, Guid anuncioId, CancellationToken ct = default)
+    {
+        var o = await OrigenAsync(usuarioId, ct);
+        if (o is null) return Result<AnuncioDetalleDto>.Fail("No tenés una unidad asignada.");
+        return await _anuncios.ObtenerAsync(o.ConsorcioId, anuncioId, ct);
+    }
+
+    public async Task<Result<AnuncioDto>> PublicarAsync(
+        string usuarioId, string cuerpo, IReadOnlyList<ArchivoSubidaDto>? imagenes, CancellationToken ct = default)
+    {
+        var o = await OrigenAsync(usuarioId, ct);
+        if (o is null) return Result<AnuncioDto>.Fail("No tenés una unidad asignada.");
+        if (string.IsNullOrWhiteSpace(cuerpo) && (imagenes is null || imagenes.Count == 0))
+            return Result<AnuncioDto>.Fail("Escribí algo o agregá una imagen.");
+
+        var res = await _anuncios.CrearAsync(o.ConsorcioId,
+            new GuardarAnuncioDto(null, string.IsNullOrWhiteSpace(cuerpo) ? " " : cuerpo.Trim(),
+                CategoriaAnuncio.General, false, null, null, null), ct);
+        if (!res.Exito) return res;
+
+        var anuncioId = res.Valor!.Id;
+        var ids = new List<Guid>();
+        foreach (var img in imagenes ?? Array.Empty<ArchivoSubidaDto>())
+        {
+            if (img.Tamano <= 0 || img.Tamano > 15L * 1024 * 1024) continue;
+            var ext = Path.GetExtension(img.Nombre);
+            var ruta = $"anuncios/{o.ConsorcioId:N}/{Guid.CreateVersion7():N}{ext}";
+            await _storage.GuardarAsync(ruta, img.Contenido, ct);
+            var a = new Adjunto
+            {
+                AdministradorId = o.AdministradorId,
+                OwnerTipo = TipoAdjuntoOwner.Anuncio,
+                OwnerId = anuncioId,
+                NombreArchivo = img.Nombre,
+                ContentType = img.ContentType,
+                Tamano = img.Tamano,
+                RutaRelativa = ruta,
+            };
+            _db.Adjuntos.Add(a);
+            ids.Add(a.Id);
+        }
+        if (ids.Count > 0)
+        {
+            await _db.SaveChangesAsync(ct);
+            await _db.Anuncios.Where(x => x.Id == anuncioId)
+                .ExecuteUpdateAsync(s => s.SetProperty(x => x.ImagenesIds, string.Join(",", ids)), ct);
+        }
+
+        return await _anuncios.ObtenerAsync(o.ConsorcioId, anuncioId, ct) is { Exito: true } det
+            ? Result<AnuncioDto>.Ok(det.Valor!.Anuncio)
+            : res;
+    }
+
+    public async Task<Result> ComentarMuroAsync(string usuarioId, Guid anuncioId, string texto, CancellationToken ct = default)
+    {
+        var o = await OrigenAsync(usuarioId, ct);
+        if (o is null) return Result.Fail("No tenés una unidad asignada.");
+        return await _anuncios.ComentarAsync(o.ConsorcioId, anuncioId, texto, ct);
+    }
+
+    public async Task<Result> EditarComentarioMuroAsync(string usuarioId, Guid anuncioId, Guid comentarioId, string texto, CancellationToken ct = default)
+    {
+        var o = await OrigenAsync(usuarioId, ct);
+        if (o is null) return Result.Fail("No tenés una unidad asignada.");
+        return await _anuncios.EditarComentarioAsync(o.ConsorcioId, anuncioId, comentarioId, texto, ct);
+    }
+
+    public async Task<Result> EliminarComentarioMuroAsync(string usuarioId, Guid anuncioId, Guid comentarioId, CancellationToken ct = default)
+    {
+        var o = await OrigenAsync(usuarioId, ct);
+        if (o is null) return Result.Fail("No tenés una unidad asignada.");
+
+        var mio = await _db.AnuncioComentarios.IgnoreQueryFilters()
+            .AnyAsync(c => c.Id == comentarioId && c.AnuncioId == anuncioId && c.AutorUsuarioId == usuarioId, ct);
+        if (!mio) return Result.Fail("Solo podés eliminar tus comentarios.");
+
+        return await _anuncios.EliminarComentarioAsync(o.ConsorcioId, anuncioId, comentarioId, ct);
+    }
+
+    public async Task<Result<LikeResultadoDto>> ToggleLikeMuroAsync(string usuarioId, Guid anuncioId, CancellationToken ct = default)
+    {
+        var o = await OrigenAsync(usuarioId, ct);
+        if (o is null) return Result<LikeResultadoDto>.Fail("No tenés una unidad asignada.");
+        return await _anuncios.ToggleLikeAsync(o.ConsorcioId, anuncioId, ct);
+    }
+
+    public async Task<Result<ArchivoDocumento>> DescargarAdjuntoMuroAsync(string usuarioId, Guid adjuntoId, CancellationToken ct = default)
+    {
+        var o = await OrigenAsync(usuarioId, ct);
+        if (o is null) return Result<ArchivoDocumento>.Fail("No tenés una unidad asignada.");
+
+        var a = await _db.Adjuntos.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.Id == adjuntoId && x.OwnerTipo == TipoAdjuntoOwner.Anuncio, ct);
+        if (a is null) return Result<ArchivoDocumento>.Fail("Adjunto no encontrado.");
+
+        var delConsorcio = await _db.Anuncios.IgnoreQueryFilters()
+            .AnyAsync(an => an.Id == a.OwnerId && an.ConsorcioId == o.ConsorcioId, ct);
+        if (!delConsorcio) return Result<ArchivoDocumento>.Fail("No tenés acceso a este archivo.");
 
         return Result<ArchivoDocumento>.Ok(new ArchivoDocumento(a.NombreArchivo, a.ContentType, _storage.Abrir(a.RutaRelativa)));
     }

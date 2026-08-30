@@ -62,7 +62,8 @@ public class AnuncioService : IAnuncioService
         var dto = Mapear(a, a.Likes.Count, a.Comentarios.Count, a.Likes.Any(l => l.UsuarioId == yo));
         var comentarios = a.Comentarios.OrderBy(c => c.CreadoUtc)
             .Select(c => new AnuncioComentarioDto(c.Id, c.Texto,
-                string.IsNullOrWhiteSpace(c.AutorNombre) ? "—" : c.AutorNombre, c.CreadoUtc))
+                string.IsNullOrWhiteSpace(c.AutorNombre) ? "—" : c.AutorNombre, c.CreadoUtc,
+                !string.IsNullOrEmpty(yo) && c.AutorUsuarioId == yo))
             .ToList();
         var likes = a.Likes.OrderBy(l => l.CreadoUtc).Select(l => new AnuncioLikeDto(l.UsuarioNombre)).ToList();
         return Result<AnuncioDetalleDto>.Ok(new AnuncioDetalleDto(dto, comentarios, likes));

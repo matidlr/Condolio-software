@@ -1,0 +1,174 @@
+@switch (vista()) {
+
+  @case ('feed') {
+    <section class="mu">
+      <header class="mu-top"><h1>Muro</h1></header>
+
+      @if (cargando()) {
+        <p class="mu-loading">Cargando…</p>
+      } @else if (posts().length === 0) {
+        <div class="mu-empty">
+          <div class="mu-empty__ic">📣</div>
+          <h3>Todavía no hay publicaciones</h3>
+          <p>Compartí una novedad o recomendación con tu comunidad.</p>
+          <button type="button" class="btn btn--primary" (click)="abrirComponer()">Crear publicación</button>
+        </div>
+      } @else {
+        @for (p of posts(); track p.id) {
+          <article class="mu-post" (click)="abrir(p)">
+            <div class="mu-post__head">
+              <span class="mu-av">{{ inicial(p.autor) }}</span>
+              <div>
+                <b>{{ p.autor }}</b>
+                <small>{{ p.publicadoUtc | date:'d MMM y, HH:mm' }}</small>
+              </div>
+            </div>
+            @if (p.cuerpo.trim()) { <p class="mu-post__body">{{ p.cuerpo }}</p> }
+            @for (id of p.imagenesIds; track id) {
+              @if (img(id)) { <img class="mu-post__img" [src]="img(id)" alt="" /> }
+            }
+            <div class="mu-post__foot">
+              <button type="button" [class.is-liked]="p.yoDiLike" (click)="toggleLike(p, $event)">
+                {{ p.yoDiLike ? '❤' : '🤍' }} {{ p.totalLikes || '' }}
+              </button>
+              <button type="button">💬 {{ p.totalComentarios || '' }}</button>
+              <button type="button" (click)="compartir(p, $event)">⤴</button>
+            </div>
+          </article>
+        }
+      }
+    </section>
+    <button type="button" class="mu-fab" (click)="abrirComponer()">+</button>
+  }
+
+  @case ('crear') {
+    <section class="mu">
+      <header class="mu-top">
+        <button type="button" class="mu-back" (click)="vista.set('feed')">‹ Atrás</button>
+        <h1>Crear post</h1>
+        <button type="button" class="mu-pub"
+          [disabled]="(nuevoCuerpo().trim().length === 0 && nuevasImgs().length === 0) || publicando()"
+          (click)="publicar()">➤ Publicar</button>
+      </header>
+
+      <div class="mu-card">
+        <div class="mu-post__head">
+          <span class="mu-av">{{ inicial(miNombre()) }}</span>
+          <b>{{ miNombre() }}</b>
+        </div>
+        <textarea rows="5" placeholder="Compartí una novedad, recomendación o pregunta…"
+          [ngModel]="nuevoCuerpo()" (ngModelChange)="nuevoCuerpo.set($event)"></textarea>
+
+        <div class="mu-attach">
+          <label class="mu-attach__btn">
+            🖼 Imagen
+            <input type="file" hidden accept="image/*" multiple (change)="onImgs($event)" />
+          </label>
+        </div>
+        @if (nuevasImgs().length) {
+          <div class="mu-thumbs">
+            @for (im of nuevasImgs(); track im.url; let idx = $index) {
+              <div class="mu-thumb"><img [src]="im.url" alt="" /><button type="button" (click)="quitarImg(idx)">✕</button></div>
+            }
+          </div>
+        }
+
+        <button type="button" class="mu-publicar"
+          [disabled]="(nuevoCuerpo().trim().length === 0 && nuevasImgs().length === 0) || publicando()"
+          (click)="publicar()">{{ publicando() ? 'Publicando…' : 'Publicar' }}</button>
+      </div>
+    </section>
+  }
+
+  @case ('detalle') {
+    <section class="mu mu-det">
+      <header class="mu-top">
+        <button type="button" class="mu-back" (click)="vista.set('feed')">‹ Atrás</button>
+        <h1>Publicación</h1><span></span>
+      </header>
+
+      @if (!detalle()) {
+        <p class="mu-loading">Cargando…</p>
+      } @else {
+        @if (detalle()!; as d) {
+          <article class="mu-post mu-post--full">
+            <div class="mu-post__head">
+              <span class="mu-av">{{ inicial(d.anuncio.autor) }}</span>
+              <div>
+                <b>{{ d.anuncio.autor }}</b>
+                <small>{{ d.anuncio.publicadoUtc | date:'d \'de\' MMM \'de\' y HH:mm' }}</small>
+              </div>
+            </div>
+            @if (d.anuncio.cuerpo.trim()) { <p class="mu-post__body">{{ d.anuncio.cuerpo }}</p> }
+            @for (id of d.anuncio.imagenesIds; track id) {
+              @if (img(id)) { <img class="mu-post__img" [src]="img(id)" alt="" /> }
+            }
+            <div class="mu-post__foot">
+              <button type="button" [class.is-liked]="d.anuncio.yoDiLike" (click)="toggleLike(d.anuncio)">
+                {{ d.anuncio.yoDiLike ? '❤' : '🤍' }} {{ d.anuncio.totalLikes || '' }}
+              </button>
+              <button type="button">💬 {{ d.anuncio.totalComentarios || '' }}</button>
+              <button type="button" (click)="compartir(d.anuncio)">⤴</button>
+            </div>
+          </article>
+
+          @if (d.likes.length) {
+            <p class="mu-sec">Likes</p>
+            <div class="mu-likes">
+              @for (l of d.likes; track $index) { <span class="mu-av mu-av--sm" [title]="l.nombre">{{ inicial(l.nombre) }}</span> }
+            </div>
+          }
+
+          <p class="mu-sec">{{ d.comentarios.length }} comentario{{ d.comentarios.length === 1 ? '' : 's' }}</p>
+          @for (c of d.comentarios; track c.id) {
+            <div class="mu-com">
+              <span class="mu-av mu-av--sm">{{ inicial(c.autor) }}</span>
+              <div class="mu-com__body">
+                <div class="mu-com__head">
+                  <b>{{ c.autor }}</b> <small>· {{ hace(c.fechaUtc) }}</small>
+                  @if (c.esMio) {
+                    <button type="button" class="mu-com__menu" (click)="abrirMenu(c.id, $event)">···</button>
+                    @if (menuComentario() === c.id) {
+                      <div class="mu-com__pop" (click)="$event.stopPropagation()">
+                        <button type="button" (click)="empezarEdicion(c.id, c.texto)">Editar comentario</button>
+                        <button type="button" class="mu-com__del" (click)="pedirEliminar(c.id)">Eliminar comentario</button>
+                      </div>
+                    }
+                  }
+                </div>
+                @if (editandoComentario() === c.id) {
+                  <input class="mu-com__edit" [ngModel]="editTexto()" (ngModelChange)="editTexto.set($event)" />
+                  <div class="mu-com__editacts">
+                    <button type="button" class="mu-com__save" (click)="guardarEdicion(c.id)">Guardar</button>
+                    <button type="button" class="mu-com__cancel" (click)="editandoComentario.set(null)">Cancelar</button>
+                  </div>
+                } @else {
+                  <p>{{ c.texto }}</p>
+                }
+              </div>
+            </div>
+          }
+        }
+      }
+
+      <div class="mu-compose">
+        <textarea rows="1" placeholder="Añadí un comentario…"
+          [ngModel]="comentario()" (ngModelChange)="comentario.set($event)"></textarea>
+        <button type="button" [disabled]="comentario().trim().length === 0 || comentando()" (click)="comentar()">➤</button>
+      </div>
+    </section>
+
+    @if (confirmarEliminar()) {
+      <div class="mu-modal-bg" (click)="confirmarEliminar.set(null)">
+        <div class="mu-modal" (click)="$event.stopPropagation()">
+          <b>Eliminar comentario</b>
+          <p>¿Seguro que querés eliminar este comentario? Esta acción no se puede deshacer.</p>
+          <footer>
+            <button type="button" class="mu-modal__cancel" (click)="confirmarEliminar.set(null)">Cancelar</button>
+            <button type="button" class="mu-modal__ok" (click)="eliminarComentario()">Eliminar</button>
+          </footer>
+        </div>
+      </div>
+    }
+  }
+}

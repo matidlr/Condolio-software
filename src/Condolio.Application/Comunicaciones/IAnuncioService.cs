@@ -17,7 +17,7 @@ public record AnuncioDto(
     int TotalComentarios,
     bool YoDiLike);
 
-public record AnuncioComentarioDto(Guid Id, string Texto, string Autor, DateTime FechaUtc);
+public record AnuncioComentarioDto(Guid Id, string Texto, string Autor, DateTime FechaUtc, bool EsMio = false);
 public record AnuncioLikeDto(string Nombre);
 
 public record AnuncioDetalleDto(

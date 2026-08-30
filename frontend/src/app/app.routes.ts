@@ -92,8 +92,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/portal/portal-incidencias.component').then((m) => m.PortalIncidenciasComponent),
       },
+      {
+        path: 'muro',
+        loadComponent: () =>
+          import('./features/portal/portal-muro.component').then((m) => m.PortalMuroComponent),
+      },
       ...[
-        'muro', 'notificaciones', 'config',
+        'notificaciones', 'config',
         'finanzas', 'historial-visitas', 'informacion', 'paquetes',
       ].map((p) => ({
         path: p,

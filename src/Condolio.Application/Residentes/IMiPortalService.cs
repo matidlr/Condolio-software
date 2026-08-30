@@ -1,5 +1,6 @@
 using Condolio.Application.Amenidades;
 using Condolio.Application.Common;
+using Condolio.Application.Comunicaciones;
 using Condolio.Application.Documentos;
 using Condolio.Application.Encuestas;
 
@@ -106,4 +107,13 @@ public interface IMiPortalService
     Task<Result<IncidenciaResidenteDto>> CrearIncidenciaAsync(string usuarioId, CrearIncidenciaResidenteDto dto, CancellationToken ct = default);
     Task<Result> ComentarIncidenciaAsync(string usuarioId, Guid ticketId, string texto, CancellationToken ct = default);
     Task<Result<ArchivoDocumento>> DescargarAdjuntoIncidenciaAsync(string usuarioId, Guid adjuntoId, CancellationToken ct = default);
+
+    Task<Result<IReadOnlyList<AnuncioDto>>> MuroAsync(string usuarioId, CancellationToken ct = default);
+    Task<Result<AnuncioDetalleDto>> PublicacionAsync(string usuarioId, Guid anuncioId, CancellationToken ct = default);
+    Task<Result<AnuncioDto>> PublicarAsync(string usuarioId, string cuerpo, IReadOnlyList<ArchivoSubidaDto>? imagenes, CancellationToken ct = default);
+    Task<Result> ComentarMuroAsync(string usuarioId, Guid anuncioId, string texto, CancellationToken ct = default);
+    Task<Result> EditarComentarioMuroAsync(string usuarioId, Guid anuncioId, Guid comentarioId, string texto, CancellationToken ct = default);
+    Task<Result> EliminarComentarioMuroAsync(string usuarioId, Guid anuncioId, Guid comentarioId, CancellationToken ct = default);
+    Task<Result<LikeResultadoDto>> ToggleLikeMuroAsync(string usuarioId, Guid anuncioId, CancellationToken ct = default);
+    Task<Result<ArchivoDocumento>> DescargarAdjuntoMuroAsync(string usuarioId, Guid adjuntoId, CancellationToken ct = default);
 }
