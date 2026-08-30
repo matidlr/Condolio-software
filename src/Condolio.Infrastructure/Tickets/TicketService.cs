@@ -64,6 +64,7 @@ public class TicketService : ITicketService
     {
         var ticket = await _db.Tickets
             .Include(t => t.Comentarios)
+            .Include(t => t.Eventos)
             .FirstOrDefaultAsync(t => t.Id == ticketId && t.ConsorcioId == consorcioId, ct);
         if (ticket is null) return Result<TicketDetalleDto>.Fail("Ticket no encontrado.");
 
@@ -80,7 +81,12 @@ public class TicketService : ITicketService
                 c.EsInterna))
             .ToList();
 
-        return Result<TicketDetalleDto>.Ok(new TicketDetalleDto(Mapear(ticket, unidad), comentarios));
+        var eventos = ticket.Eventos
+            .OrderBy(e => e.CreadoUtc)
+            .Select(e => new TicketEventoDto(e.Tipo.ToString(), e.Texto, e.ActorNombre, e.CreadoUtc))
+            .ToList();
+
+        return Result<TicketDetalleDto>.Ok(new TicketDetalleDto(Mapear(ticket, unidad), comentarios, eventos));
     }
 
     public async Task<Result<TicketDto>> CrearAsync(Guid consorcioId, CrearTicketDto dto, CancellationToken ct = default)
@@ -126,6 +132,9 @@ public class TicketService : ITicketService
         }
 
         _db.Tickets.Add(ticket);
+        RegistrarEvento(ticket, TipoEventoTicket.Creado, "Reporte creado", ticket.ReportadoPorNombre);
+        if (ticket.AsignadoANombre is { } asig)
+            RegistrarEvento(ticket, TipoEventoTicket.Asignacion, $"Asignado a {asig}", ticket.ReportadoPorNombre);
         await _db.SaveChangesAsync(ct);
         return Result<TicketDto>.Ok(Mapear(ticket, unidadNombre));
     }
@@ -135,11 +144,19 @@ public class TicketService : ITicketService
         var ticket = await _db.Tickets.FirstOrDefaultAsync(t => t.Id == ticketId && t.ConsorcioId == consorcioId, ct);
         if (ticket is null) return Result<TicketDto>.Fail("Ticket no encontrado.");
 
+        var actor = await NombreUsuario(_tenant.UsuarioId, ct) ?? "Administración";
         var ahora = DateTime.UtcNow;
         if (ticket.Estado != dto.Estado)
         {
+            RegistrarEvento(ticket, TipoEventoTicket.CambioEstado,
+                $"Estado cambió de {TicketTextos.Estado(ticket.Estado)} a {TicketTextos.Estado(dto.Estado)}", actor);
             ticket.Estado = dto.Estado;
             ticket.EstadoDesdeUtc = ahora;
+        }
+        if (ticket.Prioridad != dto.Prioridad)
+        {
+            RegistrarEvento(ticket, TipoEventoTicket.CambioPrioridad,
+                $"Prioridad cambió de {TicketTextos.Prioridad(ticket.Prioridad)} a {TicketTextos.Prioridad(dto.Prioridad)}", actor);
         }
         ticket.Prioridad = dto.Prioridad;
 
@@ -147,6 +164,8 @@ public class TicketService : ITicketService
         {
             ticket.AsignadoAUsuarioId = string.IsNullOrWhiteSpace(dto.AsignadoAUsuarioId) ? null : dto.AsignadoAUsuarioId;
             ticket.AsignadoANombre = ticket.AsignadoAUsuarioId is null ? null : await NombreUsuario(ticket.AsignadoAUsuarioId, ct);
+            RegistrarEvento(ticket, TipoEventoTicket.Asignacion,
+                ticket.AsignadoANombre is { } n ? $"Asignado a {n}" : "Se quitó la asignación", actor);
         }
 
         ticket.UltimaActividadUtc = ahora;
@@ -192,11 +211,12 @@ public class TicketService : ITicketService
 
     public async Task<Result> EliminarAsync(Guid consorcioId, Guid ticketId, CancellationToken ct = default)
     {
-        var ticket = await _db.Tickets.Include(t => t.Comentarios)
+        var ticket = await _db.Tickets.Include(t => t.Comentarios).Include(t => t.Eventos)
             .FirstOrDefaultAsync(t => t.Id == ticketId && t.ConsorcioId == consorcioId, ct);
         if (ticket is null) return Result.Fail("Ticket no encontrado.");
 
         _db.TicketComentarios.RemoveRange(ticket.Comentarios);
+        _db.TicketEventos.RemoveRange(ticket.Eventos);
         _db.Tickets.Remove(ticket);
         await _db.SaveChangesAsync(ct);
         return Result.Ok();
@@ -226,11 +246,25 @@ public class TicketService : ITicketService
             UltimaActividadUtc = ahora,
         };
         _db.Tickets.Add(ticket);
+        RegistrarEvento(ticket, TipoEventoTicket.Creado, "Reporte creado", ticket.ReportadoPorNombre);
         await _db.SaveChangesAsync(ct);
         return Result<int>.Ok(ticket.Numero);
     }
 
     // ---- helpers ----
+
+    private void RegistrarEvento(Ticket ticket, TipoEventoTicket tipo, string texto, string? actorNombre)
+    {
+        _db.TicketEventos.Add(new TicketEvento
+        {
+            TicketId = ticket.Id,
+            AdministradorId = ticket.AdministradorId,
+            Tipo = tipo,
+            Texto = texto,
+            ActorUsuarioId = _tenant.UsuarioId,
+            ActorNombre = actorNombre,
+        });
+    }
 
     private async Task<int> ProximoNumero(Guid consorcioId, CancellationToken ct) =>
         (await _db.Tickets.Where(t => t.ConsorcioId == consorcioId)

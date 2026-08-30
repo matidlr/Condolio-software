@@ -87,9 +87,14 @@
             <div class="td-card">
               <h3>📈 Actividad reciente</h3>
               <ul class="td-timeline">
-                <li><b>Reporte creado</b><small>{{ d.ticket.reportadoUtc | date:'d MMM y, HH:mm' }}</small></li>
-                @for (c of d.comentarios; track c.fechaUtc) {
-                  <li><b>{{ c.autor }}: {{ c.texto }}</b><small>{{ c.fechaUtc | date:'d MMM y, HH:mm' }}</small></li>
+                @for (it of timeline(); track $index) {
+                  <li [class.td-timeline--evt]="it.tipo === 'evento'" [class.td-timeline--int]="it.interna">
+                    <b>
+                      @if (it.tipo === 'comentario') { {{ it.autor }}: }{{ it.texto }}
+                      @if (it.interna) { <span class="td-tl-tag">nota interna</span> }
+                    </b>
+                    <small>{{ it.fechaUtc | date:'d MMM y, HH:mm' }}</small>
+                  </li>
                 }
               </ul>
             </div>

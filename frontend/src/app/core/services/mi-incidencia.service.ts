@@ -30,10 +30,17 @@ export interface IncidenciaAdjunto {
   esImagen: boolean;
 }
 
+export interface IncidenciaEvento {
+  texto: string;
+  tipo: string;
+  fechaUtc: string;
+}
+
 export interface IncidenciaDetalle {
   incidencia: Incidencia;
   mensajes: IncidenciaMensaje[];
   adjuntos: IncidenciaAdjunto[];
+  eventos: IncidenciaEvento[];
 }
 
 export const CATEGORIAS_INCIDENCIA = [

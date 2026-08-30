@@ -32,9 +32,12 @@ public record TicketListaDto(
 
 public record TicketDetalleDto(
     TicketDto Ticket,
-    IReadOnlyList<TicketComentarioDto> Comentarios);
+    IReadOnlyList<TicketComentarioDto> Comentarios,
+    IReadOnlyList<TicketEventoDto> Eventos);
 
 public record TicketComentarioDto(string Texto, string Autor, DateTime FechaUtc, bool EsInterna);
+
+public record TicketEventoDto(string Tipo, string Texto, string? Actor, DateTime FechaUtc);
 
 public record UsuarioAsignableDto(string Id, string Nombre);
 

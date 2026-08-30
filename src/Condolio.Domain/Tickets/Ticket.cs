@@ -75,6 +75,53 @@ public class Ticket : Entity, ITenantOwned
     public DateTime? ArchivadoUtc { get; set; }
 
     public List<TicketComentario> Comentarios { get; set; } = new();
+    public List<TicketEvento> Eventos { get; set; } = new();
+}
+
+/// <summary>Etiquetas legibles (compartidas entre el panel del admin y el portal del residente).</summary>
+public static class TicketTextos
+{
+    public static string Estado(EstadoTicket e) => e switch
+    {
+        EstadoTicket.Nuevo => "Pendiente",
+        EstadoTicket.EnProgreso => "En progreso",
+        EstadoTicket.EsperandoInformacion => "Esperando información",
+        EstadoTicket.PendienteAprobacion => "En revisión",
+        EstadoTicket.Resuelto => "Resuelto",
+        _ => e.ToString(),
+    };
+
+    public static string Prioridad(PrioridadTicket p) => p switch
+    {
+        PrioridadTicket.Baja => "Baja",
+        PrioridadTicket.Media => "Media",
+        PrioridadTicket.Alta => "Alta",
+        PrioridadTicket.Critica => "Crítica",
+        _ => p.ToString(),
+    };
+}
+
+public enum TipoEventoTicket
+{
+    Creado = 0,
+    CambioEstado = 1,
+    Asignacion = 2,
+    CambioPrioridad = 3,
+    ConfirmadoResidente = 4,
+    ReabiertoResidente = 5,
+}
+
+/// <summary>Entrada del historial de un ticket (creación, cambios de estado, asignaciones…).</summary>
+public class TicketEvento : Entity, ITenantOwned
+{
+    public Guid AdministradorId { get; set; }
+    public Guid TicketId { get; set; }
+    public Ticket Ticket { get; set; } = null!;
+    public TipoEventoTicket Tipo { get; set; }
+    /// <summary>Texto ya formateado, p. ej. "Estado cambió de Pendiente a En progreso".</summary>
+    public string Texto { get; set; } = string.Empty;
+    public string? ActorUsuarioId { get; set; }
+    public string? ActorNombre { get; set; }
 }
 
 public class TicketComentario : Entity, ITenantOwned

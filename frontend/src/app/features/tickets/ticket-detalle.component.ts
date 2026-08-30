@@ -47,6 +47,21 @@ export class TicketDetalleComponent {
   private id = this.ruta.snapshot.paramMap.get('id')!;
   private iconCache = new Map<string, SafeHtml>();
 
+  /** Línea de tiempo: eventos + comentarios, ordenados cronológicamente. */
+  timeline = computed(() => {
+    const d = this.detalle();
+    if (!d) return [] as { tipo: 'evento' | 'comentario'; texto: string; autor?: string; interna: boolean; fechaUtc: string }[];
+    const items = [
+      ...d.eventos.map((e) => ({
+        tipo: 'evento' as const, texto: e.texto, autor: e.actor ?? undefined, interna: false, fechaUtc: e.fechaUtc,
+      })),
+      ...d.comentarios.map((c) => ({
+        tipo: 'comentario' as const, texto: c.texto, autor: c.autor, interna: c.esInterna, fechaUtc: c.fechaUtc,
+      })),
+    ];
+    return items.sort((a, b) => a.fechaUtc.localeCompare(b.fechaUtc));
+  });
+
   /** Rótulo humano del estado en el panel derecho. */
   estadoTitulo = computed(() => {
     const e = this.detalle()?.ticket.estado;

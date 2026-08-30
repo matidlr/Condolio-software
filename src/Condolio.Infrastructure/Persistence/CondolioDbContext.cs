@@ -49,6 +49,7 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Invitacion> Invitaciones => Set<Invitacion>();
     public DbSet<Ticket> Tickets => Set<Ticket>();
     public DbSet<TicketComentario> TicketComentarios => Set<TicketComentario>();
+    public DbSet<TicketEvento> TicketEventos => Set<TicketEvento>();
     public DbSet<Amenidad> Amenidades => Set<Amenidad>();
     public DbSet<AmenidadHorario> AmenidadHorarios => Set<AmenidadHorario>();
     public DbSet<Reserva> Reservas => Set<Reserva>();
@@ -204,6 +205,7 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
             e.HasIndex(x => new { x.AdministradorId, x.ConsorcioId, x.Estado });
             e.HasIndex(x => new { x.ConsorcioId, x.Numero }).IsUnique();
             e.HasMany(x => x.Comentarios).WithOne(x => x.Ticket).HasForeignKey(x => x.TicketId);
+            e.HasMany(x => x.Eventos).WithOne(x => x.Ticket).HasForeignKey(x => x.TicketId);
             e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
         });
 
@@ -211,6 +213,15 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
         {
             e.Property(x => x.Texto).HasMaxLength(2000).IsRequired();
             e.Property(x => x.AutorUsuarioId).HasMaxLength(450).IsRequired();
+            e.HasIndex(x => new { x.AdministradorId, x.TicketId });
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
+        });
+
+        builder.Entity<TicketEvento>(e =>
+        {
+            e.Property(x => x.Texto).HasMaxLength(500).IsRequired();
+            e.Property(x => x.ActorUsuarioId).HasMaxLength(450);
+            e.Property(x => x.ActorNombre).HasMaxLength(200);
             e.HasIndex(x => new { x.AdministradorId, x.TicketId });
             e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
         });

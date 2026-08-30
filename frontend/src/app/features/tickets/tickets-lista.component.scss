@@ -201,6 +201,13 @@
 }
 .td-timeline b { display: block; font-size: 0.85rem; font-weight: 500; }
 .td-timeline small { color: var(--c-text-soft); font-size: 0.76rem; }
+.td-timeline--evt::before { background: #7c3aed; }
+.td-timeline--evt b { color: #6d28d9; }
+.td-timeline--int::before { background: #d97706; }
+.td-tl-tag {
+  font-size: 0.66rem; font-weight: 700; text-transform: uppercase; margin-left: 6px;
+  background: #fef3c7; color: #92400e; padding: 1px 6px; border-radius: 999px;
+}
 
 .td-coment { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--c-border); }
 .td-coment:last-of-type { border-bottom: none; }

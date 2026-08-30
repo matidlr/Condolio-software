@@ -56,10 +56,13 @@ public record IncidenciaMensajeDto(string Texto, string Autor, bool EsAdministra
 
 public record IncidenciaAdjuntoDto(Guid Id, string Nombre, string ContentType, bool EsImagen);
 
+public record IncidenciaEventoDto(string Texto, string Tipo, DateTime FechaUtc);
+
 public record IncidenciaDetalleResidenteDto(
     IncidenciaResidenteDto Incidencia,
     IReadOnlyList<IncidenciaMensajeDto> Mensajes,
-    IReadOnlyList<IncidenciaAdjuntoDto> Adjuntos);
+    IReadOnlyList<IncidenciaAdjuntoDto> Adjuntos,
+    IReadOnlyList<IncidenciaEventoDto> Eventos);
 
 public record ArchivoSubidaDto(string Nombre, string ContentType, long Tamano, Stream Contenido);
 

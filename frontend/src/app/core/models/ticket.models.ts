@@ -82,9 +82,17 @@ export interface TicketComentario {
   esInterna: boolean;
 }
 
+export interface TicketEvento {
+  tipo: string;
+  texto: string;
+  actor?: string | null;
+  fechaUtc: string;
+}
+
 export interface TicketDetalle {
   ticket: Ticket;
   comentarios: TicketComentario[];
+  eventos: TicketEvento[];
 }
 
 export interface UsuarioAsignable {

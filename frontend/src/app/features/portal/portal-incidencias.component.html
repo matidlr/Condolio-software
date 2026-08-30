@@ -164,17 +164,20 @@
 
           <div class="pi-timeline">
             <h4>🕐 Línea de tiempo</h4>
-            <div class="pi-evt">
-              <span class="pi-evt__ic">ⓘ</span>
-              <b>Reporte creado</b>
-              <small>{{ hace(d.incidencia.creadoUtc) }}</small>
-            </div>
-            @for (m of d.mensajes; track $index) {
-              <div class="pi-msg" [class.is-mine]="!m.esAdministracion">
-                @if (m.esAdministracion) { <span class="pi-msg__from">Administración</span> }
-                <p>{{ m.texto }}</p>
-                <small>{{ m.fechaUtc | date:'HH:mm' }}</small>
-              </div>
+            @for (it of timeline(); track $index) {
+              @if (it.tipo === 'evento') {
+                <div class="pi-evt" [class.pi-evt--move]="!it.texto.startsWith('Reporte creado')">
+                  <span class="pi-evt__ic">{{ it.texto.startsWith('Reporte creado') ? 'ⓘ' : '↻' }}</span>
+                  <b>{{ it.texto }}</b>
+                  <small>{{ it.fechaUtc | date:'d MMM, HH:mm' }}</small>
+                </div>
+              } @else {
+                <div class="pi-msg" [class.is-mine]="!it.esAdmin">
+                  @if (it.esAdmin) { <span class="pi-msg__from">Administración</span> }
+                  <p>{{ it.texto }}</p>
+                  <small>{{ it.fechaUtc | date:'HH:mm' }}</small>
+                </div>
+              }
             }
           </div>
 

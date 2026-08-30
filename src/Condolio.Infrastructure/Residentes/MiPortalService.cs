@@ -485,7 +485,13 @@ public class MiPortalService : IMiPortalService
             .Select(a => new IncidenciaAdjuntoDto(a.Id, a.NombreArchivo, a.ContentType, a.ContentType.StartsWith("image/")))
             .ToListAsync(ct);
 
-        return Result<IncidenciaDetalleResidenteDto>.Ok(new IncidenciaDetalleResidenteDto(dto, mensajes, adjuntos));
+        var eventos = await _db.TicketEventos.IgnoreQueryFilters()
+            .Where(e => e.TicketId == ticketId)
+            .OrderBy(e => e.CreadoUtc)
+            .Select(e => new IncidenciaEventoDto(e.Texto, e.Tipo.ToString(), e.CreadoUtc))
+            .ToListAsync(ct);
+
+        return Result<IncidenciaDetalleResidenteDto>.Ok(new IncidenciaDetalleResidenteDto(dto, mensajes, adjuntos, eventos));
     }
 
     public async Task<Result<IncidenciaResidenteDto>> CrearIncidenciaAsync(string usuarioId, CrearIncidenciaResidenteDto dto, CancellationToken ct = default)
@@ -517,6 +523,15 @@ public class MiPortalService : IMiPortalService
             EstadoDesdeUtc = DateTime.UtcNow,
         };
         _db.Tickets.Add(t);
+        _db.TicketEventos.Add(new TicketEvento
+        {
+            TicketId = t.Id,
+            AdministradorId = o.AdministradorId,
+            Tipo = TipoEventoTicket.Creado,
+            Texto = "Reporte creado",
+            ActorUsuarioId = usuarioId,
+            ActorNombre = t.ReportadoPorNombre,
+        });
         await _db.SaveChangesAsync(ct);
 
         foreach (var archivo in dto.Archivos ?? Array.Empty<ArchivoSubidaDto>())
@@ -584,6 +599,15 @@ public class MiPortalService : IMiPortalService
             AutorUsuarioId = usuarioId,
             EsInterna = false,
         });
+        _db.TicketEventos.Add(new TicketEvento
+        {
+            TicketId = t.Id,
+            AdministradorId = t.AdministradorId,
+            Tipo = TipoEventoTicket.ConfirmadoResidente,
+            Texto = "El residente confirmó la resolución · Estado: Resuelto",
+            ActorUsuarioId = usuarioId,
+            ActorNombre = t.ReportadoPorNombre,
+        });
         await _db.SaveChangesAsync(ct);
 
         await _notificaciones.CrearAsync(t.ConsorcioId, TipoNotificacion.NuevoTicket,
@@ -614,6 +638,15 @@ public class MiPortalService : IMiPortalService
             Texto = texto,
             AutorUsuarioId = usuarioId,
             EsInterna = false,
+        });
+        _db.TicketEventos.Add(new TicketEvento
+        {
+            TicketId = t.Id,
+            AdministradorId = t.AdministradorId,
+            Tipo = TipoEventoTicket.ReabiertoResidente,
+            Texto = "El residente reabrió el reporte · Estado: En progreso",
+            ActorUsuarioId = usuarioId,
+            ActorNombre = t.ReportadoPorNombre,
         });
         await _db.SaveChangesAsync(ct);
 

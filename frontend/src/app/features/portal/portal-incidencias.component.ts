@@ -48,6 +48,17 @@ export class PortalIncidenciasComponent {
   filtradas = computed(() =>
     this.incidencias().filter((i) => this.tab() === 'activo' ? i.estado !== 'Resuelto' : i.estado === 'Resuelto'));
 
+  /** Eventos + mensajes de la incidencia, ordenados cronológicamente. */
+  timeline = computed(() => {
+    const d = this.detalle();
+    if (!d) return [] as { tipo: 'evento' | 'mensaje'; texto: string; esAdmin: boolean; fechaUtc: string }[];
+    const items = [
+      ...d.eventos.map((e) => ({ tipo: 'evento' as const, texto: e.texto, esAdmin: false, fechaUtc: e.fechaUtc })),
+      ...d.mensajes.map((m) => ({ tipo: 'mensaje' as const, texto: m.texto, esAdmin: m.esAdministracion, fechaUtc: m.fechaUtc })),
+    ];
+    return items.sort((a, b) => a.fechaUtc.localeCompare(b.fechaUtc));
+  });
+
   constructor() {
     this.cargar();
   }
