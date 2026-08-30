@@ -65,7 +65,9 @@ export class CalendarioComponent {
     const primero = new Date(base.getFullYear(), base.getMonth(), 1);
     const arranque = new Date(primero);
     arranque.setDate(1 - ((primero.getDay() + 6) % 7));
-    const hoy = new Date().toISOString().slice(0, 10);
+    const fechaLocal = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const hoy = fechaLocal(new Date());
     const porDia = new Map<string, Evento[]>();
     for (const e of this.visibles()) {
       const k = e.inicioUtc.slice(0, 10);
@@ -75,7 +77,7 @@ export class CalendarioComponent {
     for (let i = 0; i < 42; i++) {
       const d = new Date(arranque);
       d.setDate(arranque.getDate() + i);
-      const fecha = d.toISOString().slice(0, 10);
+      const fecha = fechaLocal(d);
       celdas.push({
         fecha, dia: d.getDate(),
         otroMes: d.getMonth() !== base.getMonth(),
@@ -94,7 +96,10 @@ export class CalendarioComponent {
     const base = this.mes();
     const desde = new Date(base.getFullYear(), base.getMonth() - 1, 1);
     const hasta = new Date(base.getFullYear(), base.getMonth() + 2, 1);
-    return { desde: desde.toISOString(), hasta: hasta.toISOString() };
+    // Fechas naive en hora local (el sistema guarda datetimes sin zona; ver convención de zona horaria).
+    const fmt = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T00:00:00`;
+    return { desde: fmt(desde), hasta: fmt(hasta) };
   }
 
   private cargar(cid: string): void {
@@ -124,7 +129,8 @@ export class CalendarioComponent {
 
   // ---- modal ----
   abrirNuevo(fecha?: string): void {
-    const f = fecha ?? new Date().toISOString().slice(0, 10);
+    const n = new Date();
+    const f = fecha ?? `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
     this.editId.set(null);
     this.fTitulo.set(''); this.fDesc.set(''); this.fUbicacion.set('');
     this.fCategoria.set('General'); this.fTodoElDia.set(false); this.fNotificar.set(false);
@@ -141,11 +147,13 @@ export class CalendarioComponent {
     this.fCategoria.set(e.categoria);
     this.fTodoElDia.set(e.todoElDia);
     this.fNotificar.set(e.notificoComunidad);
-    const ini = new Date(e.inicioUtc), fin = new Date(e.finUtc);
-    this.fFechaIni.set(ini.toISOString().slice(0, 10));
-    this.fFechaFin.set(fin.toISOString().slice(0, 10));
-    this.fHoraIni.set(ini.toTimeString().slice(0, 5));
-    this.fHoraFin.set(fin.toTimeString().slice(0, 5));
+    // e.inicioUtc / e.finUtc son strings naive "YYYY-MM-DDTHH:mm:ss": se parsean sin Date para evitar corrimiento de zona.
+    const [fIni, hIni = '08:00'] = e.inicioUtc.split('T');
+    const [fFin, hFin = '09:00'] = e.finUtc.split('T');
+    this.fFechaIni.set(fIni);
+    this.fFechaFin.set(fFin);
+    this.fHoraIni.set(hIni.slice(0, 5));
+    this.fHoraFin.set(hFin.slice(0, 5));
     this.modalAbierto.set(true);
   }
 
@@ -155,15 +163,16 @@ export class CalendarioComponent {
     const cid = this.consorcioId();
     if (!cid || !this.puedeGuardar()) return;
     this.guardando.set(true);
-    const ini = new Date(`${this.fFechaIni()}T${this.fTodoElDia() ? '00:00' : this.fHoraIni()}:00`);
-    const fin = new Date(`${this.fFechaFin()}T${this.fTodoElDia() ? '23:59' : this.fHoraFin()}:00`);
+    // Naive local: el backend guarda el datetime tal cual, sin conversión de zona.
+    const ini = `${this.fFechaIni()}T${this.fTodoElDia() ? '00:00' : this.fHoraIni()}:00`;
+    const fin = `${this.fFechaFin()}T${this.fTodoElDia() ? '23:59' : this.fHoraFin()}:00`;
     const body = {
       titulo: this.fTitulo().trim(),
       descripcion: this.fDesc().trim() || null,
       ubicacion: this.fUbicacion().trim() || null,
       categoria: this.fCategoria(),
-      inicioUtc: ini.toISOString(),
-      finUtc: fin.toISOString(),
+      inicioUtc: ini,
+      finUtc: fin,
       todoElDia: this.fTodoElDia(),
       notificarComunidad: this.fNotificar(),
     };

@@ -67,17 +67,27 @@ export interface Encuesta {
   totalVotantes: number;
   yoVote: boolean;
   opciones: OpcionResultado[];
+  creadoUtc: string;
 }
 
 export interface Votante {
   nombre: string;
   opcion: string;
   fechaUtc: string;
+  unidad: string;
+}
+
+export interface VotoUnidad {
+  unidad: string;
+  votos: number;
+  votantes: string[];
 }
 
 export interface EncuestaDetalle {
   encuesta: Encuesta;
   votantes: Votante[];
+  unidadesTotales: number;
+  votosPorUnidad: VotoUnidad[];
 }
 
 export interface EstadisticasEncuestas {

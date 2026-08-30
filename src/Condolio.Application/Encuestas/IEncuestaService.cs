@@ -20,11 +20,18 @@ public record EncuestaDto(
     int TotalVotos,
     int TotalVotantes,
     bool YoVote,
-    IReadOnlyList<OpcionResultadoDto> Opciones);
+    IReadOnlyList<OpcionResultadoDto> Opciones,
+    DateTime CreadoUtc);
 
-public record VotanteDto(string Nombre, string Opcion, DateTime FechaUtc);
+public record VotanteDto(string Nombre, string Opcion, DateTime FechaUtc, string Unidad);
 
-public record EncuestaDetalleDto(EncuestaDto Encuesta, IReadOnlyList<VotanteDto> Votantes);
+public record VotoUnidadDto(string Unidad, int Votos, IReadOnlyList<string> Votantes);
+
+public record EncuestaDetalleDto(
+    EncuestaDto Encuesta,
+    IReadOnlyList<VotanteDto> Votantes,
+    int UnidadesTotales,
+    IReadOnlyList<VotoUnidadDto> VotosPorUnidad);
 
 public record EstadisticasEncuestasDto(int Total, int Activas, int Borradores, int Cerradas, int TotalVotos);
 

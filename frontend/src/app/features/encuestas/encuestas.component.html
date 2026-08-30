@@ -73,13 +73,14 @@
           </div>
 
           @for (e of g.items; track e.id) {
-            <article class="enc-card">
+            <article class="enc-card" (click)="abrirDetalle(e)">
               <div class="enc-card__top">
                 <span class="enc-card__ic">{{ iconCat[e.categoria] }}</span>
                 <div class="enc-card__head">
-                  <b (click)="abrirDetalle(e)">{{ e.titulo }}</b>
+                  <b>{{ e.titulo }}</b>
                   <span class="enc-badge" [style.color]="metaEstado[e.estado].color"
-                    [style.background]="metaEstado[e.estado].color + '1f'">● {{ metaEstado[e.estado].label }}</span>
+                    [style.background]="metaEstado[e.estado].color + '1f'">
+                    <span class="enc-badge__dot" [class.is-live]="e.estado === 'Activa'"></span>{{ metaEstado[e.estado].label }}</span>
                 </div>
                 <div class="enc-card__menu" (click)="$event.stopPropagation()">
                   <button type="button" class="enc-kebab" (click)="menu.set(menu() === e.id ? null : e.id)">⋮</button>
@@ -106,7 +107,7 @@
 
               @if (e.descripcion) { <p class="enc-card__desc">{{ e.descripcion }}</p> }
 
-              <div class="enc-opts">
+              <div class="enc-opts" (click)="$event.stopPropagation()">
                 @for (o of e.opciones; track o.id) {
                   <button type="button" class="enc-opt"
                     [class.is-elegida]="opcionElegida(e.id, o.id)"
@@ -131,13 +132,14 @@
               }
 
               @if (puedeVotar(e)) {
-                <button type="button" class="btn btn--primary enc-votar" (click)="votar(e)">Votar</button>
+                <button type="button" class="btn btn--primary enc-votar"
+                  (click)="$event.stopPropagation(); votar(e)">Votar</button>
               }
 
               <div class="enc-card__foot">
                 <span>📅 {{ rango(e) }}</span>
                 <span>👥 {{ e.totalVotos }} voto{{ e.totalVotos === 1 ? '' : 's' }}</span>
-                <button type="button" class="enc-card__link" (click)="abrirDetalle(e)">⏱ {{ textoCierre(e) }} ›</button>
+                <span class="enc-card__link">⏱ {{ textoCierre(e) }} ›</span>
               </div>
             </article>
           }
@@ -146,54 +148,6 @@
     </div>
   </div>
 </section>
-
-<!-- ===== detalle ===== -->
-@if (detalle(); as d) {
-  <div class="enc-overlay" (click)="detalle.set(null)">
-    <div class="enc-modal" (click)="$event.stopPropagation()">
-      <header>
-        <div>
-          <h3>{{ d.encuesta.titulo }}</h3>
-          <span class="enc-badge" [style.color]="metaEstado[d.encuesta.estado].color"
-            [style.background]="metaEstado[d.encuesta.estado].color + '1f'">● {{ metaEstado[d.encuesta.estado].label }}</span>
-        </div>
-        <button type="button" (click)="detalle.set(null)">✕</button>
-      </header>
-      @if (d.encuesta.descripcion) { <p class="enc-modal__desc">{{ d.encuesta.descripcion }}</p> }
-
-      <div class="enc-opts enc-opts--result">
-        @for (o of d.encuesta.opciones; track o.id) {
-          <div class="enc-opt is-result">
-            <span class="enc-opt__fill" [style.width.%]="o.porcentaje"></span>
-            <span class="enc-opt__txt">{{ o.texto }} @if (o.yoVote) { <span class="enc-opt__me">tu voto</span> }</span>
-            <span class="enc-opt__pct">{{ o.votos }} · {{ o.porcentaje | number:'1.0-0' }}%</span>
-          </div>
-        }
-      </div>
-
-      <div class="enc-modal__meta">
-        <span>👥 {{ d.encuesta.totalVotantes }} votante(s) · {{ d.encuesta.totalVotos }} voto(s)</span>
-        <span>{{ d.encuesta.anonima ? '🕶 Anónima' : '👁 Con nombre' }}</span>
-        <span>{{ d.encuesta.multiplesOpciones ? 'Selección múltiple' : 'Opción única' }}</span>
-      </div>
-
-      @if (!d.encuesta.anonima && d.votantes.length) {
-        <p class="enc-modal__label">Votos</p>
-        <div class="enc-votantes">
-          @for (v of d.votantes; track $index) {
-            <div class="enc-votante">
-              <b>{{ v.nombre }}</b>
-              <span>{{ v.opcion }}</span>
-              <small>{{ v.fechaUtc | date:'d MMM, HH:mm' }}</small>
-            </div>
-          }
-        </div>
-      } @else if (d.encuesta.anonima) {
-        <p class="enc-modal__anon">Esta encuesta es anónima: no se muestran los nombres de los votantes.</p>
-      }
-    </div>
-  </div>
-}
 
 <!-- ===== crear / editar (asistente) ===== -->
 @if (form(); as f) {

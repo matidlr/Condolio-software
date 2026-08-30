@@ -198,6 +198,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/encuestas/encuestas.component').then((m) => m.EncuestasComponent),
       },
+      {
+        path: 'encuestas/:id',
+        loadComponent: () =>
+          import('./features/encuestas/encuesta-detalle.component').then((m) => m.EncuestaDetalleComponent),
+      },
       { path: 'amenidades', pathMatch: 'full', redirectTo: 'amenidades/directorio' },
       {
         path: 'amenidades/directorio',

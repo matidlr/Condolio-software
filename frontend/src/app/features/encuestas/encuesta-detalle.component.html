@@ -1,0 +1,219 @@
+<section class="ed">
+  <header class="ed-top">
+    <button type="button" class="ed-top__back" (click)="volver()" aria-label="Volver">←</button>
+    <div class="ed-top__ttl">
+      <h1>Detalles de la encuesta</h1>
+      <p>{{ encuesta()?.titulo }}</p>
+    </div>
+    <button type="button" class="ed-top__x" (click)="volver()" aria-label="Cerrar">✕</button>
+  </header>
+
+  @if (cargando()) {
+    <p class="ed-loading">Cargando…</p>
+  } @else {
+    @if (detalle()!; as d) {
+      <div class="ed-stats">
+        <article class="ed-stat">
+          <span class="ed-stat__dot" [class.is-live]="d.encuesta.estado === 'Activa'"
+            [style.background]="metaEstado[d.encuesta.estado].color"></span>
+          <div>
+            <b>{{ metaEstado[d.encuesta.estado].label }}</b>
+            <small>Estado</small>
+          </div>
+        </article>
+        <article class="ed-stat">
+          <span class="ed-stat__ic ed-stat__ic--u">👥</span>
+          <div><b>{{ d.encuesta.totalVotos }}</b><small>Total de votos</small></div>
+        </article>
+        <article class="ed-stat">
+          <span class="ed-stat__ic ed-stat__ic--p">📊</span>
+          <div><b>{{ tasaParticipacion() }}%</b><small>Tasa de participación</small></div>
+        </article>
+        <article class="ed-stat">
+          <span class="ed-stat__ic ed-stat__ic--t">⏱</span>
+          <div><b>{{ tiempoRestante() }}</b><small>Tiempo restante</small></div>
+        </article>
+      </div>
+
+      <div class="ed-grid">
+        <!-- ===== Acciones ===== -->
+        <aside class="ed-col">
+          <article class="ed-card ed-acc">
+            <h2>⚡ Acciones</h2>
+            <p class="ed-acc__ttl">{{ d.encuesta.titulo }}</p>
+            <p class="ed-acc__meta">⚏ {{ d.encuesta.opciones.length }} opciones</p>
+            <p class="ed-acc__meta">📅 {{ d.encuesta.creadoUtc | date:'d MMM, y' }}</p>
+            <p class="ed-acc__estado">
+              <span class="ed-stat__dot" [class.is-live]="d.encuesta.estado === 'Activa'"
+                [style.background]="metaEstado[d.encuesta.estado].color"></span>
+              {{ metaEstado[d.encuesta.estado].label }}
+            </p>
+
+            @if (d.encuesta.estado === 'Activa') {
+              <button type="button" class="ed-btn ed-btn--warn" (click)="confirmCerrar.set(true)">
+                ⊗ Cerrar encuesta
+              </button>
+            } @else if (d.encuesta.estado === 'Cerrada') {
+              <button type="button" class="ed-btn ed-btn--ghost" (click)="cambiarEstado('Activa')">
+                ↻ Reabrir encuesta
+              </button>
+            } @else {
+              <button type="button" class="ed-btn ed-btn--primary" (click)="cambiarEstado('Activa')">
+                ▶ Publicar encuesta
+              </button>
+            }
+
+            <div class="ed-export">
+              <button type="button" class="ed-btn ed-btn--ghost" (click)="toggleExport($event)">
+                <span>🖹 Exportar resultados</span><span>⌄</span>
+              </button>
+              @if (exportAbierto()) {
+                <div class="ed-export__menu" (click)="$event.stopPropagation()">
+                  <button type="button" (click)="exportar('basico')">Resultados básicos (CSV)</button>
+                  <button type="button" (click)="exportar('detallado')">Resultados detallados con votantes</button>
+                  <button type="button" (click)="exportar('agrupado')">Votantes agrupados por opción</button>
+                </div>
+              }
+            </div>
+          </article>
+        </aside>
+
+        <!-- ===== Resultados ===== -->
+        <div class="ed-col">
+          <article class="ed-card ed-res">
+            <h2 class="ed-res__ttl">{{ d.encuesta.titulo }}</h2>
+            @if (d.encuesta.descripcion) { <p class="ed-res__desc">{{ d.encuesta.descripcion }}</p> }
+
+            <div class="ed-opts">
+              @for (o of d.encuesta.opciones; track o.id) {
+                <div class="ed-opt" [class.is-win]="o.id === ganadoraId()">
+                  <div class="ed-opt__row">
+                    <span class="ed-opt__name">
+                      @if (o.id === ganadoraId()) { <span class="ed-opt__crown">👑</span> }
+                      {{ o.texto }}
+                    </span>
+                    <span class="ed-opt__u">{{ unidadLabel(o.votos) }}</span>
+                    <span class="ed-opt__pct">{{ o.porcentaje | number:'1.2-2' }}%</span>
+                  </div>
+                  <div class="ed-opt__bar"><span [style.width.%]="o.porcentaje"></span></div>
+                </div>
+              }
+            </div>
+          </article>
+
+          <article class="ed-card ed-units">
+            <button type="button" class="ed-units__head" (click)="unidadesAbierto.set(!unidadesAbierto())">
+              <span>🏠 Votos por unidad <b class="ed-pill">{{ d.votosPorUnidad.length }}</b></span>
+              <span>{{ unidadesAbierto() ? '⌃' : '⌄' }}</span>
+            </button>
+            @if (unidadesAbierto()) {
+              @if (d.votosPorUnidad.length) {
+                <div class="ed-units__grid">
+                  @for (u of d.votosPorUnidad; track u.unidad) {
+                    <div class="ed-unit">
+                      <div class="ed-unit__top"><b>{{ u.unidad }}</b><span>{{ u.votos }}</span></div>
+                      @if (u.votantes.length) {
+                        <small>{{ u.votantes.join(', ') }}</small>
+                      } @else {
+                        <small class="ed-unit__anon">Voto anónimo</small>
+                      }
+                    </div>
+                  }
+                </div>
+              } @else {
+                <p class="ed-units__empty">Todavía no hay votos.</p>
+              }
+            }
+          </article>
+        </div>
+
+        <!-- ===== Info + Configuración ===== -->
+        <aside class="ed-col">
+          <article class="ed-card ed-info">
+            <h2>Detalles de la encuesta</h2>
+            <div class="ed-info__row">
+              <small>📅 Período de encuesta</small>
+              <b>
+                {{ d.encuesta.publicadaUtc ? (d.encuesta.publicadaUtc | date:'d MMM, y') : 'Sin publicar' }}
+                @if (d.encuesta.cierreUtc) { → {{ d.encuesta.cierreUtc | date:'d MMM, y' }} }
+              </b>
+            </div>
+            <div class="ed-info__row">
+              <small>👥 Total de votos</small>
+              <b>{{ d.encuesta.totalVotos }}</b>
+            </div>
+            <div class="ed-info__row">
+              <small>🕐 Creado el</small>
+              <b>{{ d.encuesta.creadoUtc | date:'d MMM, y' }}</b>
+            </div>
+          </article>
+
+          <article class="ed-card ed-info">
+            <h2>Configuración</h2>
+            <div class="ed-info__row">
+              <small>◫ Tipo de encuesta</small>
+              <b>{{ d.encuesta.multiplesOpciones ? 'Opción múltiple' : 'Opción única' }}</b>
+            </div>
+            <div class="ed-info__row">
+              <small>🏠 Modo de votación</small>
+              <span class="ed-chip">{{ labelModo[d.encuesta.modoVotacion] }}</span>
+            </div>
+            <div class="ed-info__row">
+              <small>🏷 Categoría</small>
+              <b>{{ iconCat[d.encuesta.categoria] }} {{ labelCat[d.encuesta.categoria] }}</b>
+            </div>
+            <div class="ed-info__row">
+              <small>👁 Visibilidad</small>
+              <b>Todos los residentes</b>
+            </div>
+            <div class="ed-info__row">
+              <small>👁 Permitir votación anónima</small>
+              <b>{{ d.encuesta.anonima ? 'Sí' : 'No' }}</b>
+            </div>
+            <div class="ed-info__row">
+              <small>📊 Visibilidad de resultados</small>
+              <b>Siempre</b>
+            </div>
+          </article>
+
+          <button type="button" class="ed-btn ed-btn--danger" (click)="confirmEliminar.set(true)">
+            🗑 Eliminar
+          </button>
+        </aside>
+      </div>
+    } @else {
+      <div class="ed-loading">
+        <p>No encontramos esta encuesta.</p>
+        <button type="button" class="ed-btn ed-btn--ghost" (click)="volver()">Volver a encuestas</button>
+      </div>
+    }
+  }
+</section>
+
+@if (confirmCerrar()) {
+  <div class="ed-overlay" (click)="confirmCerrar.set(false)">
+    <div class="ed-dialog" (click)="$event.stopPropagation()">
+      <h3>Cerrar encuesta</h3>
+      <p>Al cerrar esta encuesta, dejará de aceptar votos.</p>
+      <div class="ed-dialog__foot">
+        <button type="button" class="ed-btn ed-btn--ghost" (click)="confirmCerrar.set(false)">Cancelar</button>
+        <button type="button" class="ed-btn ed-btn--navy" [disabled]="procesando()"
+          (click)="cambiarEstado('Cerrada')">Cerrar encuesta</button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (confirmEliminar()) {
+  <div class="ed-overlay" (click)="confirmEliminar.set(false)">
+    <div class="ed-dialog" (click)="$event.stopPropagation()">
+      <h3>Eliminar encuesta</h3>
+      <p>Esta acción no se puede deshacer. Se borrarán la encuesta y todos sus votos.</p>
+      <div class="ed-dialog__foot">
+        <button type="button" class="ed-btn ed-btn--ghost" (click)="confirmEliminar.set(false)">Cancelar</button>
+        <button type="button" class="ed-btn ed-btn--danger" [disabled]="procesando()"
+          (click)="eliminar()">Eliminar</button>
+      </div>
+    </div>
+  </div>
+}

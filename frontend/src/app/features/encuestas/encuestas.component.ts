@@ -1,11 +1,12 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe, DecimalPipe } from '@angular/common';
+import { Router } from '@angular/router';
 import { ConsorcioService } from '../../core/services/consorcio.service';
 import { EncuestaService } from '../../core/services/encuesta.service';
 import { ToastService } from '../../core/services/toast.service';
 import {
-  CATEGORIAS_ENCUESTA, CategoriaEncuesta, DURACIONES, DuracionPreset, Encuesta, EncuestaDetalle,
+  CATEGORIAS_ENCUESTA, CategoriaEncuesta, DURACIONES, DuracionPreset, Encuesta,
   EstadisticasEncuestas, EstadoEncuesta, ICON_CAT_ENCUESTA, LABEL_CAT_ENCUESTA, LABEL_MODO_VOTO,
   META_ESTADO, MODOS_VOTO, ModoVotacion,
 } from '../../core/models/encuesta.models';
@@ -24,6 +25,7 @@ export class EncuestasComponent {
   private consorcios = inject(ConsorcioService);
   private api = inject(EncuestaService);
   private toasts = inject(ToastService);
+  private router = inject(Router);
 
   categorias = CATEGORIAS_ENCUESTA;
   labelCat = LABEL_CAT_ENCUESTA;
@@ -45,9 +47,6 @@ export class EncuestasComponent {
 
   // selección de voto por encuesta (ids de opción)
   seleccion = signal<Record<string, string[]>>({});
-
-  // detalle
-  detalle = signal<EncuestaDetalle | null>(null);
 
   // crear / editar (asistente de 3 pasos)
   form = signal<FormEncuesta | null>(null);
@@ -175,12 +174,7 @@ export class EncuestasComponent {
 
   // ---- acciones ----
   abrirDetalle(e: Encuesta): void {
-    const cid = this.consorcioId();
-    if (!cid) return;
-    this.api.obtener(cid, e.id).subscribe({
-      next: (d) => this.detalle.set(d),
-      error: () => this.toasts.error('No se pudo abrir la encuesta.'),
-    });
+    this.router.navigate(['/panel/encuestas', e.id]);
   }
 
   cambiarEstado(e: Encuesta, estado: EstadoEncuesta): void {

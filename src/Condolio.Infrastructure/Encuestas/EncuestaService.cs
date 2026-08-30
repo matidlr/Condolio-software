@@ -62,16 +62,42 @@ public class EncuestaService : IEncuestaService
         var yo = _tenant.UsuarioId ?? string.Empty;
         var dto = Mapear(e, yo);
 
+        var unidadesTotales = await _db.Unidades.CountAsync(u => u.ConsorcioId == consorcioId, ct);
+
+        var userIds = e.Votos.Select(v => v.UsuarioId).Where(id => !string.IsNullOrEmpty(id)).Distinct().ToList();
+        var personas = await _db.UnidadPersonas.IgnoreQueryFilters()
+            .Where(p => userIds.Contains(p.UsuarioId!) && p.Unidad.ConsorcioId == consorcioId)
+            .Select(p => new { p.UsuarioId, Unidad = p.Unidad.Nombre })
+            .ToListAsync(ct);
+        var mapaUnidad = personas
+            .GroupBy(p => p.UsuarioId!)
+            .ToDictionary(g => g.Key, g => g.First().Unidad);
+
+        string UnidadDe(string uid) => mapaUnidad.TryGetValue(uid, out var u) ? u : "Sin unidad";
+
         var votantes = e.Anonima
             ? new List<VotanteDto>()
             : e.Votos.OrderBy(v => v.CreadoUtc)
                 .Select(v => new VotanteDto(
                     string.IsNullOrWhiteSpace(v.UsuarioNombre) ? "—" : v.UsuarioNombre,
                     e.Opciones.FirstOrDefault(o => o.Id == v.OpcionId)?.Texto ?? "—",
-                    v.CreadoUtc))
+                    v.CreadoUtc,
+                    UnidadDe(v.UsuarioId ?? string.Empty)))
                 .ToList();
 
-        return Result<EncuestaDetalleDto>.Ok(new EncuestaDetalleDto(dto, votantes));
+        var votosPorUnidad = e.Votos
+            .GroupBy(v => UnidadDe(v.UsuarioId ?? string.Empty))
+            .Select(g => new VotoUnidadDto(
+                g.Key,
+                g.Select(v => v.UsuarioId).Distinct().Count(),
+                e.Anonima
+                    ? Array.Empty<string>()
+                    : g.Select(v => string.IsNullOrWhiteSpace(v.UsuarioNombre) ? "—" : v.UsuarioNombre)
+                        .Distinct().OrderBy(n => n).ToList()))
+            .OrderBy(x => x.Unidad)
+            .ToList();
+
+        return Result<EncuestaDetalleDto>.Ok(new EncuestaDetalleDto(dto, votantes, unidadesTotales, votosPorUnidad));
     }
 
     public async Task<Result<EncuestaDto>> CrearAsync(Guid consorcioId, GuardarEncuestaDto dto, CancellationToken ct = default)
@@ -254,6 +280,6 @@ public class EncuestaService : IEncuestaService
             string.IsNullOrWhiteSpace(e.AutorNombre) ? "Administración" : e.AutorNombre,
             totalVotos, votantes,
             !string.IsNullOrEmpty(yo) && e.Votos.Any(v => v.UsuarioId == yo),
-            opciones);
+            opciones, e.CreadoUtc);
     }
 }
