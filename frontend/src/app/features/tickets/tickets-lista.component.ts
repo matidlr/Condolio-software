@@ -505,7 +505,7 @@ export class TicketsListaComponent {
       case 'Nuevo': return [trabajar, info, resolver];
       case 'EnProgreso': return [info, aprob, resolver, pausar];
       case 'EsperandoInformacion': return [trabajar, aprob, resolver];
-      case 'PendienteAprobacion': return [trabajar, resolver, pausar];
+      case 'PendienteAprobacion': return [resolver, trabajar];
       case 'Resuelto': return [{ label: 'Reabrir', icono: '↩', estado: 'EnProgreso' }];
       default: return [trabajar, resolver];
     }
