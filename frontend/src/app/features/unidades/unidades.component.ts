@@ -216,6 +216,12 @@ export class UnidadesComponent {
     if (!t.closest('.u-cols')) this.menuColumnas.set(false);
   }
 
+  /** Clicks dentro del modal de edición masiva no llegan a document (stopPropagation),
+   *  así que cerramos el menú de columnas acá también. */
+  cerrarMenusMasivo(e: MouseEvent): void {
+    if (!(e.target as HTMLElement).closest('.u-cols')) this.menuColumnas.set(false);
+  }
+
   // ---- Edición masiva ----
   abrirMasivo(): void {
     this.menuOpciones.set(false);

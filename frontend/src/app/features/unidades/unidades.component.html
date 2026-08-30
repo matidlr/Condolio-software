@@ -171,11 +171,11 @@
         <form [formGroup]="formUnidad" (ngSubmit)="guardarUnidad()">
           <div class="u-crear">
             <div class="u-crear__form" [hidden]="tabModal() !== 'info'">
-              <div class="field">
+              <div class="field field--narrow">
                 <label for="u-nombre">Nombre de la unidad *</label>
                 <input id="u-nombre" formControlName="nombre" placeholder="ej. 101, A-1, Local 3" />
               </div>
-              <div class="field">
+              <div class="field field--narrow">
                 <label for="u-tipo">Tipo *</label>
                 <select id="u-tipo" formControlName="tipo">
                   @for (t of tipos; track t) { <option [value]="t">{{ t }}</option> }
@@ -280,7 +280,8 @@
   <!-- Modal: importar / exportar -->
   @if (modo() === 'importar') {
     <div class="u-modal-overlay" (click)="cerrarModal()">
-      <div class="u-modal u-modal--wide" (click)="$event.stopPropagation()">
+      <div class="u-modal u-modal--wide u-ie-modal" (click)="$event.stopPropagation()">
+        <button type="button" class="u-modal__x" (click)="cerrarModal()" aria-label="Cerrar">✕</button>
         <h2>Importar / Exportar unidades</h2>
 
         <div class="u-modal-tabs">
@@ -292,26 +293,68 @@
         @if (ieTab() === 'importar') {
           @if (!importPreview() && !importConfirmar()) {
             <div class="u-ie">
-              <div>
+              <div class="u-ie__col">
                 <h3>Cómo funciona</h3>
-                <ol class="u-ie__steps">
-                  <li><strong>Descargá la plantilla</strong> CSV con el formato correcto.
-                    <button type="button" class="btn btn--ghost u-btn" (click)="descargarPlantilla()">Descargar plantilla</button>
+                <ol class="u-steps">
+                  <li class="u-step">
+                    <span class="u-step__n">1</span>
+                    <div class="u-step__body">
+                      <b>Descargá la plantilla</b>
+                      <p>Un archivo CSV de muestra con el formato correcto para importar unidades.</p>
+                      <button type="button" class="btn u-btn u-btn--go" (click)="descargarPlantilla()">
+                        ⬇ Descargar plantilla
+                      </button>
+                    </div>
                   </li>
-                  <li><strong>Editá en Excel/Sheets</strong>: agregá, quitá o modificá unidades y cuotas.</li>
-                  <li><strong>Subí el archivo</strong>. Es un reemplazo completo, no una fusión.
-                    <label class="btn btn--primary u-btn">
-                      Seleccionar archivo CSV
-                      <input type="file" accept=".csv,text/csv" (change)="importarCsv($event)" hidden />
-                    </label>
+                  <li class="u-step">
+                    <span class="u-step__n">2</span>
+                    <div class="u-step__body">
+                      <b>Editá en tu hoja de cálculo</b>
+                      <p>Abrilo en Excel o Google Sheets. Agregá, quitá o modificá unidades y cuotas mensuales.</p>
+                    </div>
+                  </li>
+                  <li class="u-step">
+                    <span class="u-step__n">3</span>
+                    <div class="u-step__body">
+                      <b>Importá los cambios</b>
+                      <p>Subí el archivo para reemplazar todas las unidades existentes. Es un reemplazo completo, no una fusión.</p>
+                      <label class="btn u-btn u-btn--go">
+                        ⬆ Seleccionar archivo CSV
+                        <input type="file" accept=".csv,text/csv" (change)="importarCsv($event)" hidden />
+                      </label>
+                    </div>
                   </li>
                 </ol>
               </div>
-              <div class="u-ie__warn">
-                <strong>Advertencia crítica</strong>
-                Importar reemplaza todas las unidades. Las existentes y sus datos (residentes, notas,
-                incidencias, pagos) se eliminan permanentemente.
+
+              <div class="u-ie__col">
+                <h3>Casos de uso comunes</h3>
+                <div class="u-usecase">
+                  <span class="u-usecase__ic u-usecase__ic--add">＋</span>
+                  <div><b>Configuración inicial</b><p>Cargá todas las unidades al empezar a administrar la propiedad.</p></div>
+                </div>
+                <div class="u-usecase">
+                  <span class="u-usecase__ic u-usecase__ic--upd">↻</span>
+                  <div><b>Actualizaciones masivas</b><p>Actualizá las cuotas mensuales de muchas unidades a la vez.</p></div>
+                </div>
+                <div class="u-usecase">
+                  <span class="u-usecase__ic u-usecase__ic--reo">⇄</span>
+                  <div><b>Reorganización</b><p>Renombrá o reestructurá el sistema de numeración de las unidades.</p></div>
+                </div>
+
+                <div class="u-crit">
+                  <span class="u-crit__ic">⚠</span>
+                  <div>
+                    <b>Advertencia crítica</b>
+                    <p>Esto reemplaza todas las unidades. Las existentes y sus datos (pagos, residentes,
+                      registros de acceso) se eliminan permanentemente.</p>
+                  </div>
+                </div>
               </div>
+            </div>
+
+            <div class="u-modal__actions u-modal__actions--footer">
+              <button type="button" class="btn btn--ghost u-btn" (click)="cerrarModal()">Cancelar</button>
             </div>
           }
 
@@ -391,22 +434,44 @@
 
         <!-- ===== Exportar ===== -->
         @if (ieTab() === 'exportar') {
-          <h3>Qué incluye la exportación</h3>
-          <p>Descargá todas las unidades existentes con sus cuotas mensuales en un CSV que abrís en Excel o Google Sheets.</p>
-          <div class="u-ie__box">
-            <strong>El archivo CSV contiene:</strong>
-            <ul>
-              <li><b>Nombre</b> — el identificador único de cada unidad</li>
-              <li><b>Cuota mensual</b> — el monto de la cuota de mantenimiento recurrente</li>
-              <li><b>% Indiviso</b>, <b>Saldo inicial</b> y <b>Piso</b></li>
-            </ul>
-          </div>
-          <p class="u-ie__note">Las unidades se ordenan alfabéticamente por nombre en el archivo exportado.</p>
-          <p>Se exportarán <strong>{{ unidades().length }}</strong> unidades.</p>
+          <div class="u-export">
+            <h3>Qué incluye la exportación</h3>
+            <p class="u-export__lead">
+              Descargá todas las unidades existentes con sus cuotas mensuales en un archivo CSV
+              que abrís en Excel o Google Sheets.
+            </p>
 
-          <div class="u-modal__actions">
+            <div class="u-export__box">
+              <p class="u-export__box-ttl">El archivo CSV contiene:</p>
+              <ul>
+                <li>
+                  <span class="u-dot"></span>
+                  <div><b>Nombre de unidad</b><span>El identificador único de cada unidad (ej. 101, A-1, Local 3).</span></div>
+                </li>
+                <li>
+                  <span class="u-dot"></span>
+                  <div><b>Cuota mensual</b><span>El monto de la cuota de mantenimiento recurrente de cada unidad.</span></div>
+                </li>
+                <li>
+                  <span class="u-dot"></span>
+                  <div><b>% Indiviso, saldo inicial y piso</b><span>Datos complementarios de cada unidad.</span></div>
+                </li>
+              </ul>
+            </div>
+
+            <div class="u-export__note">
+              <span>ℹ</span>
+              Las unidades se ordenan automáticamente por nombre (alfabético) en el archivo exportado.
+            </div>
+
+            <p class="u-export__count">Se exportarán <strong>{{ unidades().length }}</strong> unidades.</p>
+            <button type="button" class="btn btn--primary u-btn u-export__dl" (click)="exportarCsv()">
+              ⬇ Descargar CSV
+            </button>
+          </div>
+
+          <div class="u-modal__actions u-modal__actions--footer">
             <button type="button" class="btn btn--ghost u-btn" (click)="cerrarModal()">Cancelar</button>
-            <button type="button" class="btn btn--primary u-btn" (click)="exportarCsv()">Descargar CSV</button>
           </div>
         }
       </div>
@@ -416,7 +481,7 @@
   <!-- Modal: edición masiva -->
   @if (modo() === 'masivo') {
     <div class="u-modal-overlay" (click)="cerrarModal()">
-      <div class="u-modal u-modal--full" (click)="$event.stopPropagation()">
+      <div class="u-modal u-modal--full" (click)="cerrarMenusMasivo($event); $event.stopPropagation()">
         <div class="u-masivo__head">
           <div>
             <h2>✎ Edición masiva de unidades</h2>
