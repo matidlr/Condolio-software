@@ -1,0 +1,79 @@
+<section class="pc">
+  <div class="pc-header">
+    <span class="pc-header__ph">{{ inicial(portal.casa()?.consorcioNombre ?? portal.unidadActiva()?.consorcioNombre) }}</span>
+    <div>
+      <h1>{{ portal.casa()?.consorcioNombre ?? portal.unidadActiva()?.consorcioNombre ?? 'Tu comunidad' }}</h1>
+      <p>{{ portal.casa()?.localidad ?? ('Unidad ' + (portal.casa()?.unidadNombre ?? portal.unidadActiva()?.unidadNombre ?? '—')) }}</p>
+    </div>
+  </div>
+
+  <div class="pc-tiles">
+    @for (t of tiles; track t.ruta) {
+      <a class="pc-tile" [routerLink]="t.ruta">
+        @if (t.dot && t.dot()) { <span class="pc-tile__dot"></span> }
+        <span class="pc-tile__ic">{{ t.icon }}</span>
+        <b>{{ t.label }}</b>
+      </a>
+    }
+  </div>
+
+  @if (cargando()) {
+    <p class="pc-loading">Cargando…</p>
+  } @else {
+    <article class="pc-sec">
+      <header>
+        <span class="pc-sec__ic pc-sec__ic--poll">📊</span>
+        <div>
+          <b>Encuestas</b>
+          <small>
+            {{ portal.casa()?.encuestasPendientes?.length
+              ? (portal.casa()!.encuestasPendientes.length + ' encuesta(s) necesitan tu voto')
+              : 'No hay encuestas pendientes' }}
+          </small>
+        </div>
+        <a class="pc-sec__go" routerLink="/portal/encuestas">›</a>
+      </header>
+      @for (e of portal.casa()?.encuestasPendientes ?? []; track e.id) {
+        <a class="pc-sec__row" routerLink="/portal/encuestas">
+          <span class="pc-sec__rowic">📊</span>
+          <b>{{ e.titulo }}</b>
+          @if (e.diasRestantes != null) { <small>🕐 {{ e.diasRestantes }}d</small> }
+        </a>
+      }
+    </article>
+
+    <article class="pc-sec">
+      <header>
+        <span class="pc-sec__ic pc-sec__ic--res">◈</span>
+        <div>
+          <b>Reservas</b>
+          <small>Ver todas las reservas</small>
+        </div>
+        <a class="pc-sec__go" routerLink="/portal/amenidades">›</a>
+      </header>
+      @if (portal.casa()?.reservasProximas?.length) {
+        @for (r of portal.casa()!.reservasProximas; track r.id) {
+          <a class="pc-sec__row" routerLink="/portal/amenidades">
+            <span class="pc-sec__rowic">◈</span>
+            <b>{{ r.amenidad }}</b>
+            <small>{{ r.inicio | date:'d MMM, HH:mm' }}</small>
+          </a>
+        }
+      } @else {
+        <p class="pc-sec__empty">No tenés reservaciones.</p>
+      }
+    </article>
+
+    <article class="pc-sec">
+      <header>
+        <span class="pc-sec__ic pc-sec__ic--box">📦</span>
+        <div>
+          <b>Mis paquetes</b>
+          <small>Ver todos los paquetes</small>
+        </div>
+        <a class="pc-sec__go" routerLink="/portal/paquetes">›</a>
+      </header>
+      <p class="pc-sec__empty">No tenés paquetes esperando.</p>
+    </article>
+  }
+</section>

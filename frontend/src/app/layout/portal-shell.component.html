@@ -1,16 +1,24 @@
 <div class="ps">
   <aside class="ps-side">
-    <a class="ps-logo" routerLink="/portal/inicio">
+    <a class="ps-logo" routerLink="/portal/casa">
       <span class="ps-logo__mark">C</span>
       <span class="ps-logo__txt">Condolio</span>
     </a>
 
     <nav class="ps-nav">
-      @for (item of nav; track item.ruta) {
+      @for (item of tabs; track item.ruta) {
         <a class="ps-nav__item" [routerLink]="item.ruta" routerLinkActive="is-active">
           <span class="ps-nav__icon" [innerHTML]="icono(item.icon)"></span>
           <span class="ps-nav__label">{{ item.label }}</span>
-          @if (item.badge && item.badge()) { <span class="ps-badge">{{ item.badge() }}</span> }
+          @if (item.icon === 'bell' && notifBadge()) { <span class="ps-badge">{{ notifBadge() }}</span> }
+        </a>
+      }
+
+      <p class="ps-nav__sep">Secciones</p>
+      @for (item of secciones; track item.ruta) {
+        <a class="ps-nav__item ps-nav__item--sm" [routerLink]="item.ruta" routerLinkActive="is-active">
+          <span class="ps-nav__icon" [innerHTML]="icono(item.icon)"></span>
+          <span class="ps-nav__label">{{ item.label }}</span>
         </a>
       }
     </nav>
@@ -31,6 +39,7 @@
         @if (menuAbierto()) {
           <div class="ps-menu">
             <a routerLink="/portal/mi-unidad">Mi unidad</a>
+            <a routerLink="/portal/config">Configuración</a>
             <button type="button" (click)="salir()">Cerrar sesión</button>
           </div>
         }
@@ -43,11 +52,11 @@
   </div>
 
   <nav class="ps-tabbar">
-    @for (item of navMobile(); track item.ruta) {
+    @for (item of tabs; track item.ruta) {
       <a class="ps-tab" [routerLink]="item.ruta" routerLinkActive="is-active">
         <span class="ps-tab__icon" [innerHTML]="icono(item.icon)"></span>
         <span class="ps-tab__label">{{ item.label }}</span>
-        @if (item.badge && item.badge()) { <span class="ps-tab__dot"></span> }
+        @if (item.icon === 'bell' && notifBadge()) { <span class="ps-tab__badge">{{ notifBadge() }}</span> }
       </a>
     }
   </nav>

@@ -10,7 +10,7 @@ import { RouterLink } from '@angular/router';
       <div class="px-ic">🚧</div>
       <h2>Estamos preparando esta sección</h2>
       <p>Muy pronto vas a poder usar esta función desde el portal.</p>
-      <a class="btn btn--primary" routerLink="/portal/inicio">Volver al inicio</a>
+      <a class="btn btn--primary" routerLink="/portal/casa">Volver al inicio</a>
     </div>
   `,
   styles: [`
