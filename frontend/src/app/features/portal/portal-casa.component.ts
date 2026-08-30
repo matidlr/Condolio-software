@@ -44,4 +44,20 @@ export class PortalCasaComponent {
   inicial(nombre: string | undefined): string {
     return (nombre ?? '?').trim().charAt(0).toUpperCase();
   }
+
+  diaRelativo(iso: string): string {
+    const d = new Date(iso);
+    const hoy = new Date();
+    const dif = Math.round((d.setHours(0, 0, 0, 0) - hoy.setHours(0, 0, 0, 0)) / 86_400_000);
+    if (dif === 0) return 'Hoy';
+    if (dif === 1) return 'Mañana';
+    if (dif > 1 && dif < 7) return new Date(iso).toLocaleDateString('es-AR', { weekday: 'long' });
+    return new Date(iso).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+  }
+  estadoLabel(e: string): string {
+    return e === 'Confirmada' ? 'Confirmada' : e === 'Pendiente' ? 'Pendiente' : e;
+  }
+  estadoColor(e: string): string {
+    return e === 'Confirmada' ? '#16a34a' : e === 'Pendiente' ? '#d97706' : '#64748b';
+  }
 }

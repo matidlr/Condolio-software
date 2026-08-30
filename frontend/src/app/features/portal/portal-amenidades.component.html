@@ -1,0 +1,190 @@
+@switch (vista()) {
+
+  @case ('directorio') {
+    <section class="am">
+      <header class="am-top">
+        <h1>Amenidades</h1>
+        @if (tab() === 'reservas') {
+          <button type="button" class="am-link" (click)="verPrevias.set(!verPrevias())">
+            {{ verPrevias() ? 'Ver activas' : 'Reservas previas' }}
+          </button>
+        }
+      </header>
+
+      <div class="am-tabs">
+        <button type="button" [class.is-active]="tab() === 'amenidades'" (click)="tab.set('amenidades')">Amenidades</button>
+        <button type="button" [class.is-active]="tab() === 'reservas'" (click)="tab.set('reservas')">Reservas</button>
+      </div>
+
+      @if (tab() === 'amenidades') {
+        @if (cargando()) {
+          <p class="am-loading">Cargando…</p>
+        } @else if (amenidades().length === 0) {
+          <div class="am-empty"><div class="am-empty__ic">◈</div><h3>No hay amenidades para reservar</h3></div>
+        } @else {
+          <div class="am-grid">
+            @for (a of amenidades(); track a.id) {
+              <button type="button" class="am-card" (click)="abrir(a)">
+                @if (portada(a)) {
+                  <img [src]="portada(a)" [alt]="a.nombre" />
+                } @else {
+                  <span class="am-card__ph"></span>
+                }
+                @if (a.requiereAprobacion) { <span class="am-card__badge">Requiere aprobación</span> }
+                <span class="am-card__name">{{ a.nombre }}</span>
+              </button>
+            }
+          </div>
+        }
+      } @else {
+        @if ((verPrevias() ? reservasPrevias() : reservasActivas()).length === 0) {
+          <div class="am-empty">
+            <div class="am-empty__ic">📅</div>
+            <h3>{{ verPrevias() ? 'No tenés reservas previas' : 'No tenés reservaciones activas' }}</h3>
+            <p>{{ verPrevias() ? '' : 'Explorá las amenidades para hacer tu primera reserva.' }}</p>
+            @if (!verPrevias()) {
+              <button type="button" class="btn btn--primary" (click)="tab.set('amenidades')">Explorar amenidades</button>
+            }
+          </div>
+        } @else {
+          @for (r of (verPrevias() ? reservasPrevias() : reservasActivas()); track r.id) {
+            <div class="am-res">
+              <span class="am-res__ph"></span>
+              <div class="am-res__body">
+                <b>{{ r.amenidad }}</b>
+                <small>🕐 {{ r.inicio | date:'h:mm a' }} - {{ r.fin | date:'h:mm a' }}</small>
+              </div>
+              <div class="am-res__side">
+                <span class="am-res__day">{{ r.inicio | date:'EEE d MMM' }}</span>
+                <span class="am-res__badge" [style.color]="estadoMeta(r.estado).color"
+                  [style.background]="estadoMeta(r.estado).color + '22'">{{ estadoMeta(r.estado).label }}</span>
+                @if (!verPrevias() && r.estado !== 'Rechazada') {
+                  <button type="button" class="am-res__cancel" (click)="cancelarReserva(r)">Cancelar</button>
+                }
+              </div>
+            </div>
+          }
+        }
+      }
+    </section>
+  }
+
+  @case ('detalle') {
+    @if (sel(); as a) {
+      <section class="am">
+        <header class="am-top">
+          <button type="button" class="am-back" (click)="vista.set('directorio')">‹ Atrás</button>
+          <h1>Amenidades</h1><span></span>
+        </header>
+
+        <div class="am-det">
+          @if (portada(a)) { <img class="am-det__img" [src]="portada(a)" [alt]="a.nombre" /> }
+          <div class="am-det__body">
+            <h2>{{ a.nombre }}</h2>
+            @if (a.requiereAprobacion) { <span class="am-card__badge am-det__badge">Requiere aprobación</span> }
+            @if (a.descripcion) { <p class="am-det__desc">{{ a.descripcion }}</p> }
+
+            <p class="am-det__row"><b>Horario:</b> {{ horarioTexto(a) }}</p>
+            <p class="am-det__row"><b>Máximo de reservas activas:</b> {{ a.maxReservasPorUnidad || '—' }}</p>
+            <p class="am-det__row"><b>Máxima duración de reserva:</b> {{ duracionTexto(a) }}</p>
+            @if (a.tieneCosto && a.tarifa) {
+              <p class="am-det__row"><b>Tarifa:</b> ${{ a.tarifa }} / hora</p>
+            }
+
+            @if (a.requiereAprobacion) {
+              <p class="am-det__warn">⚠ Esta amenidad requiere aprobación del administrador antes de confirmar tu reserva.</p>
+            }
+
+            <div class="am-dias">
+              @for (d of diasOrden; track d) {
+                <span class="am-dia" [class.is-on]="diaAbierto(a, d)">
+                  {{ diasLabel[d] }}<i>{{ diaAbierto(a, d) ? '✓' : '—' }}</i>
+                </span>
+              }
+            </div>
+          </div>
+        </div>
+
+        <button type="button" class="btn am-solicitar" (click)="irSolicitar()">Solicitar reserva</button>
+      </section>
+    }
+  }
+
+  @case ('solicitar') {
+    @if (sel(); as a) {
+      <section class="am">
+        <header class="am-top">
+          <button type="button" class="am-back" (click)="vista.set('detalle')">‹ Atrás</button>
+          <h1>Solicitar reserva</h1><span></span>
+        </header>
+
+        <button type="button" class="am-hoy" (click)="hoy()">📅 Hoy</button>
+
+        <div class="am-cal">
+          <div class="am-cal__head">
+            <b>{{ mesLabel() }}</b>
+            <div>
+              <button type="button" (click)="cambiarMes(-1)">‹</button>
+              <button type="button" (click)="cambiarMes(1)">›</button>
+            </div>
+          </div>
+          <div class="am-cal__dow">
+            <span>Dom</span><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span>
+          </div>
+          <div class="am-cal__grid">
+            @for (c of gridMes(); track $index) {
+              @if (c) {
+                <button type="button" class="am-cal__day"
+                  [class.is-sel]="fecha() === c" [disabled]="esPasado(c)"
+                  (click)="elegirFecha(c)">{{ +c.slice(8, 10) }}</button>
+              } @else { <span></span> }
+            }
+          </div>
+        </div>
+
+        @if (a.requiereAprobacion) {
+          <p class="am-solic-warn">ⓘ Esta amenidad requiere aprobación del administrador antes de confirmar tu reserva.</p>
+        }
+
+        <div class="am-slots">
+          <h4>🕐 Seleccionar hora</h4>
+          @if (slotsCargando()) {
+            <p class="am-loading">Cargando horarios…</p>
+          } @else if (slots().length === 0) {
+            <p class="am-slots__empty">No hay horarios disponibles para este día.</p>
+          } @else {
+            @for (s of slots(); track s.inicio) {
+              <button type="button" class="am-slot" [class.is-sel]="confirmar()?.inicio === s.inicio"
+                (click)="elegirSlot(s)">
+                <small>{{ s.inicio | date:'d \'de\' MMMM \'de\' y' }}</small>
+                <b>{{ s.inicio | date:'h:mm a' }} - {{ s.fin | date:'h:mm a' }}</b>
+              </button>
+            }
+          }
+        </div>
+      </section>
+
+      @if (confirmar(); as s) {
+        <div class="am-modal-bg" (click)="confirmar.set(null)">
+          <div class="am-modal" (click)="$event.stopPropagation()">
+            <h3>Solicitar reserva</h3>
+            <p>
+              {{ a.requiereAprobacion ? 'Esta amenidad requiere aprobación del administrador. ' : '' }}
+              ¿Querés {{ a.requiereAprobacion ? 'solicitar' : 'confirmar' }} una reserva para
+              {{ s.inicio | date:'d \'de\' MMMM \'de\' y' }} de
+              {{ s.inicio | date:'HH:mm' }} - {{ s.fin | date:'HH:mm' }}?
+            </p>
+            <textarea rows="3" placeholder="Agregá detalles para la revisión del administrador (ej. número de invitados, necesidades de montaje)"
+              [ngModel]="nota()" (ngModelChange)="nota.set($event)"></textarea>
+            <footer>
+              <button type="button" class="am-modal__cancel" (click)="confirmar.set(null)">Cancelar</button>
+              <button type="button" class="am-modal__ok" [disabled]="enviando()" (click)="enviarSolicitud()">
+                {{ enviando() ? 'Enviando…' : 'Solicitar' }}
+              </button>
+            </footer>
+          </div>
+        </div>
+      }
+    }
+  }
+}

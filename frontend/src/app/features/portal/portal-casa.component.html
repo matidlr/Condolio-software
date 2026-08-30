@@ -47,7 +47,9 @@
         <span class="pc-sec__ic pc-sec__ic--res">◈</span>
         <div>
           <b>Reservas</b>
-          <small>Ver todas las reservas</small>
+          <small>{{ portal.casa()?.reservasProximas?.length
+            ? (portal.casa()!.reservasProximas.length + ' reserva(s) activas')
+            : 'Ver todas las reservas' }}</small>
         </div>
         <a class="pc-sec__go" routerLink="/portal/amenidades">›</a>
       </header>
@@ -55,8 +57,15 @@
         @for (r of portal.casa()!.reservasProximas; track r.id) {
           <a class="pc-sec__row" routerLink="/portal/amenidades">
             <span class="pc-sec__rowic">◈</span>
-            <b>{{ r.amenidad }}</b>
-            <small>{{ r.inicio | date:'d MMM, HH:mm' }}</small>
+            <span class="pc-sec__rowb">
+              <b>{{ r.amenidad }}</b>
+              <small>{{ r.inicio | date:'HH:mm' }} - {{ r.fin | date:'HH:mm' }}</small>
+            </span>
+            <span class="pc-sec__meta">
+              <small>{{ diaRelativo(r.inicio) }}</small>
+              <span class="pc-sec__badge" [style.color]="estadoColor(r.estado)"
+                [style.background]="estadoColor(r.estado) + '22'">{{ estadoLabel(r.estado) }}</span>
+            </span>
           </a>
         }
       } @else {

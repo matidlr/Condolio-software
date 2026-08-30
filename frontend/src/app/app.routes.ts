@@ -57,8 +57,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/portal/portal-qr.component').then((m) => m.PortalQrComponent),
       },
+      {
+        path: 'amenidades',
+        loadComponent: () =>
+          import('./features/portal/portal-amenidades.component').then((m) => m.PortalAmenidadesComponent),
+      },
       ...[
-        'muro', 'notificaciones', 'config', 'amenidades', 'calendario', 'contactos',
+        'muro', 'notificaciones', 'config', 'calendario', 'contactos',
         'documentos', 'finanzas', 'historial-visitas', 'encuestas', 'informacion',
         'incidencias', 'paquetes',
       ].map((p) => ({

@@ -1,5 +1,5 @@
 import { Component, computed, inject, output, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ConsorcioService } from '../../core/services/consorcio.service';
@@ -10,7 +10,7 @@ import { META_NOTIF, Notificacion, TipoNotificacion } from '../../core/models/no
 @Component({
   selector: 'app-notificaciones-panel',
   standalone: true,
-  imports: [DatePipe, FormsModule],
+  imports: [FormsModule],
   templateUrl: './notificaciones-panel.component.html',
   styleUrl: './notificaciones-panel.component.scss',
 })

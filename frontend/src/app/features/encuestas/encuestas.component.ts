@@ -1,6 +1,6 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { DatePipe, DecimalPipe, NgTemplateOutlet } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { ConsorcioService } from '../../core/services/consorcio.service';
 import { EncuestaService } from '../../core/services/encuesta.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -15,7 +15,7 @@ type FiltroEstado = 'todas' | EstadoEncuesta;
 @Component({
   selector: 'app-encuestas',
   standalone: true,
-  imports: [FormsModule, DatePipe, DecimalPipe, NgTemplateOutlet],
+  imports: [FormsModule, DatePipe, DecimalPipe],
   templateUrl: './encuestas.component.html',
   styleUrl: './encuestas.component.scss',
   host: { '(document:click)': 'menu.set(null)' },

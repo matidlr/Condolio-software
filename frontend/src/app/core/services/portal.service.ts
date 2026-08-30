@@ -31,6 +31,7 @@ export interface ReservaResumen {
   id: string;
   amenidad: string;
   inicio: string;
+  fin: string;
   estado: string;
 }
 
