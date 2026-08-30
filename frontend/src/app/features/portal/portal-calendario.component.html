@@ -1,0 +1,128 @@
+@switch (vista()) {
+
+  @case ('mes') {
+    <section class="cal">
+      <header class="cal-top">
+        <h1>Calendario</h1>
+        <button type="button" class="cal-link" (click)="nuevoEvento()">Nuevo</button>
+      </header>
+
+      <div class="cal-card">
+        <div class="cal-card__head">
+          <b>{{ mesLabel().mes }} <span>{{ mesLabel().anio }}</span></b>
+          <div class="cal-card__nav">
+            <button type="button" class="cal-hoy" (click)="hoy()">Hoy</button>
+            <button type="button" (click)="cambiarMes(-1)">‹</button>
+            <button type="button" (click)="cambiarMes(1)">›</button>
+          </div>
+        </div>
+        <div class="cal-dow"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
+        <div class="cal-grid">
+          @for (d of grid(); track d.iso) {
+            <button type="button" class="cal-day"
+              [class.is-out]="!d.enMes" [class.is-today]="d.hoy" [class.is-sel]="diaSel() === d.iso"
+              (click)="diaSel.set(d.iso)">
+              {{ +d.iso.slice(8, 10) }}
+              @if (d.conItems) { <i class="cal-day__dot"></i> }
+            </button>
+          }
+        </div>
+      </div>
+
+      @if (cargando()) {
+        <p class="cal-loading">Cargando…</p>
+      } @else if (agenda().length === 0) {
+        <p class="cal-empty">No hay eventos ni reservas este mes.</p>
+      } @else {
+        @for (g of agenda(); track g.fecha) {
+          <p class="cal-fecha">{{ g.fecha + 'T00:00' | date:'EEEE d' }}</p>
+          @for (it of g.items; track it.tipo + it.id) {
+            <button type="button" class="cal-item" (click)="abrirItem(it)">
+              <span class="cal-item__date">{{ it.inicio | date:'d' }}</span>
+              <span class="cal-item__body">
+                <b>{{ it.titulo }}</b>
+                <small>
+                  🕐 {{ it.todoElDia ? 'Todo el día' : (it.inicio | date:'HH:mm') + ' – ' + (it.fin | date:'HH:mm') }}
+                  @if (it.ubicacion && it.tipo === 'Evento') { <span>· 📍 {{ it.ubicacion }}</span> }
+                </small>
+              </span>
+              @if (it.tipo === 'Reserva') { <span class="cal-item__tag">Reserva</span> }
+            </button>
+          }
+        }
+      }
+    </section>
+  }
+
+  @case ('evento') {
+    @if (eventoSel(); as e) {
+      <section class="cal">
+        <header class="cal-top">
+          <button type="button" class="cal-back" (click)="vista.set('mes')">‹ Atrás</button>
+          <h1>Información del evento</h1>
+          <button type="button" class="cal-link" (click)="compartirEvento()">⤴</button>
+        </header>
+
+        <h2 class="cal-h2">Información del evento</h2>
+        <div class="cal-info">
+          <div class="cal-info__row"><span>Evento</span><b>{{ e.titulo }}</b></div>
+          <div class="cal-info__row"><span>Ubicación</span><b>{{ e.ubicacion || '—' }}</b></div>
+          <div class="cal-info__row"><span>Hora de inicio</span><b>{{ e.inicio | date:'d \'de\' MMMM \'de\' y HH:mm' }}</b></div>
+          <div class="cal-info__row"><span>Hora de fin</span><b>{{ e.fin | date:'d \'de\' MMMM \'de\' y HH:mm' }}</b></div>
+        </div>
+
+        @if (e.descripcion) {
+          <h2 class="cal-h2">Descripción</h2>
+          <div class="cal-desc">{{ e.descripcion }}</div>
+        }
+      </section>
+    }
+  }
+
+  @case ('nuevo') {
+    <section class="cal">
+      <header class="cal-top">
+        <button type="button" class="cal-back" (click)="vista.set('mes')">Cancelar</button>
+        <h1>Nuevo evento</h1>
+        <span></span>
+      </header>
+
+      <div class="cal-form">
+        <label class="cal-field">
+          <span>Título</span>
+          <input type="text" placeholder="Título" [ngModel]="form().titulo" (ngModelChange)="setForm('titulo', $event)" />
+        </label>
+        <label class="cal-field">
+          <span>Ubicación</span>
+          <input type="text" placeholder="Ubicación" [ngModel]="form().ubicacion" (ngModelChange)="setForm('ubicacion', $event)" />
+        </label>
+        <label class="cal-field cal-field--col">
+          <span>Descripción <em>(opcional)</em></span>
+          <textarea rows="3" [ngModel]="form().descripcion" (ngModelChange)="setForm('descripcion', $event)"></textarea>
+        </label>
+        <label class="cal-field">
+          <span>Categoría</span>
+          <select [ngModel]="form().categoria" (ngModelChange)="setForm('categoria', $event)">
+            @for (c of categorias; track c.value) { <option [value]="c.value">{{ c.label }}</option> }
+          </select>
+        </label>
+        <label class="cal-field">
+          <span>Todo el día</span>
+          <input type="checkbox" [ngModel]="form().todoElDia" (ngModelChange)="setForm('todoElDia', $event)" />
+        </label>
+        <label class="cal-field">
+          <span>Fecha de inicio</span>
+          <input type="datetime-local" [ngModel]="form().inicio" (ngModelChange)="setForm('inicio', $event)" />
+        </label>
+        <label class="cal-field">
+          <span>Fecha final</span>
+          <input type="datetime-local" [ngModel]="form().fin" (ngModelChange)="setForm('fin', $event)" />
+        </label>
+      </div>
+
+      <button type="button" class="cal-guardar" [disabled]="!formValido() || guardando()" (click)="guardar()">
+        {{ guardando() ? 'Guardando…' : 'Guardar' }}
+      </button>
+    </section>
+  }
+}

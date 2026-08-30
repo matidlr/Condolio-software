@@ -62,8 +62,18 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/portal/portal-amenidades.component').then((m) => m.PortalAmenidadesComponent),
       },
+      {
+        path: 'reservas/:id',
+        loadComponent: () =>
+          import('./features/portal/portal-reserva-detalle.component').then((m) => m.PortalReservaDetalleComponent),
+      },
+      {
+        path: 'calendario',
+        loadComponent: () =>
+          import('./features/portal/portal-calendario.component').then((m) => m.PortalCalendarioComponent),
+      },
       ...[
-        'muro', 'notificaciones', 'config', 'calendario', 'contactos',
+        'muro', 'notificaciones', 'config', 'contactos',
         'documentos', 'finanzas', 'historial-visitas', 'encuestas', 'informacion',
         'incidencias', 'paquetes',
       ].map((p) => ({

@@ -70,6 +70,10 @@ export class MiAmenidadService {
     return this.http.get<MisReservas>(`${this.base}/reservas`);
   }
 
+  reserva(id: string): Observable<MiReserva> {
+    return this.http.get<MiReserva>(`${this.base}/reservas/${id}`);
+  }
+
   solicitar(body: { amenidadId: string; inicio: string; fin: string; nota?: string | null }): Observable<MiReserva> {
     return this.http.post<MiReserva>(`${this.base}/reservas`, body);
   }

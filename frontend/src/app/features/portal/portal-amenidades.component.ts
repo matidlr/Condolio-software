@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { AdjuntoService } from '../../core/services/adjunto.service';
 import { MiAmenidad, MiAmenidadService, MiReserva, Slot } from '../../core/services/mi-amenidad.service';
 import { PortalService } from '../../core/services/portal.service';
@@ -12,7 +13,7 @@ const DIAS_ORD = [1, 2, 3, 4, 5, 6, 0]; // Lun..Dom
 @Component({
   selector: 'app-portal-amenidades',
   standalone: true,
-  imports: [DatePipe, FormsModule],
+  imports: [DatePipe, FormsModule, RouterLink],
   templateUrl: './portal-amenidades.component.html',
   styleUrl: './portal-amenidades.component.scss',
 })

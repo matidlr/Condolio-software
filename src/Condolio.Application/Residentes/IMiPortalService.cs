@@ -3,6 +3,26 @@ using Condolio.Application.Common;
 
 namespace Condolio.Application.Residentes;
 
+public record CalendarioItemDto(
+    Guid Id,
+    string Titulo,
+    string? Descripcion,
+    string? Ubicacion,
+    DateTime Inicio,
+    DateTime Fin,
+    bool TodoElDia,
+    string Tipo,
+    string? Categoria);
+
+public record CrearEventoResidenteDto(
+    string Titulo,
+    string? Descripcion,
+    string? Ubicacion,
+    string Categoria,
+    DateTime Inicio,
+    DateTime Fin,
+    bool TodoElDia);
+
 public record EncuestaPendienteDto(Guid Id, string Titulo, int? DiasRestantes);
 
 public record ReservaResumenDto(Guid Id, string Amenidad, DateTime Inicio, DateTime Fin, string Estado);
@@ -41,5 +61,9 @@ public interface IMiPortalService
     Task<Result<IReadOnlyList<SlotDto>>> SlotsAsync(string usuarioId, Guid amenidadId, DateOnly fecha, CancellationToken ct = default);
     Task<Result<MiReservaDto>> SolicitarReservaAsync(string usuarioId, Guid amenidadId, DateTime inicio, DateTime fin, string? nota, CancellationToken ct = default);
     Task<Result<MisReservasDto>> MisReservasAsync(string usuarioId, CancellationToken ct = default);
+    Task<Result<MiReservaDto>> MiReservaAsync(string usuarioId, Guid reservaId, CancellationToken ct = default);
     Task<Result> CancelarReservaAsync(string usuarioId, Guid reservaId, CancellationToken ct = default);
+
+    Task<Result<IReadOnlyList<CalendarioItemDto>>> CalendarioAsync(string usuarioId, DateTime desde, DateTime hasta, CancellationToken ct = default);
+    Task<Result<CalendarioItemDto>> CrearEventoAsync(string usuarioId, CrearEventoResidenteDto dto, CancellationToken ct = default);
 }

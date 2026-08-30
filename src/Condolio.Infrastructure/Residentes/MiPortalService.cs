@@ -1,7 +1,9 @@
 using Condolio.Application.Amenidades;
+using Condolio.Application.Calendario;
 using Condolio.Application.Common;
 using Condolio.Application.Residentes;
 using Condolio.Domain.Amenidades;
+using Condolio.Domain.Calendario;
 using Condolio.Domain.Encuestas;
 using Condolio.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -15,11 +17,13 @@ public class MiPortalService : IMiPortalService
 
     private readonly CondolioDbContext _db;
     private readonly IAmenidadService _amenidades;
+    private readonly IEventoService _eventos;
 
-    public MiPortalService(CondolioDbContext db, IAmenidadService amenidades)
+    public MiPortalService(CondolioDbContext db, IAmenidadService amenidades, IEventoService eventos)
     {
         _db = db;
         _amenidades = amenidades;
+        _eventos = eventos;
     }
 
     private async Task<Origen?> OrigenAsync(string usuarioId, CancellationToken ct) =>
@@ -200,6 +204,69 @@ public class MiPortalService : IMiPortalService
         var previas = mapped.Where(x => !x.Activa).Select(x => x.Dto).ToList();
 
         return Result<MisReservasDto>.Ok(new MisReservasDto(activas, previas));
+    }
+
+    public async Task<Result<MiReservaDto>> MiReservaAsync(string usuarioId, Guid reservaId, CancellationToken ct = default)
+    {
+        var r = await _db.Reservas.IgnoreQueryFilters()
+            .Where(x => x.Id == reservaId && x.SolicitanteUsuarioId == usuarioId)
+            .Select(x => new
+            {
+                x.Id, x.AmenidadId, Amenidad = x.Amenidad.Nombre, x.Amenidad.ImagenesIds,
+                x.Inicio, x.Fin, x.Estado, x.Nota, x.CreadoUtc,
+            })
+            .FirstOrDefaultAsync(ct);
+        if (r is null) return Result<MiReservaDto>.Fail("Reserva no encontrada.");
+
+        return Result<MiReservaDto>.Ok(new MiReservaDto(
+            r.Id, r.AmenidadId, r.Amenidad, Adjuntos(r.ImagenesIds),
+            r.Inicio, r.Fin, r.Estado.ToString(), r.Nota, r.CreadoUtc));
+    }
+
+    public async Task<Result<IReadOnlyList<CalendarioItemDto>>> CalendarioAsync(
+        string usuarioId, DateTime desde, DateTime hasta, CancellationToken ct = default)
+    {
+        var o = await OrigenAsync(usuarioId, ct);
+        if (o is null) return Result<IReadOnlyList<CalendarioItemDto>>.Fail("No tenés una unidad asignada.");
+
+        var eventos = await _db.EventosCalendario.IgnoreQueryFilters()
+            .Where(e => e.ConsorcioId == o.ConsorcioId && e.InicioUtc < hasta && e.FinUtc > desde)
+            .Select(e => new CalendarioItemDto(
+                e.Id, e.Titulo, e.Descripcion, e.Ubicacion,
+                e.InicioUtc, e.FinUtc, e.TodoElDia, "Evento", e.Categoria.ToString()))
+            .ToListAsync(ct);
+
+        var reservas = await _db.Reservas.IgnoreQueryFilters()
+            .Where(r => r.SolicitanteUsuarioId == usuarioId
+                && r.Estado != EstadoReserva.Rechazada && r.Estado != EstadoReserva.Cancelada
+                && r.Inicio < hasta && r.Fin > desde)
+            .Select(r => new CalendarioItemDto(
+                r.Id, r.Amenidad.Nombre, r.Nota, r.Amenidad.Nombre,
+                r.Inicio, r.Fin, false, "Reserva", r.Estado.ToString()))
+            .ToListAsync(ct);
+
+        var items = eventos.Concat(reservas).OrderBy(i => i.Inicio).ToList();
+        return Result<IReadOnlyList<CalendarioItemDto>>.Ok(items);
+    }
+
+    public async Task<Result<CalendarioItemDto>> CrearEventoAsync(
+        string usuarioId, CrearEventoResidenteDto dto, CancellationToken ct = default)
+    {
+        var o = await OrigenAsync(usuarioId, ct);
+        if (o is null) return Result<CalendarioItemDto>.Fail("No tenés una unidad asignada.");
+        if (string.IsNullOrWhiteSpace(dto.Titulo)) return Result<CalendarioItemDto>.Fail("El título es obligatorio.");
+
+        Enum.TryParse<CategoriaEvento>(dto.Categoria, out var cat);
+        var res = await _eventos.CrearAsync(o.ConsorcioId, new GuardarEventoDto(
+            dto.Titulo.Trim(),
+            string.IsNullOrWhiteSpace(dto.Descripcion) ? null : dto.Descripcion.Trim(),
+            string.IsNullOrWhiteSpace(dto.Ubicacion) ? null : dto.Ubicacion.Trim(),
+            cat, dto.Inicio, dto.Fin, dto.TodoElDia, NotificarComunidad: false), ct);
+        if (!res.Exito) return Result<CalendarioItemDto>.Fail(res.Error!);
+
+        var e = res.Valor!;
+        return Result<CalendarioItemDto>.Ok(new CalendarioItemDto(
+            e.Id, e.Titulo, e.Descripcion, e.Ubicacion, e.InicioUtc, e.FinUtc, e.TodoElDia, "Evento", e.Categoria.ToString()));
     }
 
     public async Task<Result> CancelarReservaAsync(string usuarioId, Guid reservaId, CancellationToken ct = default)

@@ -48,7 +48,7 @@
           </div>
         } @else {
           @for (r of (verPrevias() ? reservasPrevias() : reservasActivas()); track r.id) {
-            <div class="am-res">
+            <a class="am-res" [routerLink]="['/portal/reservas', r.id]">
               <span class="am-res__ph"></span>
               <div class="am-res__body">
                 <b>{{ r.amenidad }}</b>
@@ -58,11 +58,8 @@
                 <span class="am-res__day">{{ r.inicio | date:'EEE d MMM' }}</span>
                 <span class="am-res__badge" [style.color]="estadoMeta(r.estado).color"
                   [style.background]="estadoMeta(r.estado).color + '22'">{{ estadoMeta(r.estado).label }}</span>
-                @if (!verPrevias() && r.estado !== 'Rechazada') {
-                  <button type="button" class="am-res__cancel" (click)="cancelarReserva(r)">Cancelar</button>
-                }
               </div>
-            </div>
+            </a>
           }
         }
       }

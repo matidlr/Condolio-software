@@ -41,7 +41,9 @@
 .am-res {
   display: flex; align-items: center; gap: 12px; background: var(--c-surface);
   border: 1px solid var(--c-border); border-radius: 14px; padding: 12px; margin-bottom: 10px;
+  text-decoration: none; color: inherit;
 }
+.am-res:hover { border-color: var(--c-slate-500); }
 .am-res__ph { width: 54px; height: 44px; border-radius: 8px; background: linear-gradient(135deg, #cdd6c9, #e6e1da); flex-shrink: 0; }
 .am-res__body { flex: 1; min-width: 0; }
 .am-res__body b { display: block; font-size: 0.95rem; }

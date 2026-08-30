@@ -1,0 +1,68 @@
+<section class="rd">
+  <header class="rd-top">
+    <button type="button" (click)="cerrar()">Cerrar</button>
+    <h1>Detalles de la reserva</h1>
+    <span></span>
+  </header>
+
+  @if (cargando()) {
+    <p class="rd-loading">Cargando…</p>
+  } @else if (reserva()) {
+    @if (reserva()!; as r) {
+    <div class="rd-card">
+      <div class="rd-hero" [style.background-image]="portada() ? 'url(' + portada() + ')' : null">
+        <span class="rd-badge" [style.color]="estadoMeta(r.estado).color"
+          [style.background]="estadoMeta(r.estado).color + '22'">{{ estadoMeta(r.estado).label }}</span>
+      </div>
+
+      <div class="rd-body">
+        <h2>{{ r.amenidad }}</h2>
+
+        @if (r.estado === 'Pendiente') {
+          <div class="rd-warn">
+            ⌛ Esta reserva está pendiente de aprobación del administrador. Te notificaremos cuando se tome una decisión.
+          </div>
+        } @else if (r.estado === 'Rechazada') {
+          <div class="rd-warn rd-warn--no">✕ El administrador rechazó esta reserva.</div>
+        }
+
+        <div class="rd-row">
+          <span class="rd-row__ic rd-row__ic--cal">📅</span>
+          <div><small>Fecha</small><b>{{ diaRelativo(r.inicio) }}</b></div>
+        </div>
+        <div class="rd-row">
+          <span class="rd-row__ic rd-row__ic--clock">🕐</span>
+          <div><small>Hora</small><b>{{ r.inicio | date:'h:mm a' }} - {{ r.fin | date:'h:mm a' }}</b></div>
+        </div>
+        <div class="rd-row">
+          <span class="rd-row__ic rd-row__ic--loc">📍</span>
+          <div><small>Ubicación</small><b>{{ r.amenidad }}</b></div>
+        </div>
+        @if (r.nota) {
+          <div class="rd-row">
+            <span class="rd-row__ic">📝</span>
+            <div><small>Nota</small><b>{{ r.nota }}</b></div>
+          </div>
+        }
+
+        @if (r.estado === 'Pendiente' || r.estado === 'Confirmada') {
+          <button type="button" class="rd-del" (click)="confirmar.set(true)">🗑 Eliminar reserva</button>
+        }
+      </div>
+    </div>
+    }
+  }
+
+  @if (confirmar()) {
+    <div class="rd-modal-bg" (click)="confirmar.set(false)">
+      <div class="rd-modal" (click)="$event.stopPropagation()">
+        <h3>¿Eliminar reserva?</h3>
+        <p>¿Estás seguro de que querés eliminar esta reserva?</p>
+        <footer>
+          <button type="button" class="rd-modal__cancel" (click)="confirmar.set(false)">Cancelar</button>
+          <button type="button" class="rd-modal__ok" [disabled]="eliminando()" (click)="eliminar()">Eliminar</button>
+        </footer>
+      </div>
+    </div>
+  }
+</section>
