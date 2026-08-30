@@ -1,0 +1,54 @@
+<div class="ps">
+  <aside class="ps-side">
+    <a class="ps-logo" routerLink="/portal/inicio">
+      <span class="ps-logo__mark">C</span>
+      <span class="ps-logo__txt">Condolio</span>
+    </a>
+
+    <nav class="ps-nav">
+      @for (item of nav; track item.ruta) {
+        <a class="ps-nav__item" [routerLink]="item.ruta" routerLinkActive="is-active">
+          <span class="ps-nav__icon" [innerHTML]="icono(item.icon)"></span>
+          <span class="ps-nav__label">{{ item.label }}</span>
+          @if (item.badge && item.badge()) { <span class="ps-badge">{{ item.badge() }}</span> }
+        </a>
+      }
+    </nav>
+
+    <button type="button" class="ps-logout" (click)="salir()">Cerrar sesión</button>
+  </aside>
+
+  <div class="ps-main">
+    <header class="ps-topbar">
+      <span class="ps-topbar__title">
+        {{ portal.unidadActiva()?.consorcioNombre ?? 'Portal del residente' }}
+      </span>
+
+      <div class="ps-user" (click)="menuAbierto.set(!menuAbierto())">
+        <span class="ps-avatar">{{ iniciales() }}</span>
+        <span class="ps-user__name">{{ nombre() }}</span>
+        <span class="ps-caret">▾</span>
+        @if (menuAbierto()) {
+          <div class="ps-menu">
+            <a routerLink="/portal/mi-unidad">Mi unidad</a>
+            <button type="button" (click)="salir()">Cerrar sesión</button>
+          </div>
+        }
+      </div>
+    </header>
+
+    <main class="ps-content">
+      <router-outlet />
+    </main>
+  </div>
+
+  <nav class="ps-tabbar">
+    @for (item of navMobile(); track item.ruta) {
+      <a class="ps-tab" [routerLink]="item.ruta" routerLinkActive="is-active">
+        <span class="ps-tab__icon" [innerHTML]="icono(item.icon)"></span>
+        <span class="ps-tab__label">{{ item.label }}</span>
+        @if (item.badge && item.badge()) { <span class="ps-tab__dot"></span> }
+      </a>
+    }
+  </nav>
+</div>

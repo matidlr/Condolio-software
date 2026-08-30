@@ -72,7 +72,7 @@ export class AuthService {
   rutaInicio(): string {
     if (this.tieneRol('SuperAdmin')) return '/admin-saas';
     if (this.tieneRol('Administrador')) return '/panel';
-    if (this.tieneRol('Residente')) return '/mi-unidad';
+    if (this.tieneRol('Residente')) return '/portal';
     return '/';
   }
 

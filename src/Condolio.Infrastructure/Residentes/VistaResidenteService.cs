@@ -25,6 +25,7 @@ public class VistaResidenteService : IVistaResidenteService
             .Select(p => new MiUnidadDto(
                 p.UnidadId,
                 p.Unidad.Nombre,
+                p.Unidad.ConsorcioId,
                 p.Unidad.Consorcio.Nombre,
                 p.Rol,
                 p.EsContactoPrincipal,

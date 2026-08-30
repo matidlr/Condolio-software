@@ -6,6 +6,7 @@ namespace Condolio.Application.Residentes;
 public record MiUnidadDto(
     Guid UnidadId,
     string UnidadNombre,
+    Guid ConsorcioId,
     string ConsorcioNombre,
     RolUnidad Rol,
     bool EsContactoPrincipal,

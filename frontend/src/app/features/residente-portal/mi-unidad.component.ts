@@ -19,16 +19,8 @@ interface MiUnidad {
   standalone: true,
   template: `
     <div class="mp">
-      <header class="mp-top">
-        <span class="mp-logo"><span>C</span> Condolio</span>
-        <div class="mp-user">
-          <span>{{ auth.nombre() }}</span>
-          <button type="button" (click)="salir()">Salir</button>
-        </div>
-      </header>
-
       <main class="mp-body">
-        <h1>Hola{{ auth.nombre() ? ', ' + auth.nombre() : '' }}</h1>
+        <h1>Mi unidad</h1>
 
         @if (unidades().length) {
           <p class="mp-sub">{{ unidades()[0].consorcioNombre }}</p>
@@ -61,6 +53,8 @@ interface MiUnidad {
       </main>
     </div>
   `,
+  // eslint-disable-next-line
+  // (el header ahora lo provee portal-shell)
   styles: [`
     :host { display: block; min-height: 100vh; background: var(--c-bg); }
     .mp-top {

@@ -27,12 +27,61 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/auth/invitacion.component').then((m) => m.InvitacionComponent),
   },
+  { path: 'mi-unidad', pathMatch: 'full', redirectTo: 'portal/inicio' },
   {
-    path: 'mi-unidad',
+    path: 'portal',
     canActivate: [authGuard, rolGuard],
     data: { roles: ['Residente'] },
     loadComponent: () =>
-      import('./features/residente-portal/mi-unidad.component').then((m) => m.MiUnidadComponent),
+      import('./layout/portal-shell.component').then((m) => m.PortalShellComponent),
+    children: [
+      { path: '', pathMatch: 'full', redirectTo: 'inicio' },
+      {
+        path: 'inicio',
+        loadComponent: () =>
+          import('./features/portal/portal-inicio.component').then((m) => m.PortalInicioComponent),
+      },
+      {
+        path: 'mi-unidad',
+        loadComponent: () =>
+          import('./features/residente-portal/mi-unidad.component').then((m) => m.MiUnidadComponent),
+      },
+      {
+        path: 'comunicados',
+        loadComponent: () =>
+          import('./features/portal/portal-proximamente.component').then((m) => m.PortalProximamenteComponent),
+      },
+      {
+        path: 'encuestas',
+        loadComponent: () =>
+          import('./features/portal/portal-proximamente.component').then((m) => m.PortalProximamenteComponent),
+      },
+      {
+        path: 'reservas',
+        loadComponent: () =>
+          import('./features/portal/portal-proximamente.component').then((m) => m.PortalProximamenteComponent),
+      },
+      {
+        path: 'reclamos',
+        loadComponent: () =>
+          import('./features/portal/portal-proximamente.component').then((m) => m.PortalProximamenteComponent),
+      },
+      {
+        path: 'documentos',
+        loadComponent: () =>
+          import('./features/portal/portal-proximamente.component').then((m) => m.PortalProximamenteComponent),
+      },
+      {
+        path: 'expensas',
+        loadComponent: () =>
+          import('./features/portal/portal-proximamente.component').then((m) => m.PortalProximamenteComponent),
+      },
+      {
+        path: 'notificaciones',
+        loadComponent: () =>
+          import('./features/portal/portal-proximamente.component').then((m) => m.PortalProximamenteComponent),
+      },
+    ],
   },
   {
     path: 'panel',
