@@ -1,0 +1,66 @@
+<div class="pt">
+  <header class="pt-top">
+    <div>
+      <b>{{ ctx()?.casetaNombre || 'Portería' }}</b>
+      <small>{{ ctx()?.consorcioNombre }}</small>
+    </div>
+    <button type="button" class="pt-salir" (click)="salir()">Salir</button>
+  </header>
+
+  <main class="pt-main">
+    @switch (estado()) {
+      @case ('idle') {
+        <div class="pt-idle">
+          <div class="pt-idle__ic">⛶</div>
+          <h1>Escanear código QR</h1>
+          <p>Apuntá la cámara al QR del visitante para validar el ingreso.</p>
+          <button type="button" class="pt-btn pt-btn--primary" (click)="escanear()">
+            {{ soportaCamara() ? '📷 Abrir cámara' : 'Ingresar código' }}
+          </button>
+          <div class="pt-manual">
+            <input placeholder="…o pegá el código / enlace del QR"
+              [ngModel]="manual()" (ngModelChange)="manual.set($event)" (keyup.enter)="verificarManual()" />
+            <button type="button" (click)="verificarManual()" [disabled]="manual().trim().length === 0">Verificar</button>
+          </div>
+        </div>
+      }
+
+      @case ('escaneando') {
+        <div class="pt-scan">
+          @if (soportaCamara()) {
+            <video #video playsinline muted></video>
+            <div class="pt-scan__frame"></div>
+            <p class="pt-scan__hint">Buscando un código QR…</p>
+          }
+          <div class="pt-manual">
+            <input placeholder="Ingresá el código a mano"
+              [ngModel]="manual()" (ngModelChange)="manual.set($event)" (keyup.enter)="verificarManual()" />
+            <button type="button" (click)="verificarManual()" [disabled]="manual().trim().length === 0">Verificar</button>
+          </div>
+          <button type="button" class="pt-btn pt-btn--ghost" (click)="siguiente()">Cancelar</button>
+        </div>
+      }
+
+      @case ('verificando') {
+        <div class="pt-idle"><div class="pt-idle__ic">⏳</div><h1>Verificando…</h1></div>
+      }
+
+      @case ('resultado') {
+        @if (resultado(); as r) {
+          <div class="pt-res" [class.is-ok]="r.valido" [class.is-bad]="!r.valido">
+            <div class="pt-res__badge">{{ r.valido ? '✓' : '✕' }}</div>
+            <h1>{{ r.valido ? 'Acceso permitido' : 'Acceso denegado' }}</h1>
+            @if (!r.valido && r.motivo) { <p class="pt-res__motivo">{{ r.motivo }}</p> }
+            <div class="pt-res__card">
+              <div><small>Visitante</small><b>{{ r.visitanteNombre || '—' }}</b></div>
+              <div><small>Unidad</small><b>{{ r.unidadNombre }}</b></div>
+              @if (r.patente) { <div><small>Patente</small><b>{{ r.patente }}</b></div> }
+              @if (r.valido) { <div><small>Ingresos restantes</small><b>{{ r.usosRestantes }}</b></div> }
+            </div>
+            <button type="button" class="pt-btn pt-btn--primary" (click)="siguiente()">Escanear otro</button>
+          </div>
+        }
+      }
+    }
+  </main>
+</div>

@@ -1,0 +1,81 @@
+<section class="bt">
+  <header class="bt-head">
+    <h1>Bitácora de accesos</h1>
+    <p>Registro de entradas y salidas de la comunidad</p>
+  </header>
+
+  <div class="bt-toolbar">
+    <div class="bt-datenav">
+      <button type="button" (click)="cambiarDia(-1)" aria-label="Día anterior">‹</button>
+      <span class="bt-datenav__lbl">📅 {{ tituloRango() }}</span>
+      <button type="button" (click)="cambiarDia(1)" aria-label="Día siguiente">›</button>
+    </div>
+    <div class="bt-search">
+      <span>⌕</span>
+      <input type="search" placeholder="Buscar registros de acceso…"
+        [value]="busqueda()" (input)="busqueda.set($any($event.target).value)" />
+    </div>
+    <div class="bt-tabs">
+      <button type="button" [class.is-active]="filtro() === 'todos'" (click)="setFiltro('todos')">Todos</button>
+      <button type="button" [class.is-active]="filtro() === 'adentro'" (click)="setFiltro('adentro')">Adentro</button>
+      <button type="button" [class.is-active]="filtro() === 'salio'" (click)="setFiltro('salio')">Salió</button>
+    </div>
+    <button type="button" class="btn btn--primary" (click)="exportar()">⭳ Exportar</button>
+  </div>
+
+  <div class="bt-adentro">
+    <span class="bt-adentro__dot"></span> {{ adentroAhora() }} adentro ahora
+  </div>
+
+  @if (cargando()) {
+    <p class="bt-loading">Cargando…</p>
+  } @else if (visibles().length === 0) {
+    <div class="bt-empty">
+      <div class="bt-empty__ic">↥</div>
+      <h3>{{ dias() > 1 ? 'Sin registros en el período' : 'Sin entradas todavía hoy' }}</h3>
+      <p>Cada acceso que registre la caseta aparecerá acá al instante, con vehículo y patente.</p>
+      @if (dias() === 1) {
+        <button type="button" class="btn btn--ghost" (click)="ultimos7()">📅 Ver los últimos 7 días</button>
+      }
+    </div>
+  } @else {
+    <div class="bt-tablewrap">
+      <table class="bt-table">
+        <thead>
+          <tr>
+            <th>Visitante</th><th>Propósito</th><th>Fecha · Hora</th>
+            <th>Estado</th><th>Vehículo · Placa</th><th>Unidad</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of visibles(); track r.id) {
+            <tr>
+              <td class="bt-vis">{{ r.visitanteNombre }}</td>
+              <td><span class="bt-prop">{{ iconVisita[r.tipoVisita] }} {{ labelVisita[r.tipoVisita] }}</span></td>
+              <td class="bt-nowrap">
+                <b>{{ r.ingresoUtc | date:'d MMM, HH:mm' }}</b>
+                @if (r.egresoUtc) { <small>salida {{ r.egresoUtc | date:'HH:mm' }}</small> }
+              </td>
+              <td>
+                <span class="bt-pill" [class.bt-pill--in]="!r.egresoUtc" [class.bt-pill--out]="r.egresoUtc">
+                  {{ r.egresoUtc ? 'Salió' : 'Adentro' }}
+                </span>
+              </td>
+              <td class="bt-nowrap">
+                @if (r.vehiculo !== 'SinVehiculo') {
+                  {{ iconoVehiculo(r.vehiculo) }} {{ r.patente || '—' }}
+                } @else { <span class="bt-dash">—</span> }
+              </td>
+              <td class="bt-nowrap">{{ r.unidad }}</td>
+              <td class="bt-nowrap">
+                @if (!r.egresoUtc) {
+                  <button type="button" class="bt-out" (click)="registrarSalida(r)">Registrar salida</button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

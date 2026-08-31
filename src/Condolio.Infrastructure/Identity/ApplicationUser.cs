@@ -22,6 +22,8 @@ public static class Roles
     public const string SuperAdmin = "SuperAdmin";
     public const string Administrador = "Administrador";
     public const string Residente = "Residente";
+    /// <summary>Personal de la comunidad (portería, mantenimiento). Acceso limitado a la portería.</summary>
+    public const string Personal = "Personal";
 
-    public static readonly string[] Todos = [SuperAdmin, Administrador, Residente];
+    public static readonly string[] Todos = [SuperAdmin, Administrador, Residente, Personal];
 }

@@ -39,6 +39,7 @@ const ICONOS = {
   calendar: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>',
   poll: '<path d="M5 21V10M12 21V4M19 21v-7"/>',
   bell: '<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10 20a2 2 0 0 0 4 0"/>',
+  shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
 } as const;
 
 @Component({
@@ -96,6 +97,15 @@ export class AdminShellComponent {
           { label: 'Directorio', ruta: '/panel/amenidades/directorio', disponible: true },
           { label: 'Reservaciones', ruta: '/panel/amenidades/reservaciones', disponible: true },
           { label: 'Estadísticas', ruta: '/panel/amenidades/estadisticas', disponible: true },
+        ],
+      },
+      {
+        label: 'Seguridad', icon: 'shield', disponible: true,
+        hijos: [
+          { label: 'Bitácora de accesos', ruta: '/panel/seguridad/bitacora', disponible: true },
+          { label: 'Códigos QR', ruta: '/panel/seguridad/qr', disponible: true },
+          { label: 'Staff', ruta: '/panel/seguridad/staff', disponible: true },
+          { label: 'Credenciales de caseta', ruta: '/panel/seguridad/credenciales', disponible: true },
         ],
       },
       { label: 'Anuncios', ruta: '/panel/anuncios', icon: 'megaphone', disponible: true },

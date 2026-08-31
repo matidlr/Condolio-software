@@ -1,0 +1,174 @@
+<section class="cd">
+  <header class="cd-head">
+    <div>
+      <h1>Credenciales de caseta</h1>
+      <p>Cuentas de acceso para las tabletas y equipos de caseta que usan la app de portería</p>
+    </div>
+    <button type="button" class="btn btn--primary" (click)="abrirAgregar()">+ Agregar dispositivo</button>
+  </header>
+
+  <div class="cd-stats">
+    <article class="cd-stat"><span class="cd-stat__ic">📱</span><div><b>{{ total() }}</b><small>Total de dispositivos</small></div></article>
+    <article class="cd-stat"><span class="cd-stat__ic cd-stat__ic--ok">✓</span><div><b>{{ activos() }}</b><small>Dispositivos activos</small></div></article>
+    <article class="cd-stat">
+      <span class="cd-stat__ic">🕐</span>
+      <div><b class="cd-stat__sm">{{ hace(ultimoUtc()) }}</b><small>{{ ultimoNombre() || 'Último agregado' }}</small></div>
+    </article>
+  </div>
+
+  @if (cargando()) {
+    <p class="cd-loading">Cargando…</p>
+  } @else if (dispositivos().length === 0) {
+    <div class="cd-empty">
+      <span class="cd-empty__ic">📱</span>
+      <h3>Todavía no hay dispositivos</h3>
+      <p>Agregá una credencial para cada tableta o equipo de caseta que use la app de portería.</p>
+      <button type="button" class="btn btn--primary" (click)="abrirAgregar()">+ Agregar dispositivo</button>
+    </div>
+  } @else {
+    <div class="cd-grid">
+      @for (d of dispositivos(); track d.id) {
+        <article class="cd-card" (click)="abrirDetalle(d)">
+          <div class="cd-card__top">
+            <span class="cd-card__ph">📱<span class="cd-card__dot" [class.is-off]="!d.activo"></span></span>
+            <div class="cd-card__name">
+              <b>{{ d.nombre }}</b>
+              @if (esNuevo(d.creadoUtc)) { <span class="cd-tag">NUEVO</span> }
+            </div>
+            <div class="cd-card__menu" (click)="$event.stopPropagation()">
+              <button type="button" class="cd-kebab" (click)="menu.set(menu() === d.id ? null : d.id)">⋮</button>
+              @if (menu() === d.id) {
+                <div class="cd-menu">
+                  <button type="button" (click)="copiar(d.email, 'Email copiado'); menu.set(null)">⧉ Copiar email</button>
+                  <button type="button" class="cd-menu__del" (click)="confirmEliminar.set(d); menu.set(null)">🗑 Eliminar dispositivo</button>
+                </div>
+              }
+            </div>
+          </div>
+          <span class="cd-card__estado" [class.is-off]="!d.activo">{{ d.activo ? 'Activo' : 'Inactivo' }}</span>
+          <div class="cd-card__email">
+            <span>{{ d.email }}</span>
+            <button type="button" (click)="$event.stopPropagation(); copiar(d.email, 'Email copiado')">⧉</button>
+          </div>
+          <div class="cd-card__foot">
+            <small>Creado {{ hace(d.creadoUtc) }}</small>
+            <span class="cd-card__go">Ver detalles ›</span>
+          </div>
+        </article>
+      }
+    </div>
+  }
+</section>
+
+<!-- Agregar dispositivo -->
+@if (agregarAbierto()) {
+  <div class="cd-overlay" (click)="agregarAbierto.set(false)">
+    <div class="cd-dialog" (click)="$event.stopPropagation()">
+      <header><h3>+ Agregar dispositivo</h3><button type="button" (click)="agregarAbierto.set(false)">✕</button></header>
+      <label class="cd-field">
+        <span>Nombre del dispositivo</span>
+        <input [ngModel]="nuevoNombre()" (ngModelChange)="nuevoNombre.set($event)"
+          placeholder="Ej.: Caseta, entrada principal" maxlength="40" />
+        <small>Un nombre para identificar este dispositivo (2-40 caracteres)</small>
+      </label>
+      <footer>
+        <button type="button" class="btn btn--ghost" (click)="agregarAbierto.set(false)">Cancelar</button>
+        <button type="button" class="btn btn--primary" [disabled]="nuevoNombre().trim().length < 2 || guardando()" (click)="crear()">
+          {{ guardando() ? 'Creando…' : 'Agregar dispositivo' }}
+        </button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- Credenciales generadas -->
+@if (generada(); as g) {
+  <div class="cd-overlay" (click)="generada.set(null)">
+    <div class="cd-dialog" (click)="$event.stopPropagation()">
+      <header><h3>🛡 Credenciales generadas</h3><button type="button" (click)="generada.set(null)">✕</button></header>
+      <p class="cd-note">
+        📱 Estas credenciales permiten al personal acceder a la app de portería para escanear códigos QR.
+      </p>
+      <div class="cd-creds">
+        <label class="cd-credrow"><span>Email</span>
+          <div><code>{{ g.email }}</code><button type="button" (click)="copiar(g.email, 'Email copiado')">⧉</button></div>
+        </label>
+        <label class="cd-credrow"><span>Contraseña</span>
+          <div><code>{{ g.password }}</code><button type="button" (click)="copiar(g.password, 'Contraseña copiada')">⧉</button></div>
+        </label>
+        <button type="button" class="btn btn--ghost cd-copyall" (click)="copiarAmbas(g)">⧉ Copiar ambas credenciales</button>
+      </div>
+      <p class="cd-steps">
+        Compartilas de forma segura con tu personal. La contraseña solo se muestra una vez.
+      </p>
+      <footer><button type="button" class="btn btn--primary" (click)="generada.set(null)">Cerrar</button></footer>
+    </div>
+  </div>
+}
+
+<!-- Detalle dispositivo -->
+@if (detalle(); as d) {
+  <div class="cd-overlay" (click)="detalle.set(null)">
+    <div class="cd-dialog" (click)="$event.stopPropagation()">
+      <header><h3>📱 Detalles del dispositivo</h3><button type="button" (click)="detalle.set(null)">✕</button></header>
+
+      <p class="cd-dsec">Información del dispositivo</p>
+      <div class="cd-dbox">
+        @if (editandoNombre()) {
+          <div class="cd-edit">
+            <input [ngModel]="nuevoNombre()" (ngModelChange)="nuevoNombre.set($event)" maxlength="40" />
+            <button type="button" class="btn btn--primary btn--sm" (click)="guardarNombre()">Guardar</button>
+            <button type="button" class="btn btn--ghost btn--sm" (click)="editandoNombre.set(false)">Cancelar</button>
+          </div>
+        } @else {
+          <div class="cd-dbox__row">
+            <div><small>Nombre del dispositivo</small><b>{{ d.nombre }}</b></div>
+            <button type="button" class="cd-link" (click)="editandoNombre.set(true)">✎ Editar nombre</button>
+          </div>
+        }
+      </div>
+
+      <p class="cd-dsec">Credenciales de acceso</p>
+      <div class="cd-dbox">
+        <div class="cd-credrow"><span>Email</span>
+          <div><code>{{ d.email }}</code><button type="button" (click)="copiar(d.email, 'Email copiado')">⧉</button></div>
+        </div>
+        <button type="button" class="btn btn--ghost cd-copyall" (click)="confirmReset.set(true)">🔑 Restablecer contraseña</button>
+        <small class="cd-hint">La contraseña solo se muestra una vez al crear o restablecer.</small>
+      </div>
+
+      <footer>
+        <button type="button" class="btn btn--danger" (click)="confirmEliminar.set(d)">🗑 Eliminar</button>
+        <button type="button" class="btn btn--ghost" (click)="detalle.set(null)">Cerrar</button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- Confirmar reset -->
+@if (confirmReset()) {
+  <div class="cd-overlay" (click)="confirmReset.set(false)">
+    <div class="cd-dialog cd-dialog--sm" (click)="$event.stopPropagation()">
+      <h3>⚠️ Restablecer contraseña</h3>
+      <p>¿Seguro que querés restablecer la contraseña de este dispositivo? La contraseña actual dejará de funcionar.</p>
+      <footer>
+        <button type="button" class="btn btn--ghost" (click)="confirmReset.set(false)">Cancelar</button>
+        <button type="button" class="btn btn--danger" (click)="restablecer()">Restablecer contraseña</button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- Confirmar eliminar -->
+@if (confirmEliminar(); as d) {
+  <div class="cd-overlay" (click)="confirmEliminar.set(null)">
+    <div class="cd-dialog cd-dialog--sm" (click)="$event.stopPropagation()">
+      <h3>Eliminar dispositivo</h3>
+      <p>Se elimina "{{ d.nombre }}" y su cuenta de acceso. El equipo ya no podrá iniciar sesión.</p>
+      <footer>
+        <button type="button" class="btn btn--ghost" (click)="confirmEliminar.set(null)">Cancelar</button>
+        <button type="button" class="btn btn--danger" (click)="eliminar(d)">Eliminar</button>
+      </footer>
+    </div>
+  </div>
+}

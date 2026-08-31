@@ -1,0 +1,236 @@
+<section class="qa">
+  <header class="qa-head">
+    <h1>Códigos QR</h1>
+    <p>Accesos temporales para visitantes y proveedores</p>
+  </header>
+
+  <div class="qa-stats">
+    <article class="qa-stat"><span class="qa-stat__ic">▦</span><div><b>{{ activos() }}</b><small>QRs activos</small></div></article>
+    <article class="qa-stat"><span class="qa-stat__ic">📅</span><div><b>{{ generadosRango() }}</b><small>Generados en el mes</small></div></article>
+    <article class="qa-stat"><span class="qa-stat__ic">⛶</span><div><b>{{ escaneadosHoy() }}</b><small>Escaneados hoy</small></div></article>
+  </div>
+
+  <div class="qa-toolbar">
+    <div class="qa-datenav">
+      <button type="button" (click)="cambiarMes(-1)">‹</button>
+      <span>📅 {{ mesLabel() }}</span>
+      <button type="button" (click)="cambiarMes(1)">›</button>
+    </div>
+    <div class="qa-search">
+      <span>⌕</span>
+      <input type="search" placeholder="Buscar códigos QR…"
+        [value]="busqueda()" (input)="busqueda.set($any($event.target).value)" />
+    </div>
+    <span class="qa-count">{{ visibles().length }} código(s)</span>
+    <button type="button" class="btn btn--primary" (click)="nuevo()">+ Generar código QR</button>
+  </div>
+
+  @if (cargando()) {
+    <p class="qa-loading">Cargando…</p>
+  } @else if (visibles().length === 0) {
+    <div class="qa-empty">
+      <div class="qa-empty__ic">▦</div>
+      <h3>Sin códigos en el mes</h3>
+      <p>Generá un código QR para un visitante o proveedor, o cambiá de mes.</p>
+      <button type="button" class="btn btn--primary" (click)="nuevo()">+ Generar código QR</button>
+    </div>
+  } @else {
+    <div class="qa-tablewrap">
+      <table class="qa-table">
+        <thead>
+          <tr>
+            <th>Visitante</th><th>Estado</th><th>Propósito</th><th>Unidad</th>
+            <th>Creado por</th><th>Vigencia</th><th class="qa-c-acc">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of visibles(); track p.id) {
+            <tr (click)="abrir(p)">
+              <td>
+                <div class="qa-vis">
+                  <span class="qa-vis__av">{{ iconVisita[p.tipoVisita] }}</span>
+                  <span class="qa-vis__b"><b>{{ p.visitanteNombre }}</b><small>{{ p.codigo }}</small></span>
+                </div>
+              </td>
+              <td>
+                <span class="qa-estado" [style.color]="estadoColor(p.estado)">● {{ p.estado }}</span>
+              </td>
+              <td class="qa-nowrap">{{ labelVisita[p.tipoVisita] }}</td>
+              <td class="qa-nowrap">{{ p.destino }}</td>
+              <td class="qa-nowrap">{{ p.creadoPor }}</td>
+              <td class="qa-nowrap">{{ (p.validoHastaUtc || p.fechaEntrada) | date:'d MMM y' }}</td>
+              <td class="qa-c-acc" (click)="$event.stopPropagation()">
+                <div class="qa-rowacc">
+                  <button type="button" title="Ver" (click)="abrir(p)">👁</button>
+                  <button type="button" title="Descargar" (click)="abrir(p)">⬇</button>
+                  <button type="button" title="Copiar" (click)="abrir(p)">⧉</button>
+                  @if (p.estado === 'Activo') {
+                    <button type="button" title="Revocar" class="is-danger" (click)="revocar(p)">⊘</button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>
+
+<!-- ===== Nuevo QR ===== -->
+@if (form(); as f) {
+  <div class="qa-overlay" (click)="form.set(null)">
+    <div class="qa-modal" (click)="$event.stopPropagation()">
+      <header>
+        <div><h3>Nuevo QR</h3><p>Generá un pase de acceso y compartilo por WhatsApp.</p></div>
+        <button type="button" (click)="form.set(null)">✕</button>
+      </header>
+      <div class="qa-modal__body">
+        <h4>Tipo de visita</h4>
+        <div class="qa-tiles">
+          @for (t of tiposVisita; track t.value) {
+            <button type="button" class="qa-tile" [class.is-sel]="f.tipoVisita === t.value"
+              (click)="setForm('tipoVisita', t.value)">
+              <span>{{ t.icon }}</span>{{ t.label }}
+            </button>
+          }
+        </div>
+
+        <h4>Vehículo</h4>
+        <div class="qa-tiles qa-tiles--3">
+          @for (v of tiposVehiculo; track v.value) {
+            <button type="button" class="qa-tile" [class.is-sel]="f.vehiculo === v.value"
+              (click)="setForm('vehiculo', v.value)"><span>{{ v.icon }}</span>{{ v.label }}</button>
+          }
+        </div>
+        @if (f.vehiculo !== 'SinVehiculo') {
+          <input class="qa-input" placeholder="Patente" [ngModel]="f.patente"
+            (ngModelChange)="setForm('patente', $event)" style="margin-top:8px" />
+        }
+
+        <h4>Tipo de QR</h4>
+        <div class="qa-seg">
+          <button type="button" [class.is-sel]="f.tipoPase === 'UnaEntrada'" (click)="setForm('tipoPase', 'UnaEntrada')">🕐 Una entrada</button>
+          <button type="button" [class.is-sel]="f.tipoPase === 'Temporal'" (click)="setForm('tipoPase', 'Temporal')">📅 QR temporal</button>
+        </div>
+        <p class="qa-hint">Una entrada se usa una sola vez; el QR temporal admite varias entradas dentro del rango.</p>
+
+        <h4>Detalles del visitante</h4>
+        <div class="qa-row2">
+          <label class="qa-f"><span>Fecha de entrada</span>
+            <input class="qa-input" type="date" [ngModel]="f.fechaEntrada" (ngModelChange)="setForm('fechaEntrada', $event)" />
+          </label>
+          <label class="qa-f"><span>Nombre del visitante</span>
+            <input class="qa-input" placeholder="Ingresá el nombre" [ngModel]="f.visitanteNombre"
+              (ngModelChange)="setForm('visitanteNombre', $event)" />
+          </label>
+        </div>
+        @if (f.tipoPase === 'Temporal') {
+          <label class="qa-f" style="margin-top:10px"><span>Válido hasta</span>
+            <input class="qa-input" type="date" [ngModel]="f.validoHasta" (ngModelChange)="setForm('validoHasta', $event)" />
+          </label>
+        }
+
+        <label class="qa-f" style="margin-top:10px"><span>Destino</span>
+          <select class="qa-input" [ngModel]="f.unidadId" (ngModelChange)="setForm('unidadId', $event)">
+            <option value="">🏢 Administración</option>
+            @for (u of unidadesLista(); track u.id) { <option [value]="u.id">{{ u.nombre }}</option> }
+          </select>
+        </label>
+      </div>
+      <footer>
+        <button type="button" class="btn btn--ghost" (click)="form.set(null)">Cancelar</button>
+        <button type="button" class="btn btn--primary" [disabled]="!formValido() || guardando()" (click)="crear()">
+          {{ guardando() ? 'Generando…' : 'Generar QR' }}
+        </button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- ===== Resultado ===== -->
+@if (resultado(); as r) {
+  <div class="qa-overlay" (click)="resultado.set(null)">
+    <div class="qa-modal qa-modal--sm" (click)="$event.stopPropagation()">
+      <header>
+        <div><h3>QR generado</h3><p>Compartilo por WhatsApp con el visitante.</p></div>
+        <button type="button" (click)="resultado.set(null)">✕</button>
+      </header>
+      <div class="qa-modal__body">
+        <div class="qa-qrcard">
+          <div class="qa-qrcard__top">{{ r.consorcioNombre }}</div>
+          <img [src]="'data:image/png;base64,' + r.qrPngBase64" alt="QR" />
+          <div class="qa-qrcard__meta">
+            <div><small>EMITIDO POR</small><b>{{ r.creadoPor }}</b></div>
+            <div><small>FECHA DE ACCESO</small><b>{{ r.fechaEntrada | date:'d MMM y' }}</b></div>
+            <div><small>VISITANTE</small><b>{{ r.visitanteNombre }}</b></div>
+            <div><small>PROPÓSITO</small><b>{{ labelVisita[r.tipoVisita] }}</b></div>
+          </div>
+        </div>
+        <p class="qa-valid">Válido: {{ (r.validoHastaUtc || r.fechaEntrada) | date:'d MMM y' }}</p>
+      </div>
+      <footer>
+        <button type="button" class="btn btn--ghost" (click)="resultado.set(null)">Cerrar</button>
+        <button type="button" class="btn btn--ghost" (click)="descargar(r)">⬇ Descargar</button>
+        <button type="button" class="btn btn--primary" (click)="copiar(r)">⧉ Copiar imagen</button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- ===== Detalle ===== -->
+@if (detalle(); as d) {
+  <div class="qa-overlay" (click)="detalle.set(null)">
+    <div class="qa-modal" (click)="$event.stopPropagation()">
+      <header>
+        <div><h3>Detalles del código QR</h3><p>Consultá, compartí o revocá este pase.</p></div>
+        <span class="qa-estado" [style.color]="estadoColor(d.estado)">● {{ d.estado }}</span>
+        <button type="button" (click)="detalle.set(null)">✕</button>
+      </header>
+      <div class="qa-modal__body">
+        <div class="qa-qrcard">
+          <div class="qa-qrcard__top">{{ d.consorcioNombre }}</div>
+          <img [src]="'data:image/png;base64,' + d.qrPngBase64" alt="QR" />
+          <div class="qa-qrcard__meta">
+            <div><small>EMITIDO POR</small><b>{{ d.creadoPor }}</b></div>
+            <div><small>FECHA DE ACCESO</small><b>{{ d.fechaEntrada | date:'d MMM y' }}</b></div>
+            <div><small>VISITANTE</small><b>{{ d.visitanteNombre }}</b></div>
+            <div><small>PROPÓSITO</small><b>{{ labelVisita[d.tipoVisita] }}</b></div>
+          </div>
+        </div>
+        <div class="qa-detacc">
+          <button type="button" class="btn btn--ghost" (click)="copiar(d)">⧉ Copiar imagen</button>
+          <button type="button" class="btn btn--ghost" (click)="descargar(d)">⬇ Descargar</button>
+        </div>
+
+        <h4 class="qa-dsec">Información del visitante</h4>
+        <div class="qa-drows">
+          <div><small>Nombre</small><b>{{ d.visitanteNombre }}</b></div>
+          <div><small>Propósito</small><b>{{ labelVisita[d.tipoVisita] }}</b></div>
+          <div><small>Tipo de pase</small><b>{{ labelPase[d.tipoPase] }}</b></div>
+          <div><small>Creado por</small><b>{{ d.creadoPor }}</b></div>
+          <div><small>Destino</small><b>{{ d.unidadNombre }}</b></div>
+          <div><small>Usos</small><b>{{ d.usosCount }} / {{ d.usosMax }}</b></div>
+        </div>
+
+        <h4 class="qa-dsec">Vehículo</h4>
+        <div class="qa-drows">
+          <div><small>Tipo</small><b>{{ iconoVehiculo(d.vehiculo) }} {{ d.vehiculo === 'SinVehiculo' ? 'Sin vehículo' : d.vehiculo }}</b></div>
+          @if (d.patente) { <div><small>Patente</small><b>{{ d.patente }}</b></div> }
+        </div>
+
+        <h4 class="qa-dsec">Validez</h4>
+        <div class="qa-drows">
+          <div><small>Válido desde</small><b>{{ d.fechaEntrada | date:'d MMM y' }}</b></div>
+          @if (d.validoHastaUtc) { <div><small>Válido hasta</small><b>{{ d.validoHastaUtc | date:'d MMM y' }}</b></div> }
+        </div>
+      </div>
+      <footer>
+        @if (d.estado === 'Activo') {
+          <button type="button" class="btn btn--danger" (click)="revocar(d)">⊘ Revocar</button>
+        }
+        <button type="button" class="btn btn--ghost" (click)="detalle.set(null)">Cerrar</button>
+      </footer>
+    </div>
+  </div>
+}

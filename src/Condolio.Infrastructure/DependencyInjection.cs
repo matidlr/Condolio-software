@@ -83,6 +83,10 @@ public static class DependencyInjection
         services.AddScoped<IVistaResidenteService, Condolio.Infrastructure.Residentes.VistaResidenteService>();
         services.AddScoped<IMiPortalService, Condolio.Infrastructure.Residentes.MiPortalService>();
         services.AddScoped<IPaseAccesoService, Condolio.Infrastructure.Accesos.PaseAccesoService>();
+        services.AddScoped<IAccesoAdminService, Condolio.Infrastructure.Accesos.AccesoAdminService>();
+        services.AddScoped<Condolio.Infrastructure.Personal.PersonalService>();
+        services.AddScoped<Condolio.Application.Personal.IPersonalService>(sp => sp.GetRequiredService<Condolio.Infrastructure.Personal.PersonalService>());
+        services.AddScoped<Condolio.Application.Personal.ICredencialCasetaService>(sp => sp.GetRequiredService<Condolio.Infrastructure.Personal.PersonalService>());
         services.AddScoped<IContactoService, Condolio.Infrastructure.Contactos.ContactoService>();
         services.AddScoped<ITicketService, Condolio.Infrastructure.Tickets.TicketService>();
         services.AddScoped<IAmenidadService, Condolio.Infrastructure.Amenidades.AmenidadService>();

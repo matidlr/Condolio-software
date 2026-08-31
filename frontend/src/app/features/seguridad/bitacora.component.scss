@@ -1,0 +1,87 @@
+:host { display: block; }
+
+.bt-head {
+  background: var(--c-navy-800); color: #fff; border-radius: 12px;
+  padding: 18px 22px; margin-bottom: 16px;
+}
+.bt-head h1 { margin: 0; font-size: 1.35rem; }
+.bt-head p { margin: 4px 0 0; color: #c7cfda; font-size: 0.88rem; }
+
+.bt-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.bt-datenav {
+  display: flex; align-items: center; gap: 4px;
+  border: 1px solid var(--c-border); border-radius: 8px; background: var(--c-surface); padding: 3px;
+}
+.bt-datenav button {
+  width: 28px; height: 28px; border: none; background: none; cursor: pointer; border-radius: 6px;
+  color: var(--c-text-muted); font-size: 1rem;
+}
+.bt-datenav button:hover { background: var(--c-bg); }
+.bt-datenav__lbl { font-size: 0.85rem; padding: 0 6px; white-space: nowrap; }
+
+.bt-search {
+  display: flex; align-items: center; gap: 6px; flex: 1; min-width: 200px;
+  border: 1px solid var(--c-border); border-radius: 8px; background: var(--c-surface); padding: 0 10px;
+}
+.bt-search span { color: var(--c-text-soft); }
+.bt-search input { flex: 1; border: none; outline: none; background: none; padding: 8px 0; font: inherit; font-size: 0.85rem; }
+
+.bt-tabs { display: flex; border: 1px solid var(--c-border); border-radius: 8px; overflow: hidden; }
+.bt-tabs button {
+  border: none; background: var(--c-surface); padding: 8px 14px; font: inherit; font-size: 0.83rem;
+  color: var(--c-text-muted); cursor: pointer;
+}
+.bt-tabs button + button { border-left: 1px solid var(--c-border); }
+.bt-tabs button.is-active { background: var(--c-navy-800); color: #fff; font-weight: 600; }
+
+.bt-adentro {
+  display: inline-flex; align-items: center; gap: 7px; margin-bottom: 12px;
+  background: color-mix(in srgb, #16a34a 12%, transparent); color: #15803d;
+  border-radius: 999px; padding: 5px 12px; font-size: 0.82rem; font-weight: 600;
+}
+.bt-adentro__dot { width: 8px; height: 8px; border-radius: 50%; background: #16a34a; }
+
+.bt-loading { text-align: center; color: var(--c-text-muted); padding: 40px; }
+.bt-empty {
+  background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 12px;
+  padding: 48px 24px; text-align: center;
+}
+.bt-empty__ic {
+  width: 64px; height: 64px; margin: 0 auto 12px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 1.6rem; background: var(--c-bg); color: var(--c-text-soft);
+}
+.bt-empty h3 { margin: 0 0 6px; }
+.bt-empty p { margin: 0 auto 16px; max-width: 380px; color: var(--c-text-muted); font-size: 0.88rem; }
+
+.bt-tablewrap {
+  background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 12px; overflow-x: auto;
+}
+.bt-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+.bt-table th {
+  text-align: left; padding: 10px 14px; color: var(--c-text-soft); font-weight: 600;
+  font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--c-border); white-space: nowrap;
+  background: color-mix(in srgb, var(--c-bg) 55%, var(--c-surface));
+}
+.bt-table td { padding: 11px 14px; border-bottom: 1px solid color-mix(in srgb, var(--c-border) 60%, transparent); vertical-align: middle; }
+.bt-table tbody tr:last-child td { border-bottom: none; }
+.bt-table tbody tr:hover { background: #eef1f6; }
+
+.bt-vis { font-weight: 600; }
+.bt-prop { color: var(--c-text-muted); white-space: nowrap; }
+.bt-nowrap { white-space: nowrap; }
+.bt-nowrap b { font-weight: 600; }
+.bt-nowrap small { display: block; color: var(--c-text-soft); font-size: 0.74rem; }
+.bt-dash { color: var(--c-text-soft); }
+
+.bt-pill {
+  display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; white-space: nowrap;
+}
+.bt-pill--in { background: #dbeafe; color: #1d4ed8; }
+.bt-pill--out { background: #dcfce7; color: #15803d; }
+
+.bt-out {
+  border: 1px solid var(--c-border); background: var(--c-surface); border-radius: 8px;
+  padding: 5px 10px; font: inherit; font-size: 0.78rem; color: var(--c-text); cursor: pointer; white-space: nowrap;
+}
+.bt-out:hover { border-color: var(--c-slate-500); background: var(--c-bg); }

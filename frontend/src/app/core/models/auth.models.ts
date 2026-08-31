@@ -1,4 +1,4 @@
-export type Rol = 'SuperAdmin' | 'Administrador' | 'Residente';
+export type Rol = 'SuperAdmin' | 'Administrador' | 'Residente' | 'Personal';
 
 export interface LoginRequest {
   email: string;

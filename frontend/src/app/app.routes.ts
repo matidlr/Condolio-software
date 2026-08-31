@@ -29,6 +29,13 @@ export const routes: Routes = [
   },
   { path: 'mi-unidad', pathMatch: 'full', redirectTo: 'portal/inicio' },
   {
+    path: 'porteria',
+    canActivate: [authGuard, rolGuard],
+    data: { roles: ['Personal'] },
+    loadComponent: () =>
+      import('./features/porteria/porteria.component').then((m) => m.PorteriaComponent),
+  },
+  {
     path: 'portal',
     canActivate: [authGuard, rolGuard],
     data: { roles: ['Residente'] },
@@ -225,6 +232,27 @@ export const routes: Routes = [
         path: 'encuestas',
         loadComponent: () =>
           import('./features/encuestas/encuestas.component').then((m) => m.EncuestasComponent),
+      },
+      { path: 'seguridad', pathMatch: 'full', redirectTo: 'seguridad/bitacora' },
+      {
+        path: 'seguridad/bitacora',
+        loadComponent: () =>
+          import('./features/seguridad/bitacora.component').then((m) => m.BitacoraComponent),
+      },
+      {
+        path: 'seguridad/qr',
+        loadComponent: () =>
+          import('./features/seguridad/qr-admin.component').then((m) => m.QrAdminComponent),
+      },
+      {
+        path: 'seguridad/staff',
+        loadComponent: () =>
+          import('./features/seguridad/staff.component').then((m) => m.StaffComponent),
+      },
+      {
+        path: 'seguridad/credenciales',
+        loadComponent: () =>
+          import('./features/seguridad/credenciales.component').then((m) => m.CredencialesCasetaComponent),
       },
       {
         path: 'encuestas/:id',

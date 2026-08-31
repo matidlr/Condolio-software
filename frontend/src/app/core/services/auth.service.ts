@@ -77,6 +77,7 @@ export class AuthService {
     if (this.tieneRol('SuperAdmin')) return '/admin-saas';
     if (this.tieneRol('Administrador')) return '/panel';
     if (this.tieneRol('Residente')) return '/portal';
+    if (this.tieneRol('Personal')) return '/porteria';
     return '/';
   }
 

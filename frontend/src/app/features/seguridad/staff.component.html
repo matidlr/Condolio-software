@@ -1,0 +1,157 @@
+<section class="sf">
+  <header class="sf-head">
+    <div>
+      <h1>Staff</h1>
+      <p>Personal de seguridad y servicios de la comunidad</p>
+    </div>
+    <button type="button" class="btn btn--primary" (click)="nuevo()">+ Agregar personal</button>
+  </header>
+
+  <div class="sf-stats">
+    <article class="sf-stat"><span class="sf-stat__ic">👥</span><div><b>{{ total() }}</b><small>Personal total</small></div></article>
+    <article class="sf-stat"><span class="sf-stat__ic sf-stat__ic--seg">🛡</span><div><b>{{ seguridad() }}</b><small>Seguridad</small></div></article>
+    <article class="sf-stat"><span class="sf-stat__ic sf-stat__ic--app">📱</span><div><b>{{ conAcceso() }}</b><small>Con acceso a la app</small></div></article>
+  </div>
+
+  <div class="sf-toolbar">
+    <div class="sf-search">
+      <span>⌕</span>
+      <input type="search" placeholder="Buscar personal…" [value]="busqueda()" (input)="busqueda.set($any($event.target).value)" />
+    </div>
+    <span class="sf-count">{{ visibles().length }} de {{ total() }}</span>
+    <a class="sf-link" routerLink="/panel/seguridad/credenciales">Credenciales de caseta ›</a>
+  </div>
+
+  @if (cargando()) {
+    <p class="sf-loading">Cargando…</p>
+  } @else if (visibles().length === 0) {
+    <div class="sf-empty">
+      <span class="sf-empty__ic">🛡</span>
+      <h3>{{ busqueda() ? 'Nadie coincide con la búsqueda' : 'Aún no hay personal' }}</h3>
+      <p>Agregá personal para llevar un registro de tu equipo de seguridad, mantenimiento y otros.</p>
+      @if (!busqueda()) {
+        <button type="button" class="btn btn--primary" (click)="nuevo()">+ Agregar primer miembro</button>
+      }
+    </div>
+  } @else {
+    <div class="sf-grid">
+      @for (m of visibles(); track m.id) {
+        <article class="sf-card" (click)="detalle.set(m)">
+          <div class="sf-card__menu" (click)="$event.stopPropagation()">
+            <button type="button" class="sf-kebab" (click)="menu.set(menu() === m.id ? null : m.id)">⋮</button>
+            @if (menu() === m.id) {
+              <div class="sf-menu">
+                <button type="button" (click)="editar(m); menu.set(null)">✎ Editar</button>
+                <button type="button" class="sf-menu__del" (click)="confirmEliminar.set(m); menu.set(null)">🗑 Eliminar</button>
+              </div>
+            }
+          </div>
+          <span class="sf-av">{{ iniciales(m) }}</span>
+          <b class="sf-card__name">{{ m.nombre }} {{ m.apellido }}</b>
+          <span class="sf-chip">{{ labelTipo[m.tipo] }}</span>
+          @if (m.tieneCuenta) { <span class="sf-appbadge">📱 acceso a la app</span> }
+        </article>
+      }
+    </div>
+  }
+</section>
+
+<!-- Agregar / editar -->
+@if (form(); as f) {
+  <div class="sf-overlay" (click)="form.set(null)">
+    <div class="sf-dialog" (click)="$event.stopPropagation()">
+      <header>
+        <div><h3>{{ f.id ? 'Editar personal' : 'Agregar personal' }}</h3>
+          <p>Registrá al personal de la comunidad y, si aplica, dale una cuenta de acceso.</p></div>
+        <button type="button" (click)="form.set(null)">✕</button>
+      </header>
+
+      <div class="sf-row2">
+        <label class="sf-field"><span>Nombre</span>
+          <input [ngModel]="f.nombre" (ngModelChange)="setForm('nombre', $event)" placeholder="Ingresá el nombre" /></label>
+        <label class="sf-field"><span>Apellido</span>
+          <input [ngModel]="f.apellido" (ngModelChange)="setForm('apellido', $event)" placeholder="Ingresá el apellido" /></label>
+      </div>
+
+      <label class="sf-field"><span>Tipo de personal</span>
+        <select [ngModel]="f.tipo" (ngModelChange)="setForm('tipo', $event)">
+          @for (t of tipos; track t.value) { <option [value]="t.value">{{ t.icon }} {{ t.label }}</option> }
+        </select>
+      </label>
+
+      @if (!f.id) {
+        <label class="sf-toggle">
+          <input type="checkbox" [ngModel]="f.crearCuenta" (ngModelChange)="setForm('crearCuenta', $event)" />
+          <span><b>Crear cuenta de acceso a la app</b><small>Para que pueda iniciar sesión en la app de portería</small></span>
+        </label>
+        @if (f.crearCuenta) {
+          <label class="sf-field"><span>Email de la cuenta</span>
+            <input type="email" [ngModel]="f.emailCuenta" (ngModelChange)="setForm('emailCuenta', $event)"
+              placeholder="portero@ejemplo.com" />
+            <small>Se genera una contraseña que se muestra una sola vez.</small>
+          </label>
+        }
+      }
+
+      <footer>
+        <button type="button" class="btn btn--ghost" (click)="form.set(null)">Cancelar</button>
+        <button type="button" class="btn btn--primary" [disabled]="!formValido() || guardando()" (click)="guardar()">
+          {{ guardando() ? 'Guardando…' : 'Guardar' }}
+        </button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- Cuenta generada -->
+@if (generado(); as g) {
+  <div class="sf-overlay" (click)="generado.set(null)">
+    <div class="sf-dialog sf-dialog--sm" (click)="$event.stopPropagation()">
+      <header><h3>🛡 Cuenta de acceso creada</h3><button type="button" (click)="generado.set(null)">✕</button></header>
+      <p class="sf-note">{{ g.miembro.nombre }} ya puede iniciar sesión en la app de portería con estos datos.</p>
+      <div class="sf-creds">
+        <div><span>Email</span><div><code>{{ g.miembro.email }}</code><button type="button" (click)="copiar(g.miembro.email || '')">⧉</button></div></div>
+        <div><span>Contraseña</span><div><code>{{ g.passwordTemporal }}</code><button type="button" (click)="copiar(g.passwordTemporal || '')">⧉</button></div></div>
+      </div>
+      <p class="sf-hint">La contraseña solo se muestra ahora. Compartila de forma segura.</p>
+      <footer><button type="button" class="btn btn--primary" (click)="generado.set(null)">Cerrar</button></footer>
+    </div>
+  </div>
+}
+
+<!-- Perfil -->
+@if (detalle(); as m) {
+  <div class="sf-overlay" (click)="detalle.set(null)">
+    <div class="sf-dialog sf-dialog--sm" (click)="$event.stopPropagation()">
+      <header><h3>Perfil del personal</h3><button type="button" (click)="detalle.set(null)">✕</button></header>
+      <div class="sf-perfil">
+        <span class="sf-av sf-av--lg">{{ iniciales(m) }}</span>
+        <b>{{ m.nombre }} {{ m.apellido }}</b>
+        <span class="sf-chip">{{ labelTipo[m.tipo] }}</span>
+      </div>
+      <div class="sf-dbox">
+        <div class="sf-drow"><small>Nombre</small><b>{{ m.nombre }}</b></div>
+        <div class="sf-drow"><small>Apellido</small><b>{{ m.apellido || '—' }}</b></div>
+        <div class="sf-drow"><small>Acceso a la app</small><b>{{ m.tieneCuenta ? (m.email || 'Sí') : 'Sin cuenta' }}</b></div>
+      </div>
+      <footer>
+        <button type="button" class="btn btn--ghost" (click)="editar(m)">✎ Editar</button>
+        <button type="button" class="btn btn--ghost" (click)="detalle.set(null)">Cerrar</button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- Confirmar eliminar -->
+@if (confirmEliminar(); as m) {
+  <div class="sf-overlay" (click)="confirmEliminar.set(null)">
+    <div class="sf-dialog sf-dialog--sm" (click)="$event.stopPropagation()">
+      <h3>Eliminar personal</h3>
+      <p>Se elimina a "{{ m.nombre }} {{ m.apellido }}"@if (m.tieneCuenta) { y su cuenta de acceso}.</p>
+      <footer>
+        <button type="button" class="btn btn--ghost" (click)="confirmEliminar.set(null)">Cancelar</button>
+        <button type="button" class="btn btn--danger" (click)="eliminar(m)">Eliminar</button>
+      </footer>
+    </div>
+  </div>
+}
