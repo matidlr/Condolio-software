@@ -67,6 +67,7 @@ export interface RegistrarPaquete {
   transportista?: string | null;
   descripcion?: string | null;
   llegadaLocal?: string | null;
+  fotoBase64?: string | null;
 }
 
 export const TRANSPORTISTAS = [

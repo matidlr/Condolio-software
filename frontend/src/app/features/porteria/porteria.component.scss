@@ -487,3 +487,20 @@ select.pt-input { appearance: auto; }
 }
 .pt-warn span { font-size: 1.3rem; }
 .pt-warn p { margin: 0; color: #b91c1c; font-size: 0.9rem; line-height: 1.4; }
+
+/* foto del paquete */
+.pt-foto__add {
+  width: 100%; border: 1px dashed var(--c-slate-500); background: var(--c-surface);
+  border-radius: 12px; padding: 20px; font: inherit; font-size: 0.95rem; color: var(--c-text-muted);
+  cursor: pointer;
+}
+.pt-foto__add:disabled { opacity: .6; }
+.pt-foto { border: 1px solid var(--c-border); border-radius: 12px; overflow: hidden; background: var(--c-surface); }
+.pt-foto img { width: 100%; max-height: 260px; object-fit: cover; display: block; }
+.pt-foto__acts { display: flex; }
+.pt-foto__acts button {
+  flex: 1; border: none; background: var(--c-surface); padding: 12px; font: inherit; font-size: 0.88rem;
+  font-weight: 600; color: var(--c-navy-800); cursor: pointer;
+}
+.pt-foto__acts button + button { border-left: 1px solid var(--c-border); }
+.pt-foto__acts .is-del { color: var(--c-danger, #e11d48); }

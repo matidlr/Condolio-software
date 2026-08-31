@@ -29,11 +29,19 @@
       <button type="button" class="pq-icon" (click)="refrescar()" aria-label="Refrescar">⟳</button>
     </div>
 
-    <div class="pq-tabs">
-      <button type="button" [class.is-on]="tab() === 'Todos'" (click)="setTab('Todos')">Todos</button>
-      <button type="button" [class.is-on]="tab() === 'EnRecepcion'" (click)="setTab('EnRecepcion')">En caseta</button>
-      <button type="button" [class.is-on]="tab() === 'Entregado'" (click)="setTab('Entregado')">Entregados</button>
-    </div>
+    @if (soloHistorial()) {
+      <div class="pq-monthnav">
+        <button type="button" (click)="cambiarHistMes(-1)">‹</button>
+        <b>📅 {{ histMesLabel() }}</b>
+        <button type="button" (click)="cambiarHistMes(1)">›</button>
+      </div>
+    } @else {
+      <div class="pq-tabs">
+        <button type="button" [class.is-on]="tab() === 'Todos'" (click)="setTab('Todos')">Todos</button>
+        <button type="button" [class.is-on]="tab() === 'EnRecepcion'" (click)="setTab('EnRecepcion')">En caseta</button>
+        <button type="button" [class.is-on]="tab() === 'Entregado'" (click)="setTab('Entregado')">Entregados</button>
+      </div>
+    }
 
     @if (cargando()) {
       <p class="pq-loading">Cargando…</p>
@@ -69,7 +77,7 @@
                       <div class="pq-menu">
                         @if (p.estado === 'EnRecepcion') {
                           <button type="button" (click)="recordatorio(p)">🔔 Enviar recordatorio</button>
-                          <button type="button" class="is-primary" (click)="entregar(p)">✓ Marcar como entregado</button>
+                          <button type="button" class="is-primary" (click)="pedirEntrega(p)">✓ Marcar como entregado</button>
                         } @else {
                           <button type="button" (click)="abrirDetalle(p); menuId.set(null)">Ver detalle</button>
                         }
@@ -124,7 +132,20 @@
             <div class="pq-kv"><span>Tipo</span><b>{{ labelTipo[d.paquete.tipo] }}</b></div>
             <div class="pq-kv"><span>Cantidad</span><b>{{ d.paquete.cantidad }}</b></div>
             <div class="pq-kv"><span>Fecha de llegada</span><b>{{ d.paquete.llegadaUtc | date:'d MMM y, HH:mm' }}</b></div>
+            @if (d.paquete.entregaUtc) {
+              <div class="pq-kv"><span>Fecha de entrega</span><b>{{ d.paquete.entregaUtc | date:'d MMM y, HH:mm' }}</b></div>
+            }
           </div>
+
+          @if (d.paquete.estado === 'Entregado') {
+            <div class="pq-mcard pq-resumen">
+              <h4>Resumen de línea de tiempo</h4>
+              <div class="pq-resumen__row">
+                <div><b>{{ tiempoEspera(d) }}</b><small>Tiempo de espera</small></div>
+                <div><b class="pq-resumen__ok">✓</b><small>Completado</small></div>
+              </div>
+            </div>
+          }
         </div>
 
         <div class="pq-col">
@@ -137,6 +158,7 @@
                   <small>{{ d.paquete.llegadaUtc | date:'EEEE, d MMM y, HH:mm' }}</small>
                   <b>Paquete recibido</b>
                   <em>Registrado por {{ d.paquete.registradoPorNombre }}</em>
+                  @if (d.fotoDataUrl) { <img class="pq-tl__foto" [src]="d.fotoDataUrl" alt="Foto del paquete" /> }
                 </div>
               </li>
               @if (d.paquete.estado === 'Entregado') {
@@ -144,7 +166,7 @@
                   <span class="pq-tl__dot">✓</span>
                   <div>
                     <small>{{ d.paquete.entregaUtc | date:'EEEE, d MMM y, HH:mm' }}</small>
-                    <b>Entregado</b>
+                    <b>Paquete retirado</b>
                     <em>
                       @if (d.paquete.retiradoPorNombre) { Retirado por {{ d.paquete.retiradoPorNombre }} · }
                       Gestionado por {{ d.paquete.entregadoPorNombre }}
@@ -168,10 +190,31 @@
         @if (d.paquete.estado === 'EnRecepcion') {
           <div class="pq-modal__actions">
             <button type="button" class="btn btn--ghost u-btn" (click)="recordatorio(d.paquete)">🔔 Enviar recordatorio</button>
-            <button type="button" class="btn btn--primary u-btn" (click)="entregar(d.paquete)">✓ Marcar como entregado</button>
+            <button type="button" class="btn btn--primary u-btn" (click)="pedirEntrega(d.paquete)">✓ Marcar como entregado</button>
           </div>
         }
       </footer>
+    </div>
+  </div>
+}
+
+<!-- Confirmar "marcar como entregado" (corrección administrativa) -->
+@if (confirmarEntrega(); as p) {
+  <div class="pq-overlay" (click)="confirmarEntrega.set(null)">
+    <div class="pq-confirm" (click)="$event.stopPropagation()">
+      <h3>⚠ Marcar como entregado</h3>
+      <p>Usá esto cuando el paquete ya fue entregado al residente pero la portería no lo marcó.
+        Al ser una corrección administrativa, <b>no se enviará notificación</b>.</p>
+      <div class="pq-confirm__box">
+        <div><span>📦 Unidad</span><b>{{ p.unidadNombre }}</b></div>
+        <div><span>🚚 Transportista</span><b>{{ p.transportista || labelTipo[p.tipo] }}</b></div>
+        <div><span>📅 Fecha de llegada</span><b>{{ desde(p.llegadaUtc) }}</b></div>
+      </div>
+      <p class="pq-confirm__warn">⚠ No se enviará notificación al residente</p>
+      <div class="pq-modal__actions">
+        <button type="button" class="btn btn--ghost u-btn" (click)="confirmarEntrega.set(null)">Cancelar</button>
+        <button type="button" class="btn btn--primary u-btn" (click)="hacerEntrega()">Marcar como entregado</button>
+      </div>
     </div>
   </div>
 }

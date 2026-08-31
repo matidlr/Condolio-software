@@ -440,6 +440,7 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.RegistradoPorNombre).HasMaxLength(240);
             e.Property(x => x.EntregadoPorNombre).HasMaxLength(240);
             e.Property(x => x.RetiradoPorNombre).HasMaxLength(240);
+            e.Property(x => x.FotoRuta).HasMaxLength(300);
             e.HasIndex(x => new { x.ConsorcioId, x.Estado, x.LlegadaUtc });
             e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
         });

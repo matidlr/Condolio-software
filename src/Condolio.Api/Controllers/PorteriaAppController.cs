@@ -294,6 +294,16 @@ public class PorteriaAppController : ApiControllerBase
         return ToResult(await _paquetes.EntregarAsync(c.consorcioId, id, dto, c.registradoPor, ct));
     }
 
+    public record FotoBody(string FotoBase64);
+
+    [HttpPut("paquetes/{id:guid}/foto")]
+    public async Task<IActionResult> FotoPaquete(Guid id, FotoBody body, CancellationToken ct)
+    {
+        var ctx = await CtxAsync(ct);
+        if (ctx is not { } c) return NotFound();
+        return ToResult(await _paquetes.GuardarFotoAsync(c.consorcioId, id, body.FotoBase64, ct));
+    }
+
     [HttpGet("unidades/{unidadId:guid}")]
     public async Task<IActionResult> UnidadDetalle(Guid unidadId, CancellationToken ct)
     {

@@ -3,6 +3,7 @@ using Condolio.Application.Notificaciones;
 using Condolio.Application.Paqueteria;
 using Condolio.Domain.Notificaciones;
 using Condolio.Domain.Paqueteria;
+using Condolio.Infrastructure.Archivos;
 using Condolio.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,13 +11,17 @@ namespace Condolio.Infrastructure.Paqueteria;
 
 public class PaqueteriaService : IPaqueteriaService
 {
+    private const long MaxFotoBytes = 6 * 1024 * 1024;
+
     private readonly CondolioDbContext _db;
     private readonly INotificacionService _notificaciones;
+    private readonly IFileStorage _storage;
 
-    public PaqueteriaService(CondolioDbContext db, INotificacionService notificaciones)
+    public PaqueteriaService(CondolioDbContext db, INotificacionService notificaciones, IFileStorage storage)
     {
         _db = db;
         _notificaciones = notificaciones;
+        _storage = storage;
     }
 
     public async Task<Result<ResumenPaqueteriaDto>> ResumenAsync(Guid consorcioId, CancellationToken ct = default)
@@ -84,7 +89,8 @@ public class PaqueteriaService : IPaqueteriaService
             .Select(u => (u.Nombre + " " + u.Apellido).Trim())
             .ToListAsync(ct);
 
-        return Result<PaqueteDetalleDto>.Ok(new PaqueteDetalleDto(Map(p), Referencia(p.Id), residentes));
+        return Result<PaqueteDetalleDto>.Ok(new PaqueteDetalleDto(
+            Map(p), Referencia(p.Id), residentes, LeerFotoDataUrl(p.FotoRuta)));
     }
 
     public async Task<Result<PaqueteDto>> RegistrarAsync(
@@ -118,6 +124,12 @@ public class PaqueteriaService : IPaqueteriaService
             LlegadaUtc = llegada,
             RegistradoPorNombre = registradoPor,
         };
+        if (!string.IsNullOrWhiteSpace(dto.FotoBase64))
+        {
+            var guardada = await GuardarFotoInternoAsync(consorcioId, p, dto.FotoBase64, ct);
+            if (!guardada.Exito) return Result<PaqueteDto>.Fail(guardada.Error!);
+        }
+
         _db.Paquetes.Add(p);
         await _db.SaveChangesAsync(ct);
 
@@ -125,6 +137,43 @@ public class PaqueteriaService : IPaqueteriaService
             "Llegó un paquete", $"Tenés un paquete de {p.Transportista ?? "un transportista"} esperando en la caseta.", ct);
 
         return Result<PaqueteDto>.Ok(Map(p));
+    }
+
+    public async Task<Result> GuardarFotoAsync(Guid consorcioId, Guid id, string fotoBase64, CancellationToken ct = default)
+    {
+        var p = await _db.Paquetes.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.Id == id && x.ConsorcioId == consorcioId, ct);
+        if (p is null) return Result.Fail("Paquete no encontrado.");
+
+        var r = await GuardarFotoInternoAsync(consorcioId, p, fotoBase64, ct);
+        if (!r.Exito) return Result.Fail(r.Error!);
+        await _db.SaveChangesAsync(ct);
+        return Result.Ok();
+    }
+
+    private async Task<Result> GuardarFotoInternoAsync(Guid consorcioId, Paquete p, string fotoBase64, CancellationToken ct)
+    {
+        var coma = fotoBase64.IndexOf(',');
+        var b64 = coma >= 0 ? fotoBase64[(coma + 1)..] : fotoBase64;
+        byte[] bytes;
+        try { bytes = Convert.FromBase64String(b64); }
+        catch { return Result.Fail("La foto no es válida."); }
+        if (bytes.Length == 0 || bytes.Length > MaxFotoBytes)
+            return Result.Fail("La foto supera el máximo permitido.");
+
+        var ruta = $"paquetes/{consorcioId:N}/{p.Id:N}.jpg";
+        await _storage.GuardarAsync(ruta, new MemoryStream(bytes), ct);
+        p.FotoRuta = ruta;
+        return Result.Ok();
+    }
+
+    private string? LeerFotoDataUrl(string? ruta)
+    {
+        if (string.IsNullOrWhiteSpace(ruta) || !_storage.Existe(ruta)) return null;
+        using var s = _storage.Abrir(ruta);
+        using var ms = new MemoryStream();
+        s.CopyTo(ms);
+        return "data:image/jpeg;base64," + Convert.ToBase64String(ms.ToArray());
     }
 
     public async Task<Result<PaqueteDto>> EntregarAsync(
@@ -180,5 +229,6 @@ public class PaqueteriaService : IPaqueteriaService
 
     private static PaqueteDto Map(Paquete p) => new(
         p.Id, p.UnidadId, p.UnidadNombre, p.Tipo, p.Cantidad, p.Transportista, p.Descripcion,
-        p.Estado, p.LlegadaUtc, p.EntregaUtc, p.RegistradoPorNombre, p.EntregadoPorNombre, p.RetiradoPorNombre);
+        p.Estado, p.LlegadaUtc, p.EntregaUtc, p.RegistradoPorNombre, p.EntregadoPorNombre, p.RetiradoPorNombre,
+        p.FotoRuta != null);
 }

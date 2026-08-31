@@ -20,6 +20,7 @@ export interface Paquete {
   registradoPorNombre: string;
   entregadoPorNombre?: string | null;
   retiradoPorNombre?: string | null;
+  tieneFoto: boolean;
 }
 
 export interface ResumenPaqueteria {
@@ -34,6 +35,7 @@ export interface PaqueteDetalle {
   paquete: Paquete;
   referencia: string;
   residentes: string[];
+  fotoDataUrl?: string | null;
 }
 
 export const LABEL_TIPO_PAQUETE: Record<TipoPaquete, string> = {

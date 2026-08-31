@@ -25,6 +25,28 @@ interface NuevoPaquete {
   tipo: TipoPaquete; cantidad: number;
   transportista: string | null; unidadId: string | null;
   descripcion: string | null;
+  foto: string | null;
+}
+
+/** Reduce una imagen a JPEG (máx `max` px de lado) y devuelve un data URL. */
+export function comprimirImagen(file: File, max = 1280, calidad = 0.8): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const escala = Math.min(1, max / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * escala);
+      canvas.height = Math.round(img.height * escala);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { reject(new Error('canvas')); return; }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', calidad));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('img')); };
+    img.src = url;
+  });
 }
 
 @Component({
@@ -339,11 +361,26 @@ export class PorteriaComponent implements OnDestroy {
     return {
       fecha: `${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())}`,
       hora: `${p(n.getHours())}:${p(n.getMinutes())}`,
-      tipo: 'Paquete', cantidad: 1, transportista: null, unidadId: null, descripcion: null,
+      tipo: 'Paquete', cantidad: 1, transportista: null, unidadId: null, descripcion: null, foto: null,
     };
   }
   setPq<K extends keyof NuevoPaquete>(k: K, v: NuevoPaquete[K]): void {
     this.nuevoPq.update((e) => ({ ...e, [k]: v }));
+  }
+  procesandoFoto = signal(false);
+  async elegirFotoPq(ev: Event): Promise<void> {
+    const input = ev.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    this.procesandoFoto.set(true);
+    try {
+      this.setPq('foto', await comprimirImagen(file));
+    } catch {
+      this.toasts.error('No se pudo procesar la foto.');
+    } finally {
+      this.procesandoFoto.set(false);
+    }
   }
   nuevoPqValido = computed(() => {
     const p = this.nuevoPq();
@@ -424,6 +461,7 @@ export class PorteriaComponent implements OnDestroy {
       transportista: p.transportista,
       descripcion: p.descripcion?.trim() || null,
       llegadaLocal: `${p.fecha}T${p.hora}:00`,
+      fotoBase64: p.foto,
     };
     this.api.registrarPaquete(dto).subscribe({
       next: () => {

@@ -38,6 +38,12 @@ export class PaqueteriaComponent {
   menuId = signal<string | null>(null);
   detalle = signal<PaqueteDetalle | null>(null);
   cargandoDetalle = signal(false);
+  confirmarEntrega = signal<Paquete | null>(null);
+
+  histMes = signal(new Date().getMonth() + 1);
+  histAnio = signal(new Date().getFullYear());
+  histMesLabel = computed(() =>
+    new Date(this.histAnio(), this.histMes() - 1, 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }));
 
   constructor() {
     effect(() => { const c = this.cid(); if (c) this.cargar(c); });
@@ -57,13 +63,34 @@ export class PaqueteriaComponent {
   filtrados = computed(() => {
     const q = this.busqueda().trim().toLowerCase();
     const t = this.tab();
+    const hist = this.soloHistorial();
     return this.paquetes()
-      .filter((p) => t === 'Todos' || p.estado === t)
-      .filter((p) => this.soloHistorial() ? p.estado === 'Entregado' : true)
+      .filter((p) => hist ? p.estado === 'Entregado' : (t === 'Todos' || p.estado === t))
+      .filter((p) => {
+        if (!hist) return true;
+        const d = new Date(p.llegadaUtc);
+        return d.getFullYear() === this.histAnio() && d.getMonth() + 1 === this.histMes();
+      })
       .filter((p) => !q
         || p.unidadNombre.toLowerCase().includes(q)
         || (p.transportista ?? '').toLowerCase().includes(q));
   });
+
+  cambiarHistMes(delta: number): void {
+    let m = this.histMes() + delta, a = this.histAnio();
+    if (m < 1) { m = 12; a--; }
+    if (m > 12) { m = 1; a++; }
+    this.histMes.set(m); this.histAnio.set(a);
+    this.pagina.set(1);
+  }
+
+  tiempoEspera(d: PaqueteDetalle): string {
+    if (!d.paquete.entregaUtc) return '—';
+    const min = Math.max(0, Math.round((new Date(d.paquete.entregaUtc).getTime() - new Date(d.paquete.llegadaUtc).getTime()) / 60000));
+    if (min < 60) return `${min}m`;
+    const h = Math.floor(min / 60);
+    return h < 24 ? `${h}h ${min % 60}m` : `${Math.floor(h / 24)}d ${h % 24}h`;
+  }
 
   totalPaginas = computed(() => Math.max(1, Math.ceil(this.filtrados().length / POR_PAGINA)));
   page = computed(() => {
@@ -105,13 +132,19 @@ export class PaqueteriaComponent {
     });
   }
 
-  entregar(p: Paquete): void {
-    const cid = this.cid();
-    if (!cid) return;
+  pedirEntrega(p: Paquete): void {
     this.menuId.set(null);
+    this.confirmarEntrega.set(p);
+  }
+
+  hacerEntrega(): void {
+    const cid = this.cid();
+    const p = this.confirmarEntrega();
+    if (!cid || !p) return;
     this.api.entregar(cid, p.id).subscribe({
       next: () => {
-        this.toasts.exito('Paquete marcado como entregado');
+        this.toasts.exito('Paquete marcado como entregado exitosamente');
+        this.confirmarEntrega.set(null);
         this.detalle.set(null);
         this.cargar(cid);
       },

@@ -366,6 +366,22 @@
           <input class="pt-input" placeholder="Descripción, casillero, etc."
             [ngModel]="nuevoPq().descripcion" (ngModelChange)="setPq('descripcion', $event)" />
 
+          <p class="pt-sec">Foto del paquete</p>
+          <input #fotoPq type="file" accept="image/*" capture="environment" hidden (change)="elegirFotoPq($event)" />
+          @if (nuevoPq().foto; as f) {
+            <div class="pt-foto">
+              <img [src]="f" alt="Foto del paquete" />
+              <div class="pt-foto__acts">
+                <button type="button" (click)="fotoPq.click()">Cambiar foto</button>
+                <button type="button" class="is-del" (click)="setPq('foto', null)">Quitar</button>
+              </div>
+            </div>
+          } @else {
+            <button type="button" class="pt-foto__add" [disabled]="procesandoFoto()" (click)="fotoPq.click()">
+              📷 {{ procesandoFoto() ? 'Procesando…' : 'Agregar foto' }}
+            </button>
+          }
+
           <button type="button" class="pt-btn pt-btn--primary pt-form__submit"
             [disabled]="!nuevoPqValido() || guardandoPq()" (click)="crearPaquete()">
             {{ guardandoPq() ? 'Creando…' : 'Crear paquete' }}

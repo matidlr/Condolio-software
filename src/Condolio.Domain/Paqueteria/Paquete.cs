@@ -35,6 +35,9 @@ public class Paquete : Entity, ITenantOwned
     public DateTime LlegadaUtc { get; set; } = DateTime.UtcNow;
     public DateTime? EntregaUtc { get; set; }
 
+    /// <summary>Ruta relativa de la foto del paquete en el file storage. Null = sin foto.</summary>
+    public string? FotoRuta { get; set; }
+
     public string RegistradoPorNombre { get; set; } = string.Empty;
     public string? EntregadoPorNombre { get; set; }
 
