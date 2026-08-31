@@ -4,7 +4,10 @@
       <h1>Credenciales de caseta</h1>
       <p>Cuentas de acceso para las tabletas y equipos de caseta que usan la app de portería</p>
     </div>
-    <button type="button" class="btn btn--primary" (click)="abrirAgregar()">+ Agregar dispositivo</button>
+    <div class="cd-head__acc">
+      <button type="button" class="btn btn--ghost" (click)="masInfo.set(true)">ⓘ Más info</button>
+      <button type="button" class="btn btn--primary" (click)="abrirAgregar()">+ Agregar dispositivo</button>
+    </div>
   </header>
 
   <div class="cd-stats">
@@ -155,6 +158,43 @@
         <button type="button" class="btn btn--ghost" (click)="confirmReset.set(false)">Cancelar</button>
         <button type="button" class="btn btn--danger" (click)="restablecer()">Restablecer contraseña</button>
       </footer>
+    </div>
+  </div>
+}
+
+<!-- Más info -->
+@if (masInfo()) {
+  <div class="cd-overlay" (click)="masInfo.set(false)">
+    <div class="cd-dialog cd-info" (click)="$event.stopPropagation()">
+      <header><h3>ⓘ Sobre las credenciales de caseta</h3><button type="button" (click)="masInfo.set(false)">✕</button></header>
+
+      <h4>¿Qué son?</h4>
+      <p>Cuentas de inicio de sesión especiales que le permiten al personal de seguridad usar la app de
+        portería para escanear códigos QR y validar el ingreso de visitantes.</p>
+
+      <h4>Cómo funciona</h4>
+      <ol class="cd-info__steps">
+        <li>Tocás "Agregar dispositivo" y le ponés un nombre (ej. "Caseta, entrada principal").</li>
+        <li>El sistema genera automáticamente un usuario y una contraseña únicos.</li>
+        <li>Compartís esas credenciales de forma segura con tu personal (nunca por email ni canales públicos).</li>
+        <li>El personal inicia sesión en la app de portería con esas credenciales.</li>
+      </ol>
+
+      <div class="cd-info__box">
+        El "email" que se genera <b>no es una dirección real</b>: es solo un identificador para el dispositivo.
+        Así evitás crear cuentas de correo o manejar contraseñas complejas.
+      </div>
+
+      <h4>Buenas prácticas</h4>
+      <ul class="cd-info__tips">
+        <li>Una credencial por teléfono/dispositivo, no por persona.</li>
+        <li>Compartilas de forma segura; la contraseña solo se muestra una vez.</li>
+        <li>Eliminá la credencial apenas un dispositivo deja de usarse.</li>
+        <li>Revisá seguido los dispositivos activos y borrá los que no se usan.</li>
+      </ul>
+
+      <p class="cd-info__warn">⚠️ Eliminar un dispositivo revoca su acceso al instante: ya no podrá escanear QR.</p>
+      <footer><button type="button" class="btn btn--primary" (click)="masInfo.set(false)">Entendido</button></footer>
     </div>
   </div>
 }

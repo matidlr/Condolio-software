@@ -3,14 +3,20 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
-export type TipoPersonal = 'Seguridad' | 'Mantenimiento' | 'Limpieza' | 'Administracion' | 'Jardineria' | 'Otro';
+export type TipoPersonal =
+  | 'Seguridad' | 'Recepcionista' | 'Conserje' | 'Limpieza' | 'Mantenimiento'
+  | 'Jardineria' | 'Piletero' | 'Administracion' | 'Subcontratista' | 'Otro';
 
 export const TIPOS_PERSONAL: { value: TipoPersonal; label: string; icon: string }[] = [
   { value: 'Seguridad', label: 'Seguridad', icon: '🛡' },
-  { value: 'Mantenimiento', label: 'Mantenimiento', icon: '🔧' },
+  { value: 'Recepcionista', label: 'Recepcionista', icon: '🛎' },
+  { value: 'Conserje', label: 'Conserje', icon: '🔑' },
   { value: 'Limpieza', label: 'Limpieza', icon: '🧹' },
+  { value: 'Mantenimiento', label: 'Mantenimiento', icon: '🔧' },
   { value: 'Jardineria', label: 'Jardinería', icon: '🌿' },
+  { value: 'Piletero', label: 'Piletero', icon: '💧' },
   { value: 'Administracion', label: 'Administración', icon: '🏢' },
+  { value: 'Subcontratista', label: 'Subcontratista', icon: '📋' },
   { value: 'Otro', label: 'Otro', icon: '👤' },
 ];
 export const LABEL_TIPO_PERSONAL: Record<TipoPersonal, string> =
@@ -23,6 +29,8 @@ export interface MiembroPersonal {
   tipo: TipoPersonal;
   tieneCuenta: boolean;
   email?: string | null;
+  credencialId?: string | null;
+  credencialNombre?: string | null;
   activo: boolean;
 }
 export interface PersonalLista {
@@ -35,12 +43,13 @@ export interface GuardarPersonal {
   nombre: string;
   apellido: string;
   tipo: TipoPersonal;
-  emailCuenta?: string | null;
+  credencialId?: string | null;
 }
 export interface PersonalCreado {
   miembro: MiembroPersonal;
   passwordTemporal?: string | null;
 }
+export interface CredencialOpcion { id: string; nombre: string; email: string; }
 
 export interface CredencialCaseta {
   id: string;
@@ -70,6 +79,10 @@ export class PersonalService {
   // Staff
   listar(cid: string, q = ''): Observable<PersonalLista> {
     return this.http.get<PersonalLista>(`${this.base(cid)}/personal`, { params: { q } });
+  }
+  credencialesDisponibles(cid: string, incluirId?: string): Observable<CredencialOpcion[]> {
+    return this.http.get<CredencialOpcion[]>(`${this.base(cid)}/personal/credenciales-disponibles`,
+      { params: incluirId ? { incluirId } : {} });
   }
   crear(cid: string, body: GuardarPersonal): Observable<PersonalCreado> {
     return this.http.post<PersonalCreado>(`${this.base(cid)}/personal`, body);

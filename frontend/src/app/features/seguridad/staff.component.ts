@@ -4,8 +4,8 @@ import { RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
 import { ConsorcioService } from '../../core/services/consorcio.service';
 import {
-  GuardarPersonal, LABEL_TIPO_PERSONAL, MiembroPersonal, PersonalCreado,
-  PersonalService, TIPOS_PERSONAL, TipoPersonal,
+  CredencialOpcion, GuardarPersonal, LABEL_TIPO_PERSONAL, MiembroPersonal,
+  PersonalService, TIPOS_PERSONAL,
 } from '../../core/services/personal.service';
 import { ToastService } from '../../core/services/toast.service';
 
@@ -33,9 +33,9 @@ export class StaffComponent {
   busqueda = signal('');
   menu = signal<string | null>(null);
 
-  form = signal<(GuardarPersonal & { id?: string; crearCuenta: boolean }) | null>(null);
+  form = signal<(GuardarPersonal & { id?: string }) | null>(null);
   guardando = signal(false);
-  generado = signal<PersonalCreado | null>(null);
+  credenciales = signal<CredencialOpcion[]>([]);
   detalle = signal<MiembroPersonal | null>(null);
   confirmEliminar = signal<MiembroPersonal | null>(null);
 
@@ -71,23 +71,28 @@ export class StaffComponent {
     return ((m.nombre[0] ?? '') + (m.apellido[0] ?? '')).toUpperCase() || '?';
   }
 
+  private cargarCredenciales(incluirId?: string): void {
+    const cid = this.cid();
+    if (!cid) return;
+    this.api.credencialesDisponibles(cid, incluirId).subscribe({
+      next: (l) => this.credenciales.set(l),
+      error: () => this.credenciales.set([]),
+    });
+  }
+
   nuevo(): void {
-    this.form.set({ nombre: '', apellido: '', tipo: 'Seguridad', emailCuenta: null, crearCuenta: false });
+    this.form.set({ nombre: '', apellido: '', tipo: 'Seguridad', credencialId: null });
+    this.cargarCredenciales();
   }
   editar(m: MiembroPersonal): void {
     this.detalle.set(null);
-    this.form.set({ id: m.id, nombre: m.nombre, apellido: m.apellido, tipo: m.tipo, emailCuenta: null, crearCuenta: false });
+    this.form.set({ id: m.id, nombre: m.nombre, apellido: m.apellido, tipo: m.tipo, credencialId: m.credencialId ?? null });
+    this.cargarCredenciales(m.id);
   }
-  setForm<K extends keyof (GuardarPersonal & { crearCuenta: boolean })>(k: K, v: any): void {
+  setForm<K extends keyof GuardarPersonal>(k: K, v: any): void {
     this.form.update((f) => f && { ...f, [k]: v });
   }
-  formValido = computed(() => {
-    const f = this.form();
-    if (!f) return false;
-    if (f.nombre.trim().length === 0) return false;
-    if (f.crearCuenta && !/.+@.+\..+/.test(f.emailCuenta ?? '')) return false;
-    return true;
-  });
+  formValido = computed(() => (this.form()?.nombre.trim().length ?? 0) > 0);
 
   guardar(): void {
     const cid = this.cid();
@@ -96,17 +101,14 @@ export class StaffComponent {
     this.guardando.set(true);
     const body: GuardarPersonal = {
       nombre: f.nombre.trim(), apellido: f.apellido.trim(), tipo: f.tipo,
-      emailCuenta: f.crearCuenta ? (f.emailCuenta ?? '').trim() : null,
+      credencialId: f.credencialId || null,
     };
-    const obs: Observable<PersonalCreado | MiembroPersonal> =
-      f.id ? this.api.actualizar(cid, f.id, body) : this.api.crear(cid, body);
+    const obs: Observable<unknown> = f.id ? this.api.actualizar(cid, f.id, body) : this.api.crear(cid, body);
     obs.subscribe({
-      next: (r: PersonalCreado | MiembroPersonal) => {
+      next: () => {
         this.guardando.set(false);
         this.form.set(null);
-        const creado = r as PersonalCreado;
-        if (!f.id && creado.passwordTemporal) this.generado.set(creado);
-        else this.toasts.exito(f.id ? 'Personal actualizado' : 'Personal agregado');
+        this.toasts.exito(f.id ? 'Personal actualizado' : 'Personal agregado');
         this.cargar();
       },
       error: (e: any) => { this.guardando.set(false); this.toasts.error(e?.error?.message ?? 'No se pudo guardar.'); },

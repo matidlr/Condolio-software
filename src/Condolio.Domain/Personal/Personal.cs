@@ -10,6 +10,10 @@ public enum TipoPersonal
     Administracion = 3,
     Jardineria = 4,
     Otro = 5,
+    Recepcionista = 6,
+    Conserje = 7,
+    Piletero = 8,
+    Subcontratista = 9,
 }
 
 /// <summary>Personal de la comunidad (seguridad, mantenimiento, etc.). Puede tener una cuenta de acceso a la app.</summary>
@@ -25,6 +29,9 @@ public class MiembroPersonal : Entity, ITenantOwned
     /// <summary>Id del ApplicationUser si tiene cuenta de inicio de sesión (rol Personal).</summary>
     public string? UsuarioId { get; set; }
     public string? Email { get; set; }
+
+    /// <summary>true = credencial de caseta (dispositivo); false = persona del staff.</summary>
+    public bool EsDispositivo { get; set; }
 
     public bool Activo { get; set; } = true;
 

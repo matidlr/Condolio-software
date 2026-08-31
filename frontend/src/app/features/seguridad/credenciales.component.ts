@@ -25,6 +25,7 @@ export class CredencialesCasetaComponent {
   ultimoNombre = signal<string | null>(null);
 
   menu = signal<string | null>(null);
+  masInfo = signal(false);
   agregarAbierto = signal(false);
   nuevoNombre = signal('');
   guardando = signal(false);

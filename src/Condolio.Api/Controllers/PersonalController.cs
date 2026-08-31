@@ -25,6 +25,10 @@ public class PersonalController : ApiControllerBase
     public async Task<IActionResult> Listar(Guid consorcioId, [FromQuery] string? q, CancellationToken ct) =>
         ToResult(await _personal.ListarAsync(consorcioId, q, ct));
 
+    [HttpGet("credenciales-disponibles")]
+    public async Task<IActionResult> CredencialesDisponibles(Guid consorcioId, [FromQuery] Guid? incluirId, CancellationToken ct) =>
+        ToResult(await _personal.CredencialesDisponiblesAsync(consorcioId, incluirId, ct));
+
     [HttpPost]
     public async Task<IActionResult> Crear(Guid consorcioId, GuardarPersonalDto dto, CancellationToken ct) =>
         ToResult(await _personal.CrearAsync(consorcioId, dto, ct));
