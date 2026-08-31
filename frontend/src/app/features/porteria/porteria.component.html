@@ -1,62 +1,100 @@
 <div class="pt">
   <header class="pt-top">
-    @if (vista() !== 'home') {
-      <button type="button" class="pt-back" (click)="ir('home')">‹ Atrás</button>
+    @if (esSubvista()) {
+      <button type="button" class="pt-back" (click)="ir('entradas')">‹ Atrás</button>
     } @else { <span class="pt-back"></span> }
-    <b>{{ vista() === 'home' ? 'Entradas y salidas'
-        : vista() === 'escanear' ? 'Escanear QR'
-        : vista() === 'manual' ? 'Nueva entrada'
-        : vista() === 'salidas' ? 'Registrar salidas'
-        : vista() === 'bitacora' ? 'Bitácora digital' : 'Alertas comunitarias' }}</b>
-    @if (vista() === 'home') {
-      <button type="button" class="pt-salir" (click)="salir()">Salir</button>
+    <div class="pt-top__t">
+      <b>{{ tituloVista() }}</b>
+      @if (!esSubvista() && ctx()) { <small>{{ ctx()!.casetaNombre }}</small> }
+    </div>
+    @if (vista() === 'unidades') {
+      <button type="button" class="pt-top__act" (click)="buscarUnidad.set(''); verTodas.set(true)">Ver todas</button>
     } @else { <span class="pt-back"></span> }
   </header>
 
   <main class="pt-main">
     @switch (vista()) {
 
-      @case ('home') {
+      <!-- ============ INICIO ============ -->
+      @case ('inicio') {
+        @if (turno(); as t) {
+          <div class="pt-turno pt-turno--on">
+            <div class="pt-turno__av"><span>{{ t.personalNombre.charAt(0) }}</span><i></i></div>
+            <div class="pt-turno__b">
+              <small>EN TURNO</small>
+              <b>{{ t.personalNombre }}</b>
+              <em>🕐 {{ minutosDesde(t.inicioUtc) }} · desde {{ horaCorta(t.inicioUtc) }}</em>
+            </div>
+            <button type="button" class="pt-turno__btn" (click)="notaFinTurno.set(''); dlgFinTurno.set(true)">
+              → Finalizar Turno
+            </button>
+          </div>
+        } @else {
+          <div class="pt-turno pt-turno--off">
+            <div class="pt-turno__b">
+              <b>Sin turno activo</b>
+              <em>Seleccioná tu nombre para iniciar tu turno</em>
+            </div>
+            <button type="button" class="pt-btn pt-btn--primary" (click)="abrirSheetTurno()">Iniciar Turno</button>
+          </div>
+        }
+
+        @if (alertas().length === 0) {
+          <div class="pt-idle">
+            <div class="pt-idle__ic pt-idle__ic--ok">✓</div>
+            <h1>Todo en orden</h1>
+            <p>Nada requiere tu atención por ahora</p>
+          </div>
+        } @else {
+          <p class="pt-sec">Avisos de la comunidad</p>
+          <ul class="pt-list">
+            @for (a of alertas(); track a.id) {
+              <li class="pt-litem pt-litem--log">
+                <div>
+                  <b>{{ a.titulo || 'Aviso' }}</b>
+                  <small>{{ a.cuerpo }}</small>
+                  <small class="pt-litem__t">{{ a.publicadoUtc | date:'d MMM y, HH:mm' }} · {{ a.autorNombre }}</small>
+                </div>
+              </li>
+            }
+          </ul>
+        }
+      }
+
+      <!-- ============ ENTRADAS (hub) ============ -->
+      @case ('entradas') {
         <div class="pt-stats">
           <div><b>{{ resumen().adentroAhora }}</b><small>Adentro ahora</small></div>
           <div><b>{{ resumen().entradasHoy }}</b><small>Entradas hoy</small></div>
           <div><b>{{ resumen().salidasHoy }}</b><small>Salidas hoy</small></div>
         </div>
 
-        <p class="pt-sec">Entradas</p>
+        <p class="pt-sec">Registrar entrada</p>
         <button type="button" class="pt-card pt-card--hero" (click)="ir('escanear')">
           <span class="pt-card__ic pt-card__ic--qr">⛶</span>
           <span class="pt-card__b"><b>Escanear QR</b><small>Validá el pase de un visitante</small></span>
           <span class="pt-card__go">›</span>
         </button>
         <button type="button" class="pt-card" (click)="ir('manual')">
-          <span class="pt-card__ic">👤➕</span>
+          <span class="pt-card__ic">👤</span>
           <span class="pt-card__b"><b>Entrada manual</b><small>Registrá una visita sin código</small></span>
           <span class="pt-card__go">›</span>
         </button>
 
-        <p class="pt-sec">Salidas</p>
+        <p class="pt-sec">Salidas y registro</p>
         <button type="button" class="pt-card" (click)="ir('salidas')">
           <span class="pt-card__ic">🚪</span>
           <span class="pt-card__b"><b>Registrar salidas</b><small>Marcá a los visitantes que salen</small></span>
           <span class="pt-card__go">›</span>
         </button>
-
-        <p class="pt-sec">Bitácora</p>
         <button type="button" class="pt-card" (click)="ir('bitacora')">
           <span class="pt-card__ic">📋</span>
           <span class="pt-card__b"><b>Bitácora digital</b><small>Historial de entradas y salidas</small></span>
           <span class="pt-card__go">›</span>
         </button>
-
-        <p class="pt-sec">Avisos comunitarios</p>
-        <button type="button" class="pt-card" (click)="ir('alertas')">
-          <span class="pt-card__ic pt-card__ic--alert">📣</span>
-          <span class="pt-card__b"><b>Alertas comunitarias</b><small>Avisos para la comunidad</small></span>
-          <span class="pt-card__go">›</span>
-        </button>
       }
 
+      <!-- ============ ESCANEAR ============ -->
       @case ('escanear') {
         @if (resultado(); as r) {
           <div class="pt-res" [class.is-ok]="r.valido" [class.is-bad]="!r.valido">
@@ -124,6 +162,7 @@
         }
       }
 
+      <!-- ============ MANUAL ============ -->
       @case ('manual') {
         <div class="pt-form">
           <p class="pt-sec">Motivo de ingreso</p>
@@ -152,15 +191,19 @@
             <option [ngValue]="null">Unidad — Administración</option>
             @for (u of unidades(); track u.id) { <option [ngValue]="u.id">{{ u.nombre }}</option> }
           </select>
-          <input class="pt-input" placeholder="Nota (opcional)" [ngModel]="em().nota" (ngModelChange)="setEm('nota', $event)" />
+          <input class="pt-input" inputmode="numeric" placeholder="Documento de identificación (opcional)"
+            [ngModel]="em().documento" (ngModelChange)="setEm('documento', $event)" />
+          <input class="pt-input" placeholder="Nota (opcional)"
+            [ngModel]="em().nota" (ngModelChange)="setEm('nota', $event)" />
 
           <button type="button" class="pt-btn pt-btn--primary pt-form__submit"
             [disabled]="!emValida() || guardandoEm()" (click)="registrarManual()">
-            {{ guardandoEm() ? 'Registrando…' : '👤➕ Registrar entrada' }}
+            {{ guardandoEm() ? 'Registrando…' : '👤 Registrar entrada' }}
           </button>
         </div>
       }
 
+      <!-- ============ SALIDAS ============ -->
       @case ('salidas') {
         <div class="pt-sbar">
           <div class="pt-sbar__main"><b>{{ adentro().length }}</b><small>adentro ahora</small></div>
@@ -205,6 +248,7 @@
         }
       }
 
+      <!-- ============ BITÁCORA ============ -->
       @case ('bitacora') {
         <div class="pt-monthnav">
           <button type="button" (click)="cambiarBitMes(-1)">‹</button>
@@ -251,27 +295,205 @@
         }
       }
 
-      @case ('alertas') {
-        @if (cargandoLista()) { <p class="pt-loading">Cargando…</p> }
-        @else if (alertas().length === 0) {
-          <div class="pt-idle"><div class="pt-idle__ic">📣</div><h1>Sin avisos</h1><p>No hay alertas comunitarias.</p></div>
-        } @else {
-          <ul class="pt-list">
-            @for (a of alertas(); track a.id) {
-              <li class="pt-litem pt-litem--log">
-                <div>
-                  <b>{{ a.titulo || 'Aviso' }}</b>
-                  <small>{{ a.cuerpo }}</small>
-                  <small class="pt-litem__t">{{ a.publicadoUtc | date:'d MMM y, HH:mm' }} · {{ a.autorNombre }}</small>
-                </div>
+      <!-- ============ PAQUETERÍA ============ -->
+      @case ('paqueteria') {
+        <div class="pt-idle">
+          <div class="pt-idle__ic">📦</div>
+          <h1>Paquetería</h1>
+          <p>Pronto vas a poder registrar entregas de paquetes para las unidades desde acá.</p>
+        </div>
+      }
+
+      <!-- ============ UNIDADES ============ -->
+      @case ('unidades') {
+        <div class="pt-uh">
+          <span>{{ tecleo() || 'Teclea el número de unidad' }}</span><i></i>
+        </div>
+
+        <p class="pt-kbsec">LETRAS</p>
+        <div class="pt-kb pt-kb--letras">
+          @for (l of letras; track l) {
+            <button type="button" (click)="tecla(l)">{{ l }}</button>
+          }
+        </div>
+        <p class="pt-kbsec">NÚMEROS</p>
+        <div class="pt-kb pt-kb--num">
+          @for (n of numeros; track n) {
+            <button type="button" (click)="tecla(n)" [class.is-wide]="n === 'clear'">
+              {{ n === 'del' ? '⌫' : n === 'clear' ? 'LIMPIAR' : n }}
+            </button>
+          }
+        </div>
+
+        @if (tecleo()) {
+          <ul class="pt-list pt-list--res">
+            @for (u of unidadesFiltradas(); track u.id) {
+              <li class="pt-uitem" (click)="abrirUnidad(u.id)">
+                <span class="pt-uitem__n">{{ u.nombre }}</span>
+                <span class="pt-uitem__go">›</span>
               </li>
+            } @empty {
+              <li class="pt-uitem pt-uitem--empty">Sin coincidencias</li>
             }
           </ul>
         }
       }
+
+      <!-- ============ CONFIGURACIÓN ============ -->
+      @case ('config') {
+        <div class="pt-cfg">
+          <div class="pt-cfg__av">{{ iniciales() }}</div>
+          <b class="pt-cfg__name">{{ cuenta()?.nombre || 'Portería' }}</b>
+          <small class="pt-cfg__mail">{{ cuenta()?.email }}</small>
+
+          <div class="pt-cfg__card">
+            <span class="pt-cfg__ic">🛡️</span>
+            <b>Gracias por tu servicio</b>
+            <p>Gracias por mantener nuestras comunidades seguras y cuidarnos. Tu dedicación hace que
+              nuestros barrios sean mejores lugares para vivir. Apreciamos todo lo que hacés.</p>
+          </div>
+
+          <button type="button" class="pt-btn pt-btn--danger" (click)="salir()">Cerrar sesión</button>
+        </div>
+      }
     }
   </main>
+
+  <!-- ============ BOTTOM NAV ============ -->
+  <nav class="pt-nav">
+    <button type="button" [class.is-on]="tabActiva() === 'inicio'" (click)="ir('inicio')">
+      <span>🏠</span>Inicio
+    </button>
+    <button type="button" [class.is-on]="tabActiva() === 'entradas'" (click)="ir('entradas')">
+      <span>🚙</span>Entradas
+    </button>
+    <button type="button" [class.is-on]="tabActiva() === 'paqueteria'" (click)="ir('paqueteria')">
+      <span>📦</span>Paquetería
+    </button>
+    <button type="button" [class.is-on]="tabActiva() === 'unidades'" (click)="ir('unidades')">
+      <span>🏢</span>Unidades
+    </button>
+    <button type="button" [class.is-on]="tabActiva() === 'config'" (click)="ir('config')">
+      <span>⚙️</span>Configuración
+    </button>
+  </nav>
 </div>
+
+<!-- ============ Bottom sheet: iniciar turno ============ -->
+@if (sheetTurno()) {
+  <div class="pt-vov pt-vov--sheet" (click)="sheetTurno.set(false)">
+    <div class="pt-sheet" (click)="$event.stopPropagation()">
+      <span class="pt-sheet__grip"></span>
+      <div class="pt-sheet__hd">
+        <b>Iniciar Turno</b>
+        <small>Seleccioná tu nombre para iniciar tu turno</small>
+      </div>
+      <div class="pt-search2">
+        <span>⌕</span>
+        <input placeholder="Buscar personal…" [ngModel]="buscarPersonal()" (ngModelChange)="buscarPersonal.set($event)" />
+      </div>
+
+      @if (personalAgrupado().length === 0) {
+        <p class="pt-loading">No hay personal habilitado en esta caseta.</p>
+      } @else {
+        <div class="pt-sheet__body">
+          @for (g of personalAgrupado(); track g.tipo) {
+            <p class="pt-daygroup">{{ g.icon }} {{ g.label }} <b>{{ g.items.length }}</b></p>
+            <ul class="pt-list">
+              @for (p of g.items; track p.id) {
+                <li class="pt-uitem" (click)="iniciarTurno(p)">
+                  <span class="pt-scard__av">{{ p.nombre.charAt(0) }}{{ p.apellido.charAt(0) }}</span>
+                  <span class="pt-uitem__n">{{ p.nombre }} {{ p.apellido }}</span>
+                  <span class="pt-uitem__go">›</span>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      }
+    </div>
+  </div>
+}
+
+<!-- ============ Bottom sheet: finalizar turno ============ -->
+@if (dlgFinTurno()) {
+  <div class="pt-vov pt-vov--sheet" (click)="dlgFinTurno.set(false)">
+    <div class="pt-sheet pt-sheet--dlg" (click)="$event.stopPropagation()">
+      <span class="pt-sheet__grip"></span>
+      <div class="pt-sheet__ic pt-sheet__ic--danger">→</div>
+      <h3>Finalizar Turno</h3>
+      <p>¿Estás seguro de que deseás finalizar tu turno?</p>
+      <textarea class="pt-input pt-ta" rows="3" placeholder="Notas para el siguiente turno (opcional)"
+        [ngModel]="notaFinTurno()" (ngModelChange)="notaFinTurno.set($event)"></textarea>
+      <div class="pt-sheet__btns">
+        <button type="button" class="pt-btn pt-btn--ghost" (click)="dlgFinTurno.set(false)">Cancelar</button>
+        <button type="button" class="pt-btn pt-btn--danger" [disabled]="finalizandoTurno()" (click)="confirmarFinTurno()">
+          {{ finalizandoTurno() ? 'Finalizando…' : 'Confirmar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ============ Modal: todas las unidades ============ -->
+@if (verTodas()) {
+  <div class="pt-full">
+    <header class="pt-full__hd">
+      <button type="button" (click)="verTodas.set(false)">Cerrar</button>
+      <b>Todas las unidades</b>
+      <span></span>
+    </header>
+    <div class="pt-full__body">
+      <div class="pt-search2">
+        <span>⌕</span>
+        <input placeholder="Buscar" [ngModel]="buscarUnidad()" (ngModelChange)="buscarUnidad.set($event)" />
+      </div>
+      <ul class="pt-list pt-list--res">
+        @for (u of unidadesModal(); track u.id) {
+          <li class="pt-uitem" (click)="abrirUnidad(u.id)">
+            <span class="pt-uitem__n">{{ u.nombre }}</span>
+            <span class="pt-uitem__go">›</span>
+          </li>
+        }
+      </ul>
+    </div>
+  </div>
+}
+
+<!-- ============ Modal: detalle de unidad ============ -->
+@if (unidadSel(); as u) {
+  <div class="pt-full">
+    <header class="pt-full__hd">
+      <span></span>
+      <b>Detalles de la unidad</b>
+      <button type="button" (click)="unidadSel.set(null)">✕</button>
+    </header>
+    <div class="pt-full__hero">
+      <span class="pt-full__badge">{{ u.nombre }}</span>
+      <div>
+        <b>Piso {{ u.piso }}</b>
+        <small>{{ u.residentes.length }} {{ u.residentes.length === 1 ? 'residente' : 'residentes' }}</small>
+      </div>
+    </div>
+    <div class="pt-full__body">
+      <button type="button" class="pt-card" (click)="registrarVisitaUnidad()">
+        <span class="pt-card__ic">👤</span>
+        <span class="pt-card__b"><b>Registrar visita</b><small>Nueva entrada para esta unidad</small></span>
+        <span class="pt-card__go">›</span>
+      </button>
+
+      @for (r of u.residentes; track r.nombre) {
+        <div class="pt-litem">
+          <span class="pt-scard__av">{{ r.nombre.charAt(0) }}</span>
+          <div><b>{{ r.nombre }}</b></div>
+          <span class="pt-scard__motivo">{{ r.rol }}</span>
+        </div>
+      } @empty {
+        <p class="pt-loading">Esta unidad no tiene residentes cargados.</p>
+      }
+    </div>
+  </div>
+}
 
 <!-- Detalle de visita (compartido: salidas + bitácora) -->
 @if (visitaSel(); as v) {

@@ -37,9 +37,15 @@ export interface EntradaManual {
   patente?: string | null;
   unidadId?: string | null;
   nota?: string | null;
+  documento?: string | null;
 }
 
 export interface UnidadRef { id: string; nombre: string; }
+
+export interface PersonalTurno { id: string; nombre: string; apellido: string; tipo: string; }
+export interface TurnoActual { id: string; miembroPersonalId: string; personalNombre: string; inicioUtc: string; }
+export interface ResidenteUnidad { nombre: string; rol: string; }
+export interface UnidadDetalle { id: string; nombre: string; piso: number; residentes: ResidenteUnidad[]; }
 
 @Injectable({ providedIn: 'root' })
 export class PorteriaService {
@@ -59,5 +65,15 @@ export class PorteriaService {
     return this.http.get<Bitacora>(`${this.base}/bitacora`, { params: { anio, mes, q } });
   }
   unidades(): Observable<UnidadRef[]> { return this.http.get<UnidadRef[]>(`${this.base}/unidades`); }
+  unidad(id: string): Observable<UnidadDetalle> { return this.http.get<UnidadDetalle>(`${this.base}/unidades/${id}`); }
   alertas(): Observable<{ anuncios: any[] }> { return this.http.get<{ anuncios: any[] }>(`${this.base}/alertas`); }
+
+  personalCaseta(): Observable<PersonalTurno[]> { return this.http.get<PersonalTurno[]>(`${this.base}/personal`); }
+  turnoActual(): Observable<TurnoActual | null> { return this.http.get<TurnoActual | null>(`${this.base}/turno`); }
+  iniciarTurno(miembroPersonalId: string): Observable<TurnoActual> {
+    return this.http.post<TurnoActual>(`${this.base}/turno`, { miembroPersonalId });
+  }
+  finalizarTurno(notas: string | null): Observable<void> {
+    return this.http.post<void>(`${this.base}/turno/fin`, { notas });
+  }
 }

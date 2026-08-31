@@ -62,7 +62,8 @@ public record EntradaManualDto(
     TipoVehiculo Vehiculo,
     string? Patente,
     Guid? UnidadId,
-    string? Nota);
+    string? Nota,
+    string? Documento = null);
 
 public interface IAccesoAdminService
 {

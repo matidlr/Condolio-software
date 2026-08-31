@@ -262,13 +262,14 @@ public class AccesoAdminService : IAccesoAdminService
             IngresoUtc = DateTime.UtcNow,
             RegistradoPorUsuarioId = guardiaId,
             RegistradoPorNombre = guardiaNombre,
+            DocumentoVisitante = string.IsNullOrWhiteSpace(dto.Documento) ? null : dto.Documento.Trim(),
             Nota = string.IsNullOrWhiteSpace(dto.Nota) ? null : dto.Nota.Trim(),
         };
         _db.RegistrosVisita.Add(r);
         await _db.SaveChangesAsync(ct);
 
         return Result<RegistroBitacoraDto>.Ok(new RegistroBitacoraDto(
-            r.Id, r.VisitanteNombre, r.TipoVisita, r.Vehiculo, r.Patente, null, unidadNombre,
+            r.Id, r.VisitanteNombre, r.TipoVisita, r.Vehiculo, r.Patente, r.DocumentoVisitante, unidadNombre,
             r.IngresoUtc, null, false, guardiaNombre, r.Nota));
     }
 
