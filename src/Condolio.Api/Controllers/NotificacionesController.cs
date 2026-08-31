@@ -34,4 +34,12 @@ public class NotificacionesController : ApiControllerBase
     [HttpPost("leidas")]
     public async Task<IActionResult> MarcarTodasLeidas(Guid consorcioId, CancellationToken ct) =>
         ToResult(await _notificaciones.MarcarTodasLeidasAsync(consorcioId, ct));
+
+    [HttpPost("{notificacionId:guid}/alternar-leida")]
+    public async Task<IActionResult> AlternarLeida(Guid consorcioId, Guid notificacionId, CancellationToken ct) =>
+        ToResult(await _notificaciones.AlternarLeidaAsync(consorcioId, notificacionId, ct));
+
+    [HttpPost("{notificacionId:guid}/fijar")]
+    public async Task<IActionResult> AlternarFijada(Guid consorcioId, Guid notificacionId, CancellationToken ct) =>
+        ToResult(await _notificaciones.AlternarFijadaAsync(consorcioId, notificacionId, ct));
 }

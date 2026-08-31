@@ -35,4 +35,12 @@ export class NotificacionService {
   marcarTodasLeidas(consorcioId: string): Observable<void> {
     return this.http.post<void>(`${this.base(consorcioId)}/leidas`, {});
   }
+
+  alternarLeida(consorcioId: string, id: string): Observable<boolean> {
+    return this.http.post<boolean>(`${this.base(consorcioId)}/${id}/alternar-leida`, {});
+  }
+
+  alternarFijada(consorcioId: string, id: string): Observable<boolean> {
+    return this.http.post<boolean>(`${this.base(consorcioId)}/${id}/fijar`, {});
+  }
 }

@@ -48,6 +48,9 @@ public class Notificacion : Entity, ITenantOwned
     public string? Enlace { get; set; }
 
     public DateTime? LeidaUtc { get; set; }
+
+    /// <summary>Si tiene valor, el destinatario la fijó arriba de la lista.</summary>
+    public DateTime? FijadaUtc { get; set; }
 }
 
 /// <summary>Preferencias de notificación de un usuario (una fila por usuario).</summary>

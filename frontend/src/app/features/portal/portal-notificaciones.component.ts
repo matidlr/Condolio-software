@@ -23,8 +23,10 @@ export class PortalNotificacionesComponent {
   items = signal<NotifResidente[]>([]);
   filtro = signal<'todas' | 'noleidas'>('todas');
 
-  visibles = computed(() =>
-    this.filtro() === 'noleidas' ? this.items().filter((n) => !n.leida) : this.items());
+  visibles = computed(() => {
+    const l = this.filtro() === 'noleidas' ? this.items().filter((n) => !n.leida) : this.items();
+    return l.slice().sort((a, b) => (b.fijada ? 1 : 0) - (a.fijada ? 1 : 0));
+  });
 
   noLeidas = computed(() => this.items().filter((n) => !n.leida).length);
 
@@ -65,6 +67,21 @@ export class PortalNotificacionesComponent {
       });
     }
     if (n.enlace) this.router.navigateByUrl(n.enlace);
+  }
+
+  alternarLeida(n: NotifResidente, ev: Event): void {
+    ev.stopPropagation();
+    this.api.alternarLeida(n.id).subscribe((leida) => {
+      this.items.update((l) => l.map((x) => x.id === n.id ? { ...x, leida } : x));
+      this.portal.notifNoLeidas.update((v) => Math.max(0, v + (leida ? -1 : 1)));
+    });
+  }
+
+  alternarFijada(n: NotifResidente, ev: Event): void {
+    ev.stopPropagation();
+    this.api.alternarFijada(n.id).subscribe((fijada) => {
+      this.items.update((l) => l.map((x) => x.id === n.id ? { ...x, fijada } : x));
+    });
   }
 
   marcarTodas(): void {

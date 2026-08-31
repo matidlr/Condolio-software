@@ -33,7 +33,7 @@
       <p class="nt-empty">No hay notificaciones.</p>
     } @else {
       @for (n of visibles(); track n.id) {
-        <button type="button" class="nt-row" [class.is-unread]="!n.leida"
+        <div class="nt-row" [class.is-unread]="!n.leida" [class.is-pinned]="n.fijada"
           [style.--nt-color]="meta[n.tipo].color" (click)="abrir(n)">
           <span class="nt-row__ic">
             {{ meta[n.tipo].icon }}
@@ -41,13 +41,24 @@
           </span>
           <span class="nt-row__body">
             <span class="nt-row__top">
+              @if (n.fijada) { <span class="nt-row__pinmark" title="Fijada">📌</span> }
               @if (!n.leida) { <span class="nt-row__unread">●</span> }
               <b>{{ n.titulo }}</b>
               <small>{{ hace(n.creadoUtc) }}</small>
             </span>
             <span class="nt-row__txt">{{ n.cuerpo }}</span>
           </span>
-        </button>
+          <span class="nt-row__acts">
+            <button type="button" [class.is-on]="n.fijada"
+              [title]="n.fijada ? 'Desfijar' : 'Fijar arriba'" (click)="alternarFijada(n, $event)">
+              {{ n.fijada ? '📌' : '📍' }}
+            </button>
+            <button type="button" [title]="n.leida ? 'Marcar como no leída' : 'Marcar como leída'"
+              (click)="alternarLeida(n, $event)">
+              {{ n.leida ? '✉' : '✓' }}
+            </button>
+          </span>
+        </div>
       }
     }
   </div>

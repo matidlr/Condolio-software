@@ -39,13 +39,35 @@ public class NotificacionService : INotificacionService
         if (tipo is { } t) q = q.Where(n => n.Tipo == t);
 
         var lista = await q
-            .OrderByDescending(n => n.CreadoUtc)
+            .OrderByDescending(n => n.FijadaUtc != null)
+            .ThenByDescending(n => n.FijadaUtc)
+            .ThenByDescending(n => n.CreadoUtc)
             .Take(MaxLista)
             .Select(n => new NotificacionDto(
-                n.Id, n.Tipo, n.Titulo, n.Cuerpo, n.Enlace, n.LeidaUtc != null, n.CreadoUtc))
+                n.Id, n.Tipo, n.Titulo, n.Cuerpo, n.Enlace, n.LeidaUtc != null, n.FijadaUtc != null, n.CreadoUtc))
             .ToListAsync(ct);
 
         return Result<NotificacionListaDto>.Ok(new NotificacionListaDto(lista, total, noLeidas));
+    }
+
+    public async Task<Result<bool>> AlternarLeidaAsync(Guid consorcioId, Guid notificacionId, CancellationToken ct = default)
+    {
+        var n = await _db.Notificaciones
+            .FirstOrDefaultAsync(x => x.Id == notificacionId && x.ConsorcioId == consorcioId && x.DestinatarioUsuarioId == null, ct);
+        if (n is null) return Result<bool>.Fail("Notificación no encontrada.");
+        n.LeidaUtc = n.LeidaUtc is null ? DateTime.UtcNow : null;
+        await _db.SaveChangesAsync(ct);
+        return Result<bool>.Ok(n.LeidaUtc is not null);
+    }
+
+    public async Task<Result<bool>> AlternarFijadaAsync(Guid consorcioId, Guid notificacionId, CancellationToken ct = default)
+    {
+        var n = await _db.Notificaciones
+            .FirstOrDefaultAsync(x => x.Id == notificacionId && x.ConsorcioId == consorcioId && x.DestinatarioUsuarioId == null, ct);
+        if (n is null) return Result<bool>.Fail("Notificación no encontrada.");
+        n.FijadaUtc = n.FijadaUtc is null ? DateTime.UtcNow : null;
+        await _db.SaveChangesAsync(ct);
+        return Result<bool>.Ok(n.FijadaUtc is not null);
     }
 
     public async Task<Result<NotificacionResumenDto>> ResumenAsync(Guid consorcioId, CancellationToken ct = default)
@@ -192,12 +214,35 @@ public class NotificacionService : INotificacionService
 
         var q = soloNoLeidas ? baseQuery.Where(n => n.LeidaUtc == null) : baseQuery;
         var lista = await q
-            .OrderByDescending(n => n.CreadoUtc)
+            .OrderByDescending(n => n.FijadaUtc != null)
+            .ThenByDescending(n => n.FijadaUtc)
+            .ThenByDescending(n => n.CreadoUtc)
             .Take(MaxLista)
-            .Select(n => new NotificacionDto(n.Id, n.Tipo, n.Titulo, n.Cuerpo, n.Enlace, n.LeidaUtc != null, n.CreadoUtc))
+            .Select(n => new NotificacionDto(
+                n.Id, n.Tipo, n.Titulo, n.Cuerpo, n.Enlace, n.LeidaUtc != null, n.FijadaUtc != null, n.CreadoUtc))
             .ToListAsync(ct);
 
         return Result<NotificacionListaDto>.Ok(new NotificacionListaDto(lista, total, noLeidas));
+    }
+
+    public async Task<Result<bool>> AlternarLeidaUsuarioAsync(string usuarioId, Guid notificacionId, CancellationToken ct = default)
+    {
+        var n = await _db.Notificaciones.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.Id == notificacionId && x.DestinatarioUsuarioId == usuarioId, ct);
+        if (n is null) return Result<bool>.Fail("Notificación no encontrada.");
+        n.LeidaUtc = n.LeidaUtc is null ? DateTime.UtcNow : null;
+        await _db.SaveChangesAsync(ct);
+        return Result<bool>.Ok(n.LeidaUtc is not null);
+    }
+
+    public async Task<Result<bool>> AlternarFijadaUsuarioAsync(string usuarioId, Guid notificacionId, CancellationToken ct = default)
+    {
+        var n = await _db.Notificaciones.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.Id == notificacionId && x.DestinatarioUsuarioId == usuarioId, ct);
+        if (n is null) return Result<bool>.Fail("Notificación no encontrada.");
+        n.FijadaUtc = n.FijadaUtc is null ? DateTime.UtcNow : null;
+        await _db.SaveChangesAsync(ct);
+        return Result<bool>.Ok(n.FijadaUtc is not null);
     }
 
     public async Task<Result<NotificacionResumenDto>> ResumenUsuarioAsync(string usuarioId, CancellationToken ct = default)

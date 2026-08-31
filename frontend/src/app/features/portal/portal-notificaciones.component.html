@@ -24,16 +24,26 @@
   } @else {
     <ul class="pn-list">
       @for (n of visibles(); track n.id) {
-        <li class="pn-item" [class.is-unread]="!n.leida" (click)="abrir(n)">
+        <li class="pn-item" [class.is-unread]="!n.leida" [class.is-pinned]="n.fijada" (click)="abrir(n)">
           <span class="pn-item__ic" [style.background]="meta(n.tipo).color + '22'" [style.color]="meta(n.tipo).color">
             {{ meta(n.tipo).icon }}
           </span>
           <div class="pn-item__body">
-            <b>{{ n.titulo }}</b>
+            <b>@if (n.fijada) { <span class="pn-item__pin">📌</span> }{{ n.titulo }}</b>
             <p>{{ n.cuerpo }}</p>
             <small>{{ hace(n.creadoUtc) }}</small>
           </div>
           @if (!n.leida) { <span class="pn-item__dot"></span> }
+          <span class="pn-item__acts">
+            <button type="button" [class.is-on]="n.fijada"
+              [attr.aria-label]="n.fijada ? 'Desfijar' : 'Fijar'" (click)="alternarFijada(n, $event)">
+              {{ n.fijada ? '📌' : '📍' }}
+            </button>
+            <button type="button"
+              [attr.aria-label]="n.leida ? 'Marcar como no leída' : 'Marcar como leída'" (click)="alternarLeida(n, $event)">
+              {{ n.leida ? '✉' : '✓' }}
+            </button>
+          </span>
         </li>
       }
     </ul>

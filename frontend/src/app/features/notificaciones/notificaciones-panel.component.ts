@@ -40,9 +40,12 @@ export class NotificacionesPanelComponent {
   visibles = computed(() => {
     const q = this.busqueda().trim().toLowerCase();
     const t = this.filtroTipo();
-    return this.items().filter((n) =>
-      (t === 'todas' || n.tipo === t) &&
-      (!q || n.titulo.toLowerCase().includes(q) || n.cuerpo.toLowerCase().includes(q)));
+    return this.items()
+      .filter((n) =>
+        (t === 'todas' || n.tipo === t) &&
+        (!q || n.titulo.toLowerCase().includes(q) || n.cuerpo.toLowerCase().includes(q)))
+      .slice()
+      .sort((a, b) => (b.fijada ? 1 : 0) - (a.fijada ? 1 : 0));
   });
 
   constructor() {
@@ -88,6 +91,26 @@ export class NotificacionesPanelComponent {
       this.cerrar.emit();
       this.router.navigateByUrl(n.enlace);
     }
+  }
+
+  alternarLeida(n: Notificacion, ev: Event): void {
+    ev.stopPropagation();
+    const cid = this.consorcios.activoId();
+    if (!cid) return;
+    this.api.alternarLeida(cid, n.id).subscribe((leida) => {
+      this.items.update((l) => l.map((x) => x.id === n.id ? { ...x, leida } : x));
+      this.noLeidas.update((v) => Math.max(0, v + (leida ? -1 : 1)));
+      this.api.refrescarResumen(cid);
+    });
+  }
+
+  alternarFijada(n: Notificacion, ev: Event): void {
+    ev.stopPropagation();
+    const cid = this.consorcios.activoId();
+    if (!cid) return;
+    this.api.alternarFijada(cid, n.id).subscribe((fijada) => {
+      this.items.update((l) => l.map((x) => x.id === n.id ? { ...x, fijada } : x));
+    });
   }
 
   marcarTodas(): void {

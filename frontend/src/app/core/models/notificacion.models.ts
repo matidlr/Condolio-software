@@ -26,6 +26,7 @@ export interface Notificacion {
   cuerpo: string;
   enlace?: string | null;
   leida: boolean;
+  fijada: boolean;
   creadoUtc: string;
 }
 

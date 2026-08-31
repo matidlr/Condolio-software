@@ -33,6 +33,14 @@ public class MiPortalNotificacionesController : ApiControllerBase
     public async Task<IActionResult> TodasLeidas(CancellationToken ct) =>
         ToResult(await _notificaciones.MarcarTodasLeidasUsuarioAsync(Uid, ct));
 
+    [HttpPost("{id:guid}/alternar-leida")]
+    public async Task<IActionResult> AlternarLeida(Guid id, CancellationToken ct) =>
+        ToResult(await _notificaciones.AlternarLeidaUsuarioAsync(Uid, id, ct));
+
+    [HttpPost("{id:guid}/fijar")]
+    public async Task<IActionResult> Fijar(Guid id, CancellationToken ct) =>
+        ToResult(await _notificaciones.AlternarFijadaUsuarioAsync(Uid, id, ct));
+
     [HttpGet("preferencias")]
     public async Task<IActionResult> Preferencias(CancellationToken ct) =>
         ToResult(await _notificaciones.PreferenciasAsync(Uid, ct));

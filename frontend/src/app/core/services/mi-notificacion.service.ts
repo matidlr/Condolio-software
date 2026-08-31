@@ -10,6 +10,7 @@ export interface NotifResidente {
   cuerpo: string;
   enlace?: string | null;
   leida: boolean;
+  fijada: boolean;
   creadoUtc: string;
 }
 
@@ -61,6 +62,12 @@ export class MiNotificacionService {
   }
   marcarTodasLeidas(): Observable<void> {
     return this.http.post<void>(`${this.base}/leidas`, {});
+  }
+  alternarLeida(id: string): Observable<boolean> {
+    return this.http.post<boolean>(`${this.base}/${id}/alternar-leida`, {});
+  }
+  alternarFijada(id: string): Observable<boolean> {
+    return this.http.post<boolean>(`${this.base}/${id}/fijar`, {});
   }
   preferencias(): Observable<PreferenciasNotif> {
     return this.http.get<PreferenciasNotif>(`${this.base}/preferencias`);

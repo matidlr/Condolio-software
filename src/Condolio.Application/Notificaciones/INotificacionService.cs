@@ -10,6 +10,7 @@ public record NotificacionDto(
     string Cuerpo,
     string? Enlace,
     bool Leida,
+    bool Fijada,
     DateTime CreadoUtc);
 
 public record NotificacionResumenDto(int Total, int NoLeidas);
@@ -37,6 +38,12 @@ public interface INotificacionService
 
     Task<Result> MarcarTodasLeidasAsync(Guid consorcioId, CancellationToken ct = default);
 
+    /// <summary>Alterna leída/no leída. Devuelve el nuevo estado (true = leída).</summary>
+    Task<Result<bool>> AlternarLeidaAsync(Guid consorcioId, Guid notificacionId, CancellationToken ct = default);
+
+    /// <summary>Alterna la fijación de una notificación de administrador. Devuelve el nuevo estado.</summary>
+    Task<Result<bool>> AlternarFijadaAsync(Guid consorcioId, Guid notificacionId, CancellationToken ct = default);
+
     /// <summary>Emite una notificación para los administradores del consorcio. No lanza si falla.</summary>
     Task CrearAsync(
         Guid consorcioId, TipoNotificacion tipo, string titulo, string cuerpo,
@@ -58,6 +65,8 @@ public interface INotificacionService
     Task<Result<NotificacionResumenDto>> ResumenUsuarioAsync(string usuarioId, CancellationToken ct = default);
     Task<Result> MarcarLeidaUsuarioAsync(string usuarioId, Guid notificacionId, CancellationToken ct = default);
     Task<Result> MarcarTodasLeidasUsuarioAsync(string usuarioId, CancellationToken ct = default);
+    Task<Result<bool>> AlternarLeidaUsuarioAsync(string usuarioId, Guid notificacionId, CancellationToken ct = default);
+    Task<Result<bool>> AlternarFijadaUsuarioAsync(string usuarioId, Guid notificacionId, CancellationToken ct = default);
 
     Task<Result<PreferenciasNotificacionDto>> PreferenciasAsync(string usuarioId, CancellationToken ct = default);
     Task<Result<PreferenciasNotificacionDto>> GuardarPreferenciasAsync(string usuarioId, PreferenciasNotificacionDto dto, CancellationToken ct = default);
