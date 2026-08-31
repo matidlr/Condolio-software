@@ -2,8 +2,6 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { forkJoin, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
 import { ConsorcioService } from '../../core/services/consorcio.service';
 import { UnidadService } from '../../core/services/unidad.service';
 import { ResidenteService } from '../../core/services/residente.service';
@@ -206,12 +204,71 @@ export class NuevaSociedadComponent {
     });
   });
 
-  // ---- Residentes ----
-  invites = signal<{ email: string; unidad: string }[]>([{ email: '', unidad: '' }]);
-  addInvite(): void { this.invites.update((l) => [...l, { email: '', unidad: '' }]); }
-  quitarInvite(i: number): void { this.invites.update((l) => l.filter((_, j) => j !== i)); }
-  setInvite(i: number, k: 'email' | 'unidad', v: string): void {
-    this.invites.update((l) => l.map((x, j) => j === i ? { ...x, [k]: v } : x));
+  // ---- Residentes (import CSV) ----
+  resFilas = signal<{ nombre: string; email: string; unidad: string; ok: boolean; motivo?: string }[]>([]);
+  resError = signal<string | null>(null);
+  resValidas = computed(() => this.resFilas().filter((r) => r.ok));
+  quitarResFila(i: number): void { this.resFilas.update((l) => l.filter((_, j) => j !== i)); }
+
+  descargarPlantillaResidentes(): void {
+    const unidades = this.filas().map((f) => f.nombre.trim()).filter(Boolean);
+    const filas = unidades.length ? unidades : ['1A', '2B'];
+    const csv = 'nombre,correo,unidad\n' + filas.map((u) => `,,${u}`).join('\n') + '\n';
+    const nombre = (this.d().nombre.trim() || 'Sociedad') + ' - Plantilla de Residentes.csv';
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    a.download = nombre;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  async elegirCsvResidentes(ev: Event): Promise<void> {
+    const input = ev.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    this.resError.set(null);
+    try {
+      const texto = await file.text();
+      this.parsearCsvResidentes(texto);
+    } catch {
+      this.resError.set('No se pudo leer el archivo.');
+    }
+  }
+
+  private parsearCsvResidentes(texto: string): void {
+    const lineas = texto.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    if (lineas.length < 2) { this.resError.set('El CSV no tiene filas de datos.'); return; }
+    const headers = lineas[0].toLowerCase().split(/[,;]/).map((h) => h.trim());
+    const iNombre = headers.findIndex((h) => h.includes('nombre'));
+    const iEmail = headers.findIndex((h) => h.includes('email') || h.includes('correo') || h.includes('mail'));
+    const iUnidad = headers.findIndex((h) => h.includes('unidad') || h.includes('depto') || h.includes('casa'));
+    if (iEmail < 0) { this.resError.set('El CSV necesita una columna de correo electrónico.'); return; }
+
+    const unidades = new Set(this.filas().map((f) => f.nombre.trim().toLowerCase()));
+    const vistos = new Set<string>();
+    const filas = lineas.slice(1).map((linea) => {
+      const cols = linea.split(/[,;]/).map((c) => c.trim());
+      return {
+        nombre: iNombre >= 0 ? (cols[iNombre] ?? '') : '',
+        email: (cols[iEmail] ?? '').toLowerCase(),
+        unidad: iUnidad >= 0 ? (cols[iUnidad] ?? '') : '',
+      };
+    })
+      // ignora filas de la plantilla sin completar (sin nombre ni correo)
+      .filter((r) => r.email || r.nombre)
+      .map((r) => {
+        let ok = true, motivo: string | undefined;
+        if (!r.email.includes('@')) { ok = false; motivo = 'Falta el correo'; }
+        else if (vistos.has(r.email)) { ok = false; motivo = 'Correo repetido'; }
+        else if (r.unidad && unidades.size && !unidades.has(r.unidad.toLowerCase())) { ok = false; motivo = `Unidad "${r.unidad}" inexistente`; }
+        vistos.add(r.email);
+        return { ...r, ok, motivo };
+      });
+
+    this.resFilas.set(filas);
+    if (filas.length === 0) this.resError.set('El CSV no tiene filas con datos de residentes cargados.');
+    else if (filas.every((f) => !f.ok)) this.resError.set('Ninguna fila es válida. Revisá los correos y las unidades.');
   }
 
   // ---- Navegación ----
@@ -275,17 +332,22 @@ export class NuevaSociedadComponent {
     });
   }
 
+  omitirResidentes(): void { this.paso.set(6); }
+
   private invitarYFinalizar(): void {
     const cid = this.consorcioId();
-    const pendientes = this.invites().filter((x) => x.email.trim().includes('@'));
-    if (!cid || pendientes.length === 0) { this.paso.set(6); return; }
+    const validas = this.resValidas();
+    if (!cid || validas.length === 0) { this.paso.set(6); return; }
     this.guardando.set(true);
-    forkJoin(pendientes.map((x) =>
-      this.residentesApi.invitar(cid, { email: x.email.trim(), rol: 'Propietario' }).pipe(catchError(() => of(null))),
-    )).subscribe(() => {
-      this.guardando.set(false);
-      this.toasts.exito('Invitaciones enviadas');
-      this.paso.set(6);
+    this.residentesApi.invitarLote(cid, validas.map((r) => ({
+      nombre: r.nombre, email: r.email, telefono: '', unidad: r.unidad, rol: 'Propietario',
+    })), true).subscribe({
+      next: (res) => {
+        this.guardando.set(false);
+        this.toasts.exito(`${res.enviadas} invitaciones enviadas` + (res.fallidas ? `, ${res.fallidas} con error` : ''));
+        this.paso.set(6);
+      },
+      error: (e) => { this.guardando.set(false); this.toasts.error(e?.error?.message ?? 'No se pudieron enviar las invitaciones.'); },
     });
   }
 

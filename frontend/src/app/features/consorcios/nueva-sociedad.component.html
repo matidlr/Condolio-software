@@ -165,29 +165,61 @@
       }
 
       @case (5) {
-        <h1>Residentes</h1>
-        <p class="ns-sub">Invitá a los propietarios ahora, o dejalo para después.</p>
+        <h1>Importar residentes</h1>
+        <p class="ns-sub">Agregá residentes a tu sociedad (opcional).</p>
 
-        @for (inv of invites(); track $index) {
-          <div class="ns-inv">
-            <input type="email" placeholder="correo@ejemplo.com"
-              [ngModel]="inv.email" (ngModelChange)="setInvite($index, 'email', $event)" />
-            @if (invites().length > 1) {
-              <button type="button" class="ns-edif__x" (click)="quitarInvite($index)" aria-label="Quitar">🗑</button>
+        <div class="ns-ubic">
+          <div>
+            <span class="ns-field__label">Subir CSV</span>
+            <input #csvRes type="file" accept=".csv,text/csv" hidden (change)="elegirCsvResidentes($event)" />
+            <div class="ns-drop">
+              <span class="ns-drop__ic">☁️</span>
+              <p>Elegí un archivo CSV con columnas <b>nombre</b>, <b>email</b> y <b>unidad</b>.</p>
+              <div class="ns-drop__btns">
+                <button type="button" class="ns-btn ns-btn--ghost" (click)="descargarPlantillaResidentes()">⬇ Descargar plantilla</button>
+                <button type="button" class="ns-btn ns-btn--dark" (click)="csvRes.click()">Seleccionar archivo</button>
+              </div>
+            </div>
+            @if (resError()) { <p class="ns-err">{{ resError() }}</p> }
+          </div>
+
+          <div>
+            <span class="ns-field__label">Vista previa de residentes
+              @if (resFilas().length) { <b class="ns-badge">{{ resFilas().length }}</b> }</span>
+            @if (resFilas().length === 0) {
+              <div class="ns-mapa__empty" style="height:auto;padding:32px">
+                <p>Subí un CSV para ver la vista previa.</p>
+              </div>
+            } @else {
+              <div class="ns-rescards">
+                @for (r of resFilas(); track $index) {
+                  <div class="ns-rescard" [class.is-bad]="!r.ok">
+                    <div class="ns-rescard__b">
+                      <b>🙍 {{ r.nombre || '(sin nombre)' }}</b>
+                      <small>{{ r.email || 'sin correo' }}</small>
+                      <span class="ns-rescard__u">🏢 {{ r.unidad || '—' }}</span>
+                      @if (!r.ok) { <span class="ns-rescard__err">⚠ {{ r.motivo }}</span> }
+                    </div>
+                    <button type="button" class="ns-edif__x" (click)="quitarResFila($index)" aria-label="Quitar">🗑</button>
+                  </div>
+                }
+              </div>
             }
           </div>
-        }
-        <button type="button" class="ns-link" (click)="addInvite()">＋ Agregar otro</button>
-        <p class="ns-hint">Cada persona recibe un correo para crear su cuenta. Podés asignarles la unidad
-          después desde <b>Residentes → Directorio</b>.</p>
+        </div>
+
+        <p class="ns-hint">Podés importar ahora o agregarlos más tarde desde <b>Residentes → Invitaciones</b>.</p>
       }
 
       @case (6) {
         <div class="ns-done">
           <div class="ns-done__ic">✓</div>
-          <h1>¡Sociedad creada!</h1>
-          <p><b>{{ d().nombre }}</b> ya está lista y seleccionada, con {{ filas().length }} unidades cargadas.</p>
-          <button type="button" class="ns-btn ns-btn--primary" (click)="irAlPanel()">Ir al panel</button>
+          <h1>¡Configuración completada!</h1>
+          <p class="ns-sub">Tu sociedad quedó configurada correctamente.</p>
+          <h3>¡{{ d().nombre }} agregada!</h3>
+          <p>Se crearon <b>{{ filas().length }}</b> unidades@if (resValidas().length) { y se invitaron <b>{{ resValidas().length }}</b> residentes }.
+            La sociedad ya está seleccionada y lista para administrar.</p>
+          <button type="button" class="ns-btn ns-btn--primary" (click)="irAlPanel()">▦ Ir al panel de control</button>
         </div>
       }
     }
@@ -200,15 +232,20 @@
         {{ paso() === 1 ? '✕ Salir' : '‹ Atrás' }}
       </button>
       <span class="ns-foot__n">Paso {{ paso() }} de {{ pasos.length }}</span>
-      <button type="button" class="ns-btn ns-btn--primary"
-        [disabled]="!puedeAvanzar() || guardando()" (click)="siguiente()">
-        @switch (paso()) {
-          @case (3) { {{ guardando() ? 'Creando…' : 'Crear sociedad ›' }} }
-          @case (4) { {{ guardando() ? 'Generando…' : 'Crear unidades ›' }} }
-          @case (5) { {{ guardando() ? 'Enviando…' : 'Finalizar ›' }} }
-          @default { Siguiente › }
+      <div class="ns-foot__r">
+        @if (paso() === 5) {
+          <button type="button" class="ns-link" [disabled]="guardando()" (click)="omitirResidentes()">Omitir este paso</button>
         }
-      </button>
+        <button type="button" class="ns-btn ns-btn--primary"
+          [disabled]="!puedeAvanzar() || guardando()" (click)="siguiente()">
+          @switch (paso()) {
+            @case (3) { {{ guardando() ? 'Creando…' : 'Crear sociedad ›' }} }
+            @case (4) { {{ guardando() ? 'Generando…' : 'Crear unidades ›' }} }
+            @case (5) { {{ guardando() ? 'Enviando…' : (resValidas().length ? 'Invitar ' + resValidas().length + ' y finalizar ›' : 'Finalizar ›') }} }
+            @default { Siguiente › }
+          }
+        </button>
+      </div>
     </footer>
   }
 </div>

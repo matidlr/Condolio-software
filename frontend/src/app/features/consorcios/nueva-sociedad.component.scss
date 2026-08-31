@@ -170,3 +170,42 @@
   flex: 1; height: 42px; padding: 0 12px; border: 1px solid var(--c-border); border-radius: 10px;
   background: var(--c-surface); font: inherit; font-size: 0.92rem;
 }
+
+/* Paso 5 - import residentes */
+.ns-drop {
+  border: 1px dashed var(--c-border); border-radius: 14px; padding: 26px 18px; text-align: center; margin-top: 6px;
+}
+.ns-drop__ic { font-size: 2rem; }
+.ns-drop p { margin: 10px 0 14px; font-size: 0.88rem; color: var(--c-text-muted); }
+.ns-drop__btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.ns-err { margin: 10px 0 0; color: var(--c-danger); font-size: 0.85rem; }
+
+.ns-tr--pv { grid-template-columns: 1fr 80px auto; }
+.ns-tabla--2 .ns-tr--pv { grid-template-columns: 1fr 80px auto; }
+.ns-tr__t { font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ns-tr__st { font-size: 0.78rem; font-weight: 600; color: var(--c-danger); white-space: nowrap; }
+.ns-tr__st.is-ok { color: #16a34a; }
+
+.ns-foot__r { display: flex; align-items: center; gap: 14px; }
+.ns-foot__r .ns-link { padding: 0; }
+
+.ns-badge {
+  display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px;
+  border-radius: 999px; background: color-mix(in srgb, var(--c-primary) 15%, transparent);
+  color: var(--c-primary); font-size: 0.72rem; margin-left: 4px;
+}
+.ns-rescards { display: flex; flex-direction: column; gap: 8px; max-height: 340px; overflow-y: auto; }
+.ns-rescard {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+  border: 1px solid var(--c-border); border-radius: 12px; padding: 12px 14px;
+}
+.ns-rescard.is-bad { border-color: #fca5a5; background: #fef2f2; }
+.ns-rescard__b b { display: block; font-size: 0.92rem; }
+.ns-rescard__b small { display: block; color: var(--c-text-muted); font-size: 0.82rem; margin: 1px 0 5px; }
+.ns-rescard__u {
+  display: inline-block; font-size: 0.75rem; background: var(--c-bg); border-radius: 6px; padding: 2px 8px;
+}
+.ns-rescard__err { display: block; margin-top: 5px; font-size: 0.76rem; color: var(--c-danger); font-weight: 600; }
+
+.ns-done__ic2 { font-size: 2.4rem; margin: 8px 0 4px; }
+.ns-done h3 { margin: 0 0 4px; font-size: 1.1rem; }
