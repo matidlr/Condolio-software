@@ -1,0 +1,43 @@
+<section class="pn">
+  <header class="pn-top">
+    <h1>Notificaciones</h1>
+    @if (noLeidas() > 0) {
+      <button type="button" class="pn-mark" (click)="marcarTodas()">Marcar todas leídas</button>
+    }
+  </header>
+
+  <div class="pn-tabs">
+    <button type="button" [class.is-active]="filtro() === 'todas'" (click)="filtro.set('todas')">Todas</button>
+    <button type="button" [class.is-active]="filtro() === 'noleidas'" (click)="filtro.set('noleidas')">
+      No leídas @if (noLeidas() > 0) { <b>{{ noLeidas() }}</b> }
+    </button>
+  </div>
+
+  @if (cargando()) {
+    <p class="pn-loading">Cargando…</p>
+  } @else if (visibles().length === 0) {
+    <div class="pn-empty">
+      <span class="pn-empty__ic">🔔</span>
+      <h2>{{ filtro() === 'noleidas' ? 'No tenés notificaciones sin leer' : 'Todavía no hay notificaciones' }}</h2>
+      <p>Acá vas a ver novedades de tus reportes, anuncios, encuestas y reservas.</p>
+    </div>
+  } @else {
+    <ul class="pn-list">
+      @for (n of visibles(); track n.id) {
+        <li class="pn-item" [class.is-unread]="!n.leida" (click)="abrir(n)">
+          <span class="pn-item__ic" [style.background]="meta(n.tipo).color + '22'" [style.color]="meta(n.tipo).color">
+            {{ meta(n.tipo).icon }}
+          </span>
+          <div class="pn-item__body">
+            <b>{{ n.titulo }}</b>
+            <p>{{ n.cuerpo }}</p>
+            <small>{{ hace(n.creadoUtc) }}</small>
+          </div>
+          @if (!n.leida) { <span class="pn-item__dot"></span> }
+        </li>
+      }
+    </ul>
+  }
+
+  <a class="pn-prefs" routerLink="/portal/config/notificaciones">⚙️ Configurar alertas ›</a>
+</section>

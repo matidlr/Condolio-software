@@ -50,6 +50,10 @@ export class AuthService {
     return this.http.post<void>(`${environment.apiUrl}/auth/reenviar-codigo`, { email });
   }
 
+  cambiarClave(actual: string, nueva: string): Observable<void> {
+    return this.http.post<void>(`${environment.apiUrl}/auth/cambiar-clave`, { actual, nueva });
+  }
+
   aceptarInvitacion(token: string, body: {
     nombre: string; apellido: string; telefono?: string | null; password: string;
   }): Observable<LoginResponse> {

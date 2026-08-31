@@ -85,6 +85,13 @@ public class AnuncioService : IAnuncioService
         Aplicar(a, dto);
         _db.Anuncios.Add(a);
         await _db.SaveChangesAsync(ct);
+
+        await _notificaciones.CrearParaResidentesAsync(consorcioId, CategoriaNotificacion.Comunidad,
+            TipoNotificacion.NuevoAnuncio,
+            string.IsNullOrWhiteSpace(a.Titulo) ? "Nuevo anuncio de la administración" : a.Titulo,
+            a.Cuerpo.Length > 140 ? a.Cuerpo[..140] + "…" : a.Cuerpo,
+            "/portal/muro", excluirUsuarioId: _tenant.UsuarioId, ct: ct);
+
         return Result<AnuncioDto>.Ok(Mapear(a, 0, 0, false));
     }
 

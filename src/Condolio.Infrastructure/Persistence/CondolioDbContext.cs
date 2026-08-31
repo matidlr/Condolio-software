@@ -64,6 +64,7 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<OpcionEncuesta> OpcionesEncuesta => Set<OpcionEncuesta>();
     public DbSet<VotoEncuesta> VotosEncuesta => Set<VotoEncuesta>();
     public DbSet<Notificacion> Notificaciones => Set<Notificacion>();
+    public DbSet<PreferenciasNotificacion> PreferenciasNotificacion => Set<PreferenciasNotificacion>();
     public DbSet<PaseAcceso> PasesAcceso => Set<PaseAcceso>();
     public DbSet<RegistroVisita> RegistrosVisita => Set<RegistroVisita>();
     public DbSet<Contacto> Contactos => Set<Contacto>();
@@ -351,8 +352,16 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.Titulo).HasMaxLength(200).IsRequired();
             e.Property(x => x.Cuerpo).HasMaxLength(1000).IsRequired();
             e.Property(x => x.Enlace).HasMaxLength(400);
+            e.Property(x => x.DestinatarioUsuarioId).HasMaxLength(450);
             e.HasIndex(x => new { x.AdministradorId, x.ConsorcioId, x.LeidaUtc });
+            e.HasIndex(x => new { x.DestinatarioUsuarioId, x.LeidaUtc });
             e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
+        });
+
+        builder.Entity<PreferenciasNotificacion>(e =>
+        {
+            e.Property(x => x.UsuarioId).HasMaxLength(450).IsRequired();
+            e.HasIndex(x => x.UsuarioId).IsUnique();
         });
 
         builder.Entity<PaseAcceso>(e =>

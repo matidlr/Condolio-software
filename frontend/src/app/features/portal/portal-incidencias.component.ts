@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { ActivatedRoute } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import {
   CATEGORIAS_INCIDENCIA, Incidencia, IncidenciaDetalle, META_ESTADO_INC, MiIncidenciaService,
@@ -61,6 +62,8 @@ export class PortalIncidenciasComponent {
 
   constructor() {
     this.cargar();
+    const id = inject(ActivatedRoute).snapshot.paramMap.get('id');
+    if (id) this.abrir({ id } as Incidencia);
   }
 
   private cargar(): void {

@@ -93,6 +93,11 @@ export const routes: Routes = [
           import('./features/portal/portal-incidencias.component').then((m) => m.PortalIncidenciasComponent),
       },
       {
+        path: 'incidencias/:id',
+        loadComponent: () =>
+          import('./features/portal/portal-incidencias.component').then((m) => m.PortalIncidenciasComponent),
+      },
+      {
         path: 'muro',
         loadComponent: () =>
           import('./features/portal/portal-muro.component').then((m) => m.PortalMuroComponent),
@@ -107,9 +112,32 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/portal/portal-informacion.component').then((m) => m.PortalInformacionComponent),
       },
-      { path: 'config', pathMatch: 'full', redirectTo: 'informacion' },
+      {
+        path: 'notificaciones',
+        loadComponent: () =>
+          import('./features/portal/portal-notificaciones.component').then((m) => m.PortalNotificacionesComponent),
+      },
+      {
+        path: 'config',
+        loadComponent: () =>
+          import('./features/portal/portal-config.component').then((m) => m.PortalConfigComponent),
+      },
+      {
+        path: 'config/notificaciones',
+        loadComponent: () =>
+          import('./features/portal/portal-notif-preferencias.component').then((m) => m.PortalNotifPreferenciasComponent),
+      },
+      {
+        path: 'config/mi-info',
+        loadComponent: () =>
+          import('./features/portal/portal-mi-info.component').then((m) => m.PortalMiInfoComponent),
+      },
+      {
+        path: 'config/seguridad',
+        loadComponent: () =>
+          import('./features/portal/portal-seguridad.component').then((m) => m.PortalSeguridadComponent),
+      },
       ...[
-        'notificaciones',
         'finanzas', 'paquetes',
       ].map((p) => ({
         path: p,

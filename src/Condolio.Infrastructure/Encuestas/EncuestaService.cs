@@ -121,6 +121,9 @@ public class EncuestaService : IEncuestaService
         if (e.Estado == EstadoEncuesta.Activa)
             await _notificaciones.CrearAsync(consorcioId, TipoNotificacion.NuevaEncuesta,
                 "Nueva encuesta publicada", $"Se publicó la encuesta “{e.Titulo}”.", "/panel/encuestas", ct);
+            await _notificaciones.CrearParaResidentesAsync(consorcioId, CategoriaNotificacion.EventosReservas,
+                TipoNotificacion.NuevaEncuesta, "Nueva encuesta",
+                $"“{e.Titulo}” — tu voto cuenta.", "/portal/encuestas", ct: ct);
 
         return Result<EncuestaDto>.Ok(Mapear(e, _tenant.UsuarioId ?? string.Empty));
     }
@@ -160,6 +163,9 @@ public class EncuestaService : IEncuestaService
         if (primeraPublicacion)
             await _notificaciones.CrearAsync(consorcioId, TipoNotificacion.NuevaEncuesta,
                 "Nueva encuesta publicada", $"Se publicó la encuesta “{e.Titulo}”.", "/panel/encuestas", ct);
+            await _notificaciones.CrearParaResidentesAsync(consorcioId, CategoriaNotificacion.EventosReservas,
+                TipoNotificacion.NuevaEncuesta, "Nueva encuesta",
+                $"“{e.Titulo}” — tu voto cuenta.", "/portal/encuestas", ct: ct);
 
         return Result<EncuestaDto>.Ok(Mapear(e, _tenant.UsuarioId ?? string.Empty));
     }

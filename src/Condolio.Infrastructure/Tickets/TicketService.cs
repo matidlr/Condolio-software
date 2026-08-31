@@ -1,5 +1,7 @@
 using Condolio.Application.Common;
+using Condolio.Application.Notificaciones;
 using Condolio.Application.Tickets;
+using Condolio.Domain.Notificaciones;
 using Condolio.Domain.Tickets;
 using Condolio.Domain.Unidades;
 using Condolio.Infrastructure.Persistence;
@@ -11,11 +13,13 @@ public class TicketService : ITicketService
 {
     private readonly CondolioDbContext _db;
     private readonly ITenantContext _tenant;
+    private readonly INotificacionService _notificaciones;
 
-    public TicketService(CondolioDbContext db, ITenantContext tenant)
+    public TicketService(CondolioDbContext db, ITenantContext tenant, INotificacionService notificaciones)
     {
         _db = db;
         _tenant = tenant;
+        _notificaciones = notificaciones;
     }
 
     public async Task<Result<TicketListaDto>> ListarAsync(Guid consorcioId, bool archivados, CancellationToken ct = default)
@@ -146,6 +150,7 @@ public class TicketService : ITicketService
 
         var actor = await NombreUsuario(_tenant.UsuarioId, ct) ?? "Administración";
         var ahora = DateTime.UtcNow;
+        var estadoAnterior = ticket.Estado;
         if (ticket.Estado != dto.Estado)
         {
             RegistrarEvento(ticket, TipoEventoTicket.CambioEstado,
@@ -169,7 +174,17 @@ public class TicketService : ITicketService
         }
 
         ticket.UltimaActividadUtc = ahora;
+        var cambioEstado = ticket.Estado != estadoAnterior;
         await _db.SaveChangesAsync(ct);
+
+        if (cambioEstado && !string.IsNullOrEmpty(ticket.ReportadoPorUsuarioId))
+        {
+            await _notificaciones.CrearParaUsuarioAsync(consorcioId, ticket.ReportadoPorUsuarioId,
+                CategoriaNotificacion.EdificioEntregas, TipoNotificacion.IncidenciaActualizada,
+                $"Tu reporte #{ticket.Numero} cambió de estado",
+                $"“{ticket.Titulo}” ahora está en: {TicketTextos.Estado(ticket.Estado)}.",
+                $"/portal/incidencias/{ticket.Id}", ct);
+        }
 
         var unidad = ticket.UnidadId is null ? null
             : await _db.Unidades.Where(u => u.Id == ticket.UnidadId).Select(u => u.Nombre).FirstOrDefaultAsync(ct);
@@ -195,6 +210,17 @@ public class TicketService : ITicketService
 
         await _db.Tickets.Where(t => t.Id == ticketId)
             .ExecuteUpdateAsync(s => s.SetProperty(t => t.UltimaActividadUtc, DateTime.UtcNow), ct);
+
+        // Respuesta visible del admin (autor distinto del reportante) -> notificar al residente.
+        if (!esInterna && !string.IsNullOrEmpty(ticket.ReportadoPorUsuarioId)
+            && _tenant.UsuarioId != ticket.ReportadoPorUsuarioId)
+        {
+            await _notificaciones.CrearParaUsuarioAsync(consorcioId, ticket.ReportadoPorUsuarioId,
+                CategoriaNotificacion.EdificioEntregas, TipoNotificacion.RespuestaIncidencia,
+                $"Respuesta en tu reporte #{ticket.Numero}",
+                texto.Trim().Length > 120 ? texto.Trim()[..120] + "…" : texto.Trim(),
+                $"/portal/incidencias/{ticket.Id}", ct);
+        }
         return Result.Ok();
     }
 

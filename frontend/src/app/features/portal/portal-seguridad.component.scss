@@ -1,0 +1,26 @@
+:host { display: block; }
+
+.psg-top { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.psg-back { border: none; background: none; color: var(--c-text-muted); font: inherit; cursor: pointer; padding: 4px 0; }
+.psg-back:hover { color: var(--c-text); }
+.psg-top h1 { margin: 0; font-size: 1.35rem; }
+
+.psg-card {
+  background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 16px; padding: 18px;
+}
+.psg-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.psg-field span { font-size: 0.85rem; font-weight: 500; }
+.psg-field input {
+  height: 44px; padding: 0 12px; border: 1px solid var(--c-border); border-radius: 10px;
+  background: #f3f6fb; font: inherit; font-size: 0.95rem;
+}
+.psg-field input:focus { outline: none; border-color: var(--c-slate-500); background: #fff; }
+
+.psg-meter { height: 5px; border-radius: 999px; background: var(--c-bg); overflow: hidden; margin-bottom: 4px; }
+.psg-meter span { display: block; height: 100%; background: linear-gradient(90deg, #f59e0b, #16a34a); transition: width .2s; }
+.psg-hint { display: block; font-size: 0.78rem; color: #b45309; margin-bottom: 10px; }
+.psg-hint--err { color: var(--c-danger); }
+
+.psg-ver { display: flex; align-items: center; gap: 8px; font-size: 0.84rem; color: var(--c-text-muted); margin: 6px 0 4px; }
+
+.psg-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }

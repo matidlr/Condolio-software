@@ -100,9 +100,12 @@ public class MiPortalService : IMiPortalService
             .Select(r => new ReservaResumenDto(r.Id, r.Amenidad.Nombre, r.Inicio, r.Fin, r.Estado.ToString()))
             .ToListAsync(ct);
 
+        var notifNoLeidas = await _db.Notificaciones.IgnoreQueryFilters()
+            .CountAsync(n => n.DestinatarioUsuarioId == usuarioId && n.LeidaUtc == null, ct);
+
         return Result<PortalCasaDto>.Ok(new PortalCasaDto(
             o.ConsorcioId, o.ConsorcioNombre, o.Localidad, o.UnidadNombre,
-            encuestasPendientes, reservas, 0, 0));
+            encuestasPendientes, reservas, 0, notifNoLeidas));
     }
 
     public async Task<Result<ComunidadInfoDto>> ComunidadAsync(string usuarioId, CancellationToken ct = default)

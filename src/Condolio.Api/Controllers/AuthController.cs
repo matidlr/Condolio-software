@@ -263,6 +263,31 @@ public class AuthController : ControllerBase
         await _suscripciones.IniciarTrialAsync(administrador.Id);
     }
 
+    public record CambiarClaveRequest(string Actual, string Nueva);
+
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    [HttpPost("cambiar-clave")]
+    public async Task<IActionResult> CambiarClave(CambiarClaveRequest req)
+    {
+        var uid = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(uid)) return Unauthorized();
+        if (string.IsNullOrWhiteSpace(req.Nueva) || req.Nueva.Length < 6)
+            return BadRequest(new { message = "La nueva contraseña debe tener al menos 6 caracteres." });
+
+        var user = await _users.FindByIdAsync(uid);
+        if (user is null) return Unauthorized();
+
+        var res = await _users.ChangePasswordAsync(user, req.Actual, req.Nueva);
+        if (!res.Succeeded)
+        {
+            var msg = res.Errors.Any(e => e.Code.Contains("Password"))
+                ? "La contraseña actual no es correcta."
+                : string.Join(" ", res.Errors.Select(e => e.Description));
+            return BadRequest(new { message = msg });
+        }
+        return NoContent();
+    }
+
     private static string GenerarPasswordAleatoria() =>
         $"G{Guid.NewGuid():N}A9!";
 
