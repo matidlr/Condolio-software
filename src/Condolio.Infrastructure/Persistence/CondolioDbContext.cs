@@ -71,6 +71,7 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Condolio.Domain.Personal.MiembroPersonal> Personal => Set<Condolio.Domain.Personal.MiembroPersonal>();
     public DbSet<Condolio.Domain.Personal.TurnoPorteria> TurnosPorteria => Set<Condolio.Domain.Personal.TurnoPorteria>();
     public DbSet<Condolio.Domain.Paqueteria.Paquete> Paquetes => Set<Condolio.Domain.Paqueteria.Paquete>();
+    public DbSet<Condolio.Domain.Residentes.MiembroJunta> MiembrosJunta => Set<Condolio.Domain.Residentes.MiembroJunta>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -422,6 +423,13 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.NotasCierre).HasMaxLength(1000);
             e.HasIndex(x => new { x.CredencialUsuarioId, x.FinUtc });
             e.HasIndex(x => new { x.ConsorcioId, x.InicioUtc });
+        });
+
+        builder.Entity<Condolio.Domain.Residentes.MiembroJunta>(e =>
+        {
+            e.Property(x => x.UsuarioId).HasMaxLength(450).IsRequired();
+            e.HasIndex(x => new { x.ConsorcioId, x.UsuarioId, x.Cargo }).IsUnique();
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
         });
 
         builder.Entity<Condolio.Domain.Paqueteria.Paquete>(e =>

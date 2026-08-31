@@ -101,7 +101,10 @@
                   <td>{{ r.telefono || '—' }}</td>
                   <td>{{ r.unidadNombre }}</td>
                   <td><span class="r-tag r-tag--tipo">{{ r.rol }}</span></td>
-                  <td><span class="r-tag r-tag--rol">Residente</span></td>
+                  <td>
+                    <span class="r-tag r-tag--rol">Residente</span>
+                    @for (c of r.rolesJunta; track c) { <span class="r-tag r-tag--junta">{{ c }}</span> }
+                  </td>
                   <td>
                     @if (r.tieneAcceso) { <span class="r-estado r-estado--ok">✓ Con cuenta</span> }
                     @else { <span class="r-estado">Sin cuenta</span> }
@@ -196,9 +199,14 @@
       </div>
 
       <div class="rd-card">
-        <header><h4>Roles</h4></header>
+        <header><h4>Roles</h4>
+          @if (d.tieneCuenta) {
+            <button type="button" class="r-add" (click)="abrirGestionarRoles()">⚙ Gestionar roles</button>
+          }
+        </header>
         @for (rol of d.roles; track rol) { <span class="r-tag r-tag--rol">{{ rol }}</span> }
-        @if (!d.roles.length) { <p class="rd-muted">Sin cuenta todavía.</p> }
+        @for (c of d.rolesJunta; track c) { <span class="r-tag r-tag--junta">{{ c }}</span> }
+        @if (!d.roles.length && !d.rolesJunta.length) { <p class="rd-muted">Sin cuenta todavía.</p> }
       </div>
 
       <div class="rd-card">
@@ -211,7 +219,7 @@
       </div>
 
       <div class="u-modal__actions">
-        <button type="button" class="btn u-btn u-btn--danger-outline" (click)="removerDeComunidad()">👥 Remover de comunidad</button>
+        <button type="button" class="btn u-btn u-btn--danger-outline" (click)="removerAbierto.set(true)">👥 Remover de comunidad</button>
       </div>
 
       <button type="button" class="rd-inc-toggle" (click)="toggleIncidencias()">
@@ -237,6 +245,51 @@
           }
         </div>
       }
+    </div>
+  </div>
+}
+
+<!-- Gestionar roles de junta -->
+@if (gestionarRolesAbierto() && detalle(); as d) {
+  <div class="u-modal-overlay" (click)="gestionarRolesAbierto.set(false)">
+    <div class="u-modal rj" (click)="$event.stopPropagation()">
+      <button type="button" class="u-modal-x" (click)="gestionarRolesAbierto.set(false)">✕</button>
+      <h3 class="rj-title">Gestionar roles — {{ d.nombre }} {{ d.apellido }}</h3>
+      <p class="rj-sub">Gestioná los roles y permisos de este residente dentro de la junta del consorcio.</p>
+
+      <div class="rj-list">
+        @for (c of cargosJunta; track c.value) {
+          <button type="button" class="rj-opt" [class.is-sel]="rolesJuntaSel().has(c.value)"
+            (click)="toggleCargoJunta(c.value)">
+            <span class="rj-check">{{ rolesJuntaSel().has(c.value) ? '✓' : '' }}</span>
+            <span class="rj-opt__ic">{{ c.icon }}</span>
+            <span class="rj-opt__b"><b>{{ c.label }}</b><small>{{ c.descripcion }}</small></span>
+          </button>
+        }
+      </div>
+
+      <div class="u-modal__actions rj-actions">
+        <button type="button" class="btn btn--ghost u-btn" (click)="gestionarRolesAbierto.set(false)">Cancelar</button>
+        <button type="button" class="btn btn--primary u-btn" [disabled]="guardandoRoles()" (click)="guardarRolesJunta()">
+          {{ guardandoRoles() ? 'Guardando…' : 'Guardar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Remover de comunidad -->
+@if (removerAbierto() && detalle(); as d) {
+  <div class="u-modal-overlay" (click)="removerAbierto.set(false)">
+    <div class="u-modal rj rj--danger" (click)="$event.stopPropagation()">
+      <h3 class="rj-title">⚠ Remover de la comunidad</h3>
+      <p class="rj-sub">¿Estás seguro de que querés remover a {{ d.nombre }} {{ d.apellido }} de esta comunidad?</p>
+      <p class="rj-warn">Esta acción no se puede deshacer. El residente perderá todo acceso a esta comunidad,
+        incluyendo sus roles y asignaciones de unidad.</p>
+      <div class="u-modal__actions rj-actions">
+        <button type="button" class="btn btn--ghost u-btn" (click)="removerAbierto.set(false)">Cancelar</button>
+        <button type="button" class="btn u-btn u-btn--danger" (click)="removerDeComunidad()">👥 Remover de comunidad</button>
+      </div>
     </div>
   </div>
 }

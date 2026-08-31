@@ -11,7 +11,18 @@ export interface Residente {
   tieneAcceso: boolean;
   unidadId: string;
   unidadNombre: string;
+  rolesJunta: CargoJunta[];
 }
+
+export type CargoJunta = 'Presidente' | 'Vicepresidente' | 'Tesorero' | 'Secretario' | 'Miembro';
+
+export const CARGOS_JUNTA: { value: CargoJunta; label: string; descripcion: string; icon: string }[] = [
+  { value: 'Presidente', label: 'Presidente', descripcion: 'Supervisa las decisiones de la junta y representa a la comunidad', icon: '👑' },
+  { value: 'Vicepresidente', label: 'Vicepresidente', descripcion: 'Asiste al presidente y actúa en su ausencia', icon: '🤝' },
+  { value: 'Tesorero', label: 'Tesorero', descripcion: 'Administra las finanzas y los informes financieros', icon: '💲' },
+  { value: 'Secretario', label: 'Secretario', descripcion: 'Registra reuniones y administra documentación', icon: '📄' },
+  { value: 'Miembro', label: 'Miembro', descripcion: 'Participa en decisiones y actividades de la junta', icon: '👤' },
+];
 
 export interface Directorio {
   residentes: Residente[];
@@ -65,6 +76,7 @@ export interface PersonaDetalle {
   telefono?: string | null;
   unidades: PersonaUnidadRef[];
   roles: string[];
+  rolesJunta: CargoJunta[];
   tieneCuenta: boolean;
   correoVerificado: boolean;
   activo: boolean;

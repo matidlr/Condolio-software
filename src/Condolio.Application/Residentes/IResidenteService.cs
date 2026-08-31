@@ -1,4 +1,5 @@
 using Condolio.Application.Common;
+using Condolio.Domain.Residentes;
 using Condolio.Domain.Unidades;
 
 namespace Condolio.Application.Residentes;
@@ -13,7 +14,8 @@ public record ResidenteDto(
     bool EsContactoPrincipal,
     bool TieneAcceso,
     Guid UnidadId,
-    string UnidadNombre);
+    string UnidadNombre,
+    IReadOnlyList<string> RolesJunta);
 
 public record DirectorioDto(
     IReadOnlyList<ResidenteDto> Residentes,
@@ -34,12 +36,15 @@ public record PersonaDetalleDto(
     string? Telefono,
     IReadOnlyList<PersonaUnidadRefDto> Unidades,
     IReadOnlyList<string> Roles,
+    IReadOnlyList<string> RolesJunta,
     bool TieneCuenta,
     bool CorreoVerificado,
     bool Activo,
     DateTime MiembroDesdeUtc);
 
 public record ActualizarPersonaContactoDto(string Nombre, string Apellido, string? Telefono);
+
+public record GestionarRolesJuntaDto(IReadOnlyList<CargoJunta> Cargos);
 
 public record InvitacionDto(
     Guid Id,
@@ -84,6 +89,7 @@ public interface IResidenteService
     Task<Result<DirectorioDto>> DirectorioAsync(Guid consorcioId, CancellationToken ct = default);
     Task<Result<PersonaDetalleDto>> PersonaDetalleAsync(Guid consorcioId, Guid personaId, CancellationToken ct = default);
     Task<Result> ActualizarContactoAsync(Guid consorcioId, Guid personaId, ActualizarPersonaContactoDto dto, CancellationToken ct = default);
+    Task<Result> GestionarRolesJuntaAsync(Guid consorcioId, Guid personaId, GestionarRolesJuntaDto dto, CancellationToken ct = default);
     Task<Result> RemoverDeComunidadAsync(Guid consorcioId, Guid personaId, CancellationToken ct = default);
     Task<Result<IReadOnlyList<InvitacionDto>>> InvitacionesAsync(Guid consorcioId, CancellationToken ct = default);
     Task<Result<InvitacionDto>> InvitarAsync(Guid consorcioId, CrearInvitacionDto dto, CancellationToken ct = default);

@@ -37,14 +37,31 @@ public class ResidenteService : IResidenteService
         if (!await _db.Consorcios.AnyAsync(c => c.Id == consorcioId, ct))
             return Result<DirectorioDto>.Fail("Consorcio no encontrado.");
 
-        var residentes = await _db.UnidadPersonas
+        var filas = await _db.UnidadPersonas
             .Where(p => p.Unidad.ConsorcioId == consorcioId)
             .OrderBy(p => p.Unidad.Piso).ThenBy(p => p.Unidad.Nombre).ThenBy(p => p.Rol)
-            .Select(p => new ResidenteDto(
+            .Select(p => new
+            {
                 p.Id, p.Nombre, p.Apellido, p.Email, p.Telefono, p.Rol,
-                p.EsContactoPrincipal, p.UsuarioId != null,
-                p.UnidadId, p.Unidad.Nombre))
+                p.EsContactoPrincipal, TieneAcceso = p.UsuarioId != null,
+                p.UsuarioId, p.UnidadId, UnidadNombre = p.Unidad.Nombre,
+            })
             .ToListAsync(ct);
+
+        var juntaPorUsuario = (await _db.MiembrosJunta
+                .Where(m => m.ConsorcioId == consorcioId)
+                .Select(m => new { m.UsuarioId, m.Cargo })
+                .ToListAsync(ct))
+            .GroupBy(m => m.UsuarioId)
+            .ToDictionary(g => g.Key, g => g.OrderBy(x => x.Cargo).Select(x => x.Cargo.ToString()).ToList());
+
+        var residentes = filas.Select(p => new ResidenteDto(
+                p.Id, p.Nombre, p.Apellido, p.Email, p.Telefono, p.Rol,
+                p.EsContactoPrincipal, p.TieneAcceso,
+                p.UnidadId, p.UnidadNombre,
+                (p.UsuarioId != null && juntaPorUsuario.TryGetValue(p.UsuarioId, out var cargos))
+                    ? cargos : new List<string>()))
+            .ToList();
 
         var totalUnidades = await _db.Unidades.CountAsync(u => u.ConsorcioId == consorcioId, ct);
         var unidadesConPropietario = await _db.Unidades
@@ -84,10 +101,17 @@ public class ResidenteService : IResidenteService
             : await _db.Users.FirstOrDefaultAsync(u => u.Email == email, ct);
         var roles = user is null ? Array.Empty<string>() : (await _users.GetRolesAsync(user)).ToArray();
 
+        var rolesJunta = user is null ? new List<string>()
+            : await _db.MiembrosJunta
+                .Where(m => m.ConsorcioId == consorcioId && m.UsuarioId == user.Id)
+                .OrderBy(m => m.Cargo)
+                .Select(m => m.Cargo.ToString())
+                .ToListAsync(ct);
+
         return Result<PersonaDetalleDto>.Ok(new PersonaDetalleDto(
             base_.Nombre, base_.Apellido, email ?? "",
             personas.Select(p => p.Telefono).FirstOrDefault(t => !string.IsNullOrWhiteSpace(t)),
-            unidades, roles,
+            unidades, roles, rolesJunta,
             user is not null,
             user?.EmailConfirmed ?? false,
             !(user?.LockoutEnd > DateTimeOffset.UtcNow),
@@ -118,6 +142,37 @@ public class ResidenteService : IResidenteService
         return Result.Ok();
     }
 
+    public async Task<Result> GestionarRolesJuntaAsync(Guid consorcioId, Guid personaId, GestionarRolesJuntaDto dto, CancellationToken ct = default)
+    {
+        var persona = await _db.UnidadPersonas
+            .FirstOrDefaultAsync(p => p.Id == personaId && p.Unidad.ConsorcioId == consorcioId, ct);
+        if (persona is null) return Result.Fail("Residente no encontrado.");
+
+        var adminId = await _db.Consorcios.Where(c => c.Id == consorcioId)
+            .Select(c => c.AdministradorId).FirstOrDefaultAsync(ct);
+
+        var user = string.IsNullOrWhiteSpace(persona.Email) ? null
+            : await _db.Users.FirstOrDefaultAsync(u => u.Email == persona.Email, ct);
+        if (user is null) return Result.Fail("El residente todavía no tiene una cuenta para asignarle roles de junta.");
+
+        var actuales = await _db.MiembrosJunta
+            .Where(m => m.ConsorcioId == consorcioId && m.UsuarioId == user.Id).ToListAsync(ct);
+        var deseados = dto.Cargos.Distinct().ToHashSet();
+
+        _db.MiembrosJunta.RemoveRange(actuales.Where(m => !deseados.Contains(m.Cargo)));
+        foreach (var cargo in deseados.Where(c => actuales.All(m => m.Cargo != c)))
+            _db.MiembrosJunta.Add(new Domain.Residentes.MiembroJunta
+            {
+                AdministradorId = adminId,
+                ConsorcioId = consorcioId,
+                UsuarioId = user.Id,
+                Cargo = cargo,
+            });
+
+        await _db.SaveChangesAsync(ct);
+        return Result.Ok();
+    }
+
     public async Task<Result> RemoverDeComunidadAsync(Guid consorcioId, Guid personaId, CancellationToken ct = default)
     {
         var persona = await _db.UnidadPersonas
@@ -129,6 +184,18 @@ public class ResidenteService : IResidenteService
             ? new List<Domain.Unidades.UnidadPersona> { persona }
             : await _db.UnidadPersonas.Where(p => p.Unidad.ConsorcioId == consorcioId && p.Email == email).ToListAsync(ct);
         _db.UnidadPersonas.RemoveRange(todas);
+
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == email, ct);
+            if (user is not null)
+            {
+                var junta = await _db.MiembrosJunta
+                    .Where(m => m.ConsorcioId == consorcioId && m.UsuarioId == user.Id).ToListAsync(ct);
+                _db.MiembrosJunta.RemoveRange(junta);
+            }
+        }
+
         await _db.SaveChangesAsync(ct);
         return Result.Ok();
     }

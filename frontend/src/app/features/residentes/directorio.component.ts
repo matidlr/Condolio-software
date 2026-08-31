@@ -7,7 +7,7 @@ import { ResidenteService } from '../../core/services/residente.service';
 import { UnidadService } from '../../core/services/unidad.service';
 import { IncidenciaUnidadService } from '../../core/services/incidencia-unidad.service';
 import { ToastService } from '../../core/services/toast.service';
-import { Directorio, PersonaDetalle, PersonaUnidadRef, Residente } from '../../core/models/residente.models';
+import { CARGOS_JUNTA, CargoJunta, Directorio, PersonaDetalle, PersonaUnidadRef, Residente } from '../../core/models/residente.models';
 import { IncidenciaUnidad, LABEL_CATEGORIA, RolUnidad, Unidad } from '../../core/models/consorcio.models';
 import { InvitarResidenteComponent } from './invitar-residente.component';
 import { AyudaPanelComponent } from '../../shared/ayuda-panel.component';
@@ -49,6 +49,12 @@ export class DirectorioComponent {
   cargandoIncidencias = signal(false);
   incidencias = signal<(IncidenciaUnidad & { unidadNombre: string })[]>([]);
   labelCategoria = LABEL_CATEGORIA;
+
+  cargosJunta = CARGOS_JUNTA;
+  gestionarRolesAbierto = signal(false);
+  rolesJuntaSel = signal<Set<CargoJunta>>(new Set());
+  guardandoRoles = signal(false);
+  removerAbierto = signal(false);
 
   private consorcioId = computed(() => this.consorcios.activoId());
 
@@ -203,11 +209,41 @@ export class DirectorioComponent {
     });
   }
 
+  // ---- Roles de junta ----
+  abrirGestionarRoles(): void {
+    const d = this.detalle();
+    this.rolesJuntaSel.set(new Set(d?.rolesJunta ?? []));
+    this.gestionarRolesAbierto.set(true);
+  }
+
+  toggleCargoJunta(c: CargoJunta): void {
+    this.rolesJuntaSel.update((s) => {
+      const n = new Set(s);
+      n.has(c) ? n.delete(c) : n.add(c);
+      return n;
+    });
+  }
+
+  guardarRolesJunta(): void {
+    const cid = this.consorcioId();
+    if (!cid || this.guardandoRoles()) return;
+    this.guardandoRoles.set(true);
+    this.api.gestionarRolesJunta(cid, this.personaIdSel(), [...this.rolesJuntaSel()]).subscribe({
+      next: () => {
+        this.guardandoRoles.set(false);
+        this.gestionarRolesAbierto.set(false);
+        this.toasts.exito('Roles de junta actualizados');
+        this.recargarDetalle();
+      },
+      error: (e) => { this.guardandoRoles.set(false); this.toasts.error(e?.error?.message ?? 'No se pudieron guardar los roles.'); },
+    });
+  }
+
   removerDeComunidad(): void {
     const cid = this.consorcioId();
-    if (!cid || !confirm('¿Remover a este residente de toda la comunidad? Se quitará de todas sus unidades.')) return;
+    if (!cid) return;
     this.api.removerDeComunidad(cid, this.personaIdSel()).subscribe({
-      next: () => { this.toasts.exito('Residente removido de la comunidad'); this.cerrarDetalle(); },
+      next: () => { this.removerAbierto.set(false); this.toasts.exito('Residente removido de la comunidad'); this.cerrarDetalle(); },
       error: (e) => this.toasts.error(e?.error?.message ?? 'No se pudo remover.'),
     });
   }

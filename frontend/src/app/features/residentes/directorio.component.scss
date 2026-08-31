@@ -476,3 +476,33 @@
   .r-empty__cards { grid-template-columns: 1fr; }
   .u-row { grid-template-columns: 1fr; }
 }
+
+/* Roles de junta */
+.r-tag--junta { background: #ede9fe; color: #6d28d9; }
+
+.rj { max-width: 480px; }
+.rj-title { margin: 0 4px 4px 0; font-size: 1.15rem; }
+.rj-sub { margin: 0 0 16px; color: var(--c-text-muted); font-size: 0.9rem; }
+.rj-list { display: flex; flex-direction: column; gap: 8px; }
+.rj-opt {
+  display: flex; align-items: flex-start; gap: 12px; width: 100%; text-align: left;
+  border: 1px solid var(--c-border); border-radius: 12px; padding: 12px 14px;
+  background: var(--c-surface); font: inherit; cursor: pointer;
+}
+.rj-opt:hover { border-color: var(--c-slate-500); }
+.rj-opt.is-sel { border-color: #7c3aed; background: #f5f3ff; }
+.rj-check {
+  flex-shrink: 0; width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--c-border);
+  display: grid; place-items: center; color: #fff; font-size: 0.8rem; font-weight: 700; margin-top: 1px;
+}
+.rj-opt.is-sel .rj-check { background: #7c3aed; border-color: #7c3aed; }
+.rj-opt__ic { font-size: 1.1rem; }
+.rj-opt__b b { display: block; font-size: 0.95rem; }
+.rj-opt__b small { color: var(--c-text-muted); font-size: 0.82rem; }
+.rj-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+.rj-actions .u-btn { width: auto; }
+
+.rj--danger .rj-title { color: var(--c-danger); }
+.rj-warn { margin: 0; color: var(--c-danger); font-size: 0.86rem; line-height: 1.5; }
+.u-btn--danger { background: var(--c-danger); color: #fff; border: none; }
+.u-btn--danger:hover { filter: brightness(0.94); }

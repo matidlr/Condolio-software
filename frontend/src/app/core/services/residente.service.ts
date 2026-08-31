@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
-  CrearInvitacion, Directorio, Invitacion, PersonaDetalle, ResidenteSinUnidad,
+  CargoJunta, CrearInvitacion, Directorio, Invitacion, PersonaDetalle, ResidenteSinUnidad,
 } from '../models/residente.models';
 
 @Injectable({ providedIn: 'root' })
@@ -34,6 +34,10 @@ export class ResidenteService {
 
   actualizarContacto(consorcioId: string, personaId: string, body: { nombre: string; apellido: string; telefono?: string | null }): Observable<void> {
     return this.http.put<void>(`${this.base(consorcioId)}/persona/${personaId}/contacto`, body);
+  }
+
+  gestionarRolesJunta(consorcioId: string, personaId: string, cargos: CargoJunta[]): Observable<void> {
+    return this.http.put<void>(`${this.base(consorcioId)}/persona/${personaId}/roles-junta`, { cargos });
   }
 
   removerDeComunidad(consorcioId: string, personaId: string): Observable<void> {
