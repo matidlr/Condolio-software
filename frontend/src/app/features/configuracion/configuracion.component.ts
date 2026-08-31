@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { ConsorcioService } from '../../core/services/consorcio.service';
 import { UnidadService } from '../../core/services/unidad.service';
 import { BillingService, EstadoSuscripcionDto } from '../../core/services/billing.service';
+import { AdminMiembro, AdminMiembroService, AreaAdmin, AREAS_ADMIN, LABEL_AREA } from '../../core/services/admin-miembro.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { ConsorcioDetalle, TIPOS_CONSORCIO, TipoConsorcio, Unidad } from '../../core/models/consorcio.models';
@@ -30,6 +31,7 @@ export class ConfiguracionComponent {
   consorcios = inject(ConsorcioService);
   private unidadesApi = inject(UnidadService);
   private billing = inject(BillingService);
+  private adminsApi = inject(AdminMiembroService);
   private auth = inject(AuthService);
   private toasts = inject(ToastService);
   private router = inject(Router);
@@ -41,7 +43,7 @@ export class ConfiguracionComponent {
     {
       titulo: '', items: [
         { id: 'general', label: 'General', icon: '🏢', listo: true },
-        { id: 'administradores', label: 'Administradores', icon: '👥', listo: false },
+        { id: 'administradores', label: 'Administradores', icon: '👥', listo: true },
         { id: 'secciones', label: 'Secciones', icon: '🗂️', listo: true },
         { id: 'preferencias', label: 'Preferencias', icon: '🎛️', listo: false },
         { id: 'suscripcion', label: 'Suscripción', icon: '💳', listo: true },
@@ -271,6 +273,82 @@ export class ConfiguracionComponent {
   irA(t: Tab): void {
     this.tab.set(t);
     if (t === 'suscripcion') this.cargarSuscripcion();
+    if (t === 'administradores') this.cargarAdmins();
+  }
+
+  // ---- Administradores ----
+  areasAll = AREAS_ADMIN;
+  labelArea = LABEL_AREA;
+  admins = signal<AdminMiembro[]>([]);
+  cargandoAdmins = signal(false);
+
+  adminModal = signal(false);
+  adminEdit = signal<AdminMiembro | null>(null);   // null = agregar
+  adminEmail = signal('');
+  adminGeneral = signal(true);
+  adminAreas = signal<Set<AreaAdmin>>(new Set());
+  guardandoAdmin = signal(false);
+  adminBorrar = signal<AdminMiembro | null>(null);
+
+  private cargarAdmins(): void {
+    if (this.cargandoAdmins()) return;
+    this.cargandoAdmins.set(true);
+    this.adminsApi.listar().subscribe({
+      next: (l) => { this.admins.set(l); this.cargandoAdmins.set(false); },
+      error: () => this.cargandoAdmins.set(false),
+    });
+  }
+
+  abrirAgregarAdmin(): void {
+    this.adminEdit.set(null);
+    this.adminEmail.set('');
+    this.adminGeneral.set(true);
+    this.adminAreas.set(new Set());
+    this.adminModal.set(true);
+  }
+  abrirEditarAdmin(m: AdminMiembro): void {
+    this.adminEdit.set(m);
+    this.adminGeneral.set(m.esGeneral);
+    this.adminAreas.set(new Set(m.areas));
+    this.adminModal.set(true);
+  }
+  toggleArea(a: AreaAdmin): void {
+    this.adminAreas.update((s) => { const n = new Set(s); n.has(a) ? n.delete(a) : n.add(a); return n; });
+  }
+  atajoArea(a: AreaAdmin): void {
+    this.adminGeneral.set(false);
+    this.adminAreas.update((s) => { const n = new Set(s); n.add(a); return n; });
+  }
+
+  guardarAdmin(): void {
+    if (this.guardandoAdmin()) return;
+    const areas = [...this.adminAreas()];
+    if (!this.adminGeneral() && areas.length === 0) { this.toasts.error('Elegí al menos un área.'); return; }
+    this.guardandoAdmin.set(true);
+    const edit = this.adminEdit();
+    const obs = edit
+      ? this.adminsApi.cambiarRol(edit.usuarioId, this.adminGeneral(), areas)
+      : this.adminsApi.agregar(this.adminEmail().trim(), this.adminGeneral(), areas);
+    obs.subscribe({
+      next: () => {
+        this.guardandoAdmin.set(false);
+        this.adminModal.set(false);
+        this.toasts.exito(edit ? 'Rol actualizado' : 'Administrador agregado');
+        this.admins.set([]);
+        this.cargandoAdmins.set(false);
+        this.cargarAdmins();
+      },
+      error: (e) => { this.guardandoAdmin.set(false); this.toasts.error(e?.error?.message ?? 'No se pudo guardar.'); },
+    });
+  }
+
+  confirmarBorrarAdmin(): void {
+    const m = this.adminBorrar();
+    if (!m) return;
+    this.adminsApi.quitar(m.usuarioId).subscribe({
+      next: () => { this.adminBorrar.set(null); this.toasts.exito('Administrador quitado'); this.admins.set([]); this.cargandoAdmins.set(false); this.cargarAdmins(); },
+      error: (e) => this.toasts.error(e?.error?.message ?? 'No se pudo quitar.'),
+    });
   }
 
   fechaLarga(iso: string): string {

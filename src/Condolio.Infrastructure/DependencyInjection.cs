@@ -102,6 +102,7 @@ public static class DependencyInjection
         // ---- Archivos ----
         services.AddSingleton<IFileStorage, LocalFileStorage>();
         services.AddScoped<IAdjuntoService, AdjuntoService>();
+        services.AddScoped<Condolio.Application.Tenancy.IAdminMiembroService, Condolio.Infrastructure.Tenancy.AdminMiembroService>();
 
         return services;
     }

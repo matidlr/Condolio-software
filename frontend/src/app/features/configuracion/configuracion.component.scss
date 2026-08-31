@@ -191,3 +191,22 @@
   font: inherit; font-size: 0.95rem; font-weight: 700; cursor: pointer;
 }
 .cfg-mp:hover { filter: brightness(.95); }
+
+/* Administradores */
+.cfg-owner {
+  font-style: normal; font-size: 0.66rem; font-weight: 700; text-transform: uppercase;
+  background: var(--c-bg); border-radius: 5px; padding: 1px 5px; color: var(--c-text-soft); margin-left: 4px;
+}
+.cfg-chip--area { background: #eef2ff; color: #4338ca; }
+.ns-tipo { display: block; width: 100%; margin-bottom: 8px; }
+.cfg-areas { margin-top: 12px; border: 1px solid var(--c-border); border-radius: 10px; overflow: hidden; }
+.cfg-areas__lbl { margin: 0; padding: 10px 12px; font-size: 0.78rem; font-weight: 700; color: var(--c-text-soft); background: var(--c-bg); }
+
+.ns-tipo {
+  text-align: left; border: 1px solid var(--c-border); border-radius: 12px; padding: 12px 14px;
+  background: var(--c-surface); cursor: pointer; font: inherit; border-left: 4px solid transparent;
+}
+.ns-tipo:hover { border-color: var(--c-slate-500); }
+.ns-tipo.is-sel { border-color: var(--c-primary); border-left-color: var(--c-primary); background: color-mix(in srgb, var(--c-primary) 5%, transparent); }
+.ns-tipo b { display: block; font-size: 0.94rem; margin-bottom: 2px; }
+.ns-tipo small { color: var(--c-text-muted); font-size: 0.83rem; line-height: 1.4; }

@@ -109,6 +109,38 @@
           }
         }
 
+        @case ('administradores') {
+          <div class="cfg-hd2">
+            <div>
+              <h2>Administradores</h2>
+              <p class="cfg-sub">Gestioná el equipo de administradores de esta cuenta y sus permisos.</p>
+            </div>
+            <button type="button" class="btn btn--primary u-btn" (click)="abrirAgregarAdmin()">＋ Agregar</button>
+          </div>
+
+          @if (cargandoAdmins()) { <p class="cfg-loading">Cargando…</p> }
+          @else {
+            @for (m of admins(); track m.usuarioId) {
+              <div class="cfg-seccard">
+                <span class="cfg-seccard__ic">{{ (m.nombre[0] || '?').toUpperCase() }}</span>
+                <div class="cfg-seccard__b">
+                  <b>{{ m.nombre }} @if (m.esDueno) { <em class="cfg-owner">dueño</em> }</b>
+                  <small>{{ m.email }}</small>
+                </div>
+                @if (m.esGeneral) {
+                  <span class="cfg-chip">General</span>
+                } @else {
+                  @for (a of m.areas; track a) { <span class="cfg-chip cfg-chip--area">{{ labelArea[a] }}</span> }
+                }
+                <button type="button" class="cfg-ic" (click)="abrirEditarAdmin(m)" aria-label="Editar rol">✎</button>
+                @if (!m.esDueno) {
+                  <button type="button" class="cfg-ic cfg-ic--del" (click)="adminBorrar.set(m)" aria-label="Quitar">🗑</button>
+                }
+              </div>
+            }
+          }
+        }
+
         @case ('secciones') {
           <div class="cfg-hd2">
             <div>
@@ -258,6 +290,68 @@
     </section>
   </div>
 </div>
+
+<!-- Modal: agregar / editar administrador -->
+@if (adminModal()) {
+  <div class="cfg-ov" (click)="adminModal.set(false)">
+    <div class="cfg-modal" (click)="$event.stopPropagation()">
+      <header>
+        <b>{{ adminEdit() ? 'Editar rol' : 'Agregar administrador' }}</b>
+        <button type="button" (click)="adminModal.set(false)">✕</button>
+      </header>
+      <div class="cfg-modal__b">
+        @if (adminEdit(); as m) {
+          <p class="cfg-hint" style="margin-top:0">{{ m.nombre }} · {{ m.email }}</p>
+        } @else {
+          <label class="cfg-field cfg-field--full"><span>Correo electrónico</span>
+            <input type="email" [ngModel]="adminEmail()" (ngModelChange)="adminEmail.set($event)"
+              placeholder="persona@ejemplo.com" /></label>
+          <p class="cfg-hint">Si el correo ya tiene una cuenta en Condolio, se agrega como administrador.</p>
+        }
+
+        <span class="cfg-field__label" style="margin-top:14px">Rol</span>
+        <button type="button" class="ns-tipo" [class.is-sel]="adminGeneral()" (click)="adminGeneral.set(true)">
+          <b>Administrador general</b><small>Acceso completo, incluida la configuración y la gestión de administradores.</small>
+        </button>
+        <button type="button" class="ns-tipo" [class.is-sel]="!adminGeneral()" (click)="adminGeneral.set(false)">
+          <b>Acceso limitado</b><small>Solo puede entrar a las áreas seleccionadas.</small>
+        </button>
+
+        @if (!adminGeneral()) {
+          <div class="cfg-areas">
+            <p class="cfg-areas__lbl">Áreas de acceso</p>
+            @for (a of areasAll; track a.value) {
+              <label class="cfg-secpick__row">
+                <input type="checkbox" [checked]="adminAreas().has(a.value)" (change)="toggleArea(a.value)" />
+                <span>{{ a.icon }} {{ a.label }}</span>
+              </label>
+            }
+          </div>
+        }
+      </div>
+      <footer>
+        <button type="button" class="btn btn--ghost u-btn" (click)="adminModal.set(false)">Cancelar</button>
+        <button type="button" class="btn btn--primary u-btn"
+          [disabled]="guardandoAdmin() || (!adminEdit() && !adminEmail().trim())" (click)="guardarAdmin()">
+          {{ guardandoAdmin() ? 'Guardando…' : (adminEdit() ? 'Guardar' : 'Agregar administrador') }}
+        </button>
+      </footer>
+    </div>
+  </div>
+}
+
+@if (adminBorrar(); as m) {
+  <div class="cfg-ov" (click)="adminBorrar.set(null)">
+    <div class="cfg-dlg" (click)="$event.stopPropagation()">
+      <b>Quitar administrador</b>
+      <p>¿Sacar a <b>{{ m.nombre }}</b> del equipo de administradores? Va a perder el acceso a esta cuenta.</p>
+      <div class="cfg-dlg__btns">
+        <button type="button" class="btn btn--ghost u-btn" (click)="adminBorrar.set(null)">Cancelar</button>
+        <button type="button" class="btn u-btn cfg-btn-del" (click)="confirmarBorrarAdmin()">Quitar</button>
+      </div>
+    </div>
+  </div>
+}
 
 <!-- Modal: agregar / editar sección -->
 @if (secModal()) {
