@@ -21,6 +21,10 @@ public enum TipoVisita
     EntregaDomicilio = 4,
     ProveedorServicios = 5,
     Empleado = 6,
+    Visita = 7,
+    Taxi = 8,
+    Residente = 9,
+    Otro = 10,
 }
 
 public enum TipoVehiculo

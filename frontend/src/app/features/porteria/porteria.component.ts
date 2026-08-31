@@ -1,56 +1,99 @@
 import { Component, ElementRef, OnDestroy, computed, inject, signal, viewChild } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
+import {
+  Bitacora, EntradaManual, PorteriaContexto, PorteriaService, RegistroBitacora,
+  ResumenAcceso, UnidadRef, Verificacion,
+} from '../../core/services/porteria.service';
+import { ICON_VISITA, LABEL_VISITA, TIPOS_VEHICULO, TIPOS_VISITA } from '../../core/models/pase-acceso.models';
 
-interface Contexto { consorcioId: string; consorcioNombre: string; casetaNombre: string; }
-interface Verificacion {
-  valido: boolean; motivo?: string | null; visitanteNombre: string; tipoVisita: string;
-  patente?: string | null; unidadNombre: string; consorcioNombre: string; usosRestantes: number;
-}
+type Vista = 'home' | 'escanear' | 'manual' | 'salidas' | 'bitacora' | 'alertas';
 
 @Component({
   selector: 'app-porteria',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, DatePipe],
   templateUrl: './porteria.component.html',
   styleUrl: './porteria.component.scss',
 })
 export class PorteriaComponent implements OnDestroy {
-  private http = inject(HttpClient);
+  private api = inject(PorteriaService);
   private auth = inject(AuthService);
   private router = inject(Router);
   private toasts = inject(ToastService);
 
   video = viewChild<ElementRef<HTMLVideoElement>>('video');
 
-  ctx = signal<Contexto | null>(null);
-  estado = signal<'idle' | 'escaneando' | 'verificando' | 'resultado'>('idle');
-  resultado = signal<Verificacion | null>(null);
-  manual = signal('');
-  soportaCamara = signal('BarcodeDetector' in window);
+  tiposVisita = TIPOS_VISITA;
+  tiposVehiculo = TIPOS_VEHICULO;
+  labelVisita = LABEL_VISITA;
+  iconVisita = ICON_VISITA;
 
+  vista = signal<Vista>('home');
+  ctx = signal<PorteriaContexto | null>(null);
+  resumen = signal<ResumenAcceso>({ adentroAhora: 0, entradasHoy: 0, salidasHoy: 0 });
+
+  // escáner
+  escaneando = signal(false);
+  verificando = signal(false);
+  resultado = signal<Verificacion | null>(null);
+  manualToken = signal('');
+  soportaCamara = signal('BarcodeDetector' in window);
   private stream: MediaStream | null = null;
   private detector: any = null;
   private raf = 0;
   private ultimoToken = '';
 
-  nombre = computed(() => this.auth.nombre());
+  // entrada manual
+  em = signal<EntradaManual>(this.emVacia());
+  unidades = signal<UnidadRef[]>([]);
+  guardandoEm = signal(false);
+
+  // salidas / bitácora
+  adentro = signal<RegistroBitacora[]>([]);
+  bitacora = signal<Bitacora>({ registros: [], adentroAhora: 0 });
+  cargandoLista = signal(false);
+  alertas = signal<any[]>([]);
+
+  nombre = computed(() => this.ctx()?.casetaNombre ?? 'Portería');
 
   constructor() {
-    this.http.get<Contexto>(`${environment.apiUrl}/porteria/contexto`).subscribe({
+    this.api.contexto().subscribe({
       next: (c) => this.ctx.set(c),
       error: (e) => this.toasts.error(e?.error?.message ?? 'No se pudo cargar la caseta.'),
     });
+    this.cargarResumen();
+    this.api.unidades().subscribe({ next: (u) => this.unidades.set(u), error: () => {} });
   }
 
+  private emVacia(): EntradaManual {
+    return { visitanteNombre: '', tipoVisita: 'Familia', vehiculo: 'SinVehiculo', patente: null, unidadId: null, nota: null };
+  }
+
+  cargarResumen(): void {
+    this.api.resumen().subscribe({ next: (r) => this.resumen.set(r), error: () => {} });
+  }
+
+  ir(v: Vista): void {
+    this.pararCamara();
+    this.vista.set(v);
+    if (v === 'escanear') this.escanear();
+    if (v === 'salidas') this.cargarAdentro();
+    if (v === 'bitacora') this.cargarBitacora();
+    if (v === 'alertas') this.cargarAlertas();
+    if (v === 'manual') this.em.set(this.emVacia());
+    if (v === 'home') this.cargarResumen();
+  }
+
+  // ---- escáner ----
   async escanear(): Promise<void> {
-    if (!this.soportaCamara()) { this.estado.set('escaneando'); return; }
-    this.estado.set('escaneando');
     this.resultado.set(null);
+    this.ultimoToken = '';
+    if (!this.soportaCamara()) { this.escaneando.set(true); return; }
+    this.escaneando.set(true);
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
       const v = this.video()?.nativeElement;
@@ -66,7 +109,7 @@ export class PorteriaComponent implements OnDestroy {
 
   private loop = async (): Promise<void> => {
     const v = this.video()?.nativeElement;
-    if (!v || this.estado() !== 'escaneando') return;
+    if (!v || !this.escaneando()) return;
     try {
       const codes = await this.detector.detect(v);
       if (codes.length && codes[0].rawValue && codes[0].rawValue !== this.ultimoToken) {
@@ -79,31 +122,94 @@ export class PorteriaComponent implements OnDestroy {
   };
 
   verificarManual(): void {
-    const t = this.manual().trim();
+    const t = this.manualToken().trim();
     if (t) this.verificar(t);
   }
 
   private verificar(token: string): void {
     this.pararCamara();
-    this.estado.set('verificando');
-    this.http.post<Verificacion>(`${environment.apiUrl}/porteria/verificar`, { token }).subscribe({
-      next: (r) => { this.resultado.set(r); this.estado.set('resultado'); },
+    this.escaneando.set(false);
+    this.verificando.set(true);
+    this.api.verificar(token).subscribe({
+      next: (r) => { this.resultado.set(r); this.verificando.set(false); this.cargarResumen(); },
       error: (e) => {
         this.toasts.error(e?.error?.message ?? 'No se pudo verificar el código.');
-        this.estado.set('idle');
+        this.verificando.set(false);
+        this.vista.set('home');
       },
     });
   }
 
-  siguiente(): void {
+  otroEscaneo(): void {
     this.resultado.set(null);
-    this.manual.set('');
-    this.ultimoToken = '';
-    this.estado.set('idle');
+    this.manualToken.set('');
+    this.escanear();
   }
+
+  // ---- entrada manual ----
+  setEm<K extends keyof EntradaManual>(k: K, v: EntradaManual[K]): void {
+    this.em.update((e) => ({ ...e, [k]: v }));
+  }
+  emValida = computed(() => this.em().visitanteNombre.trim().length > 0);
+
+  registrarManual(): void {
+    if (!this.emValida() || this.guardandoEm()) return;
+    this.guardandoEm.set(true);
+    const e = this.em();
+    this.api.entradaManual({
+      ...e,
+      visitanteNombre: e.visitanteNombre.trim(),
+      patente: e.vehiculo === 'SinVehiculo' ? null : (e.patente?.trim() || null),
+      unidadId: e.unidadId || null,
+    }).subscribe({
+      next: () => {
+        this.guardandoEm.set(false);
+        this.toasts.exito('Entrada registrada');
+        this.cargarResumen();
+        this.vista.set('home');
+      },
+      error: (err) => { this.guardandoEm.set(false); this.toasts.error(err?.error?.message ?? 'No se pudo registrar.'); },
+    });
+  }
+
+  // ---- salidas ----
+  cargarAdentro(): void {
+    this.cargandoLista.set(true);
+    this.api.adentro().subscribe({
+      next: (l) => { this.adentro.set(l); this.cargandoLista.set(false); },
+      error: () => { this.cargandoLista.set(false); this.toasts.error('No pudimos cargar la lista.'); },
+    });
+  }
+  registrarSalida(r: RegistroBitacora): void {
+    this.api.salida(r.id).subscribe({
+      next: () => { this.toasts.exito('Salida registrada'); this.cargarAdentro(); this.cargarResumen(); },
+      error: (e) => this.toasts.error(e?.error?.message ?? 'No se pudo registrar.'),
+    });
+  }
+
+  // ---- bitácora ----
+  cargarBitacora(): void {
+    this.cargandoLista.set(true);
+    this.api.bitacora(7).subscribe({
+      next: (b) => { this.bitacora.set(b); this.cargandoLista.set(false); },
+      error: () => { this.cargandoLista.set(false); this.toasts.error('No pudimos cargar la bitácora.'); },
+    });
+  }
+
+  // ---- alertas ----
+  cargarAlertas(): void {
+    this.cargandoLista.set(true);
+    this.api.alertas().subscribe({
+      next: (r) => { this.alertas.set(r.anuncios ?? []); this.cargandoLista.set(false); },
+      error: () => { this.cargandoLista.set(false); this.alertas.set([]); },
+    });
+  }
+
+  iconoVehiculo(v: string): string { return TIPOS_VEHICULO.find((x) => x.value === v)?.icon ?? ''; }
 
   private pararCamara(): void {
     cancelAnimationFrame(this.raf);
+    this.escaneando.set(false);
     this.stream?.getTracks().forEach((t) => t.stop());
     this.stream = null;
   }

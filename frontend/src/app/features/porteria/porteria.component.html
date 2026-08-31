@@ -1,51 +1,63 @@
 <div class="pt">
   <header class="pt-top">
-    <div>
-      <b>{{ ctx()?.casetaNombre || 'Portería' }}</b>
-      <small>{{ ctx()?.consorcioNombre }}</small>
-    </div>
-    <button type="button" class="pt-salir" (click)="salir()">Salir</button>
+    @if (vista() !== 'home') {
+      <button type="button" class="pt-back" (click)="ir('home')">‹ Atrás</button>
+    } @else { <span class="pt-back"></span> }
+    <b>{{ vista() === 'home' ? 'Entradas y salidas'
+        : vista() === 'escanear' ? 'Escanear QR'
+        : vista() === 'manual' ? 'Nueva entrada'
+        : vista() === 'salidas' ? 'Registrar salidas'
+        : vista() === 'bitacora' ? 'Bitácora digital' : 'Alertas comunitarias' }}</b>
+    @if (vista() === 'home') {
+      <button type="button" class="pt-salir" (click)="salir()">Salir</button>
+    } @else { <span class="pt-back"></span> }
   </header>
 
   <main class="pt-main">
-    @switch (estado()) {
-      @case ('idle') {
-        <div class="pt-idle">
-          <div class="pt-idle__ic">⛶</div>
-          <h1>Escanear código QR</h1>
-          <p>Apuntá la cámara al QR del visitante para validar el ingreso.</p>
-          <button type="button" class="pt-btn pt-btn--primary" (click)="escanear()">
-            {{ soportaCamara() ? '📷 Abrir cámara' : 'Ingresar código' }}
-          </button>
-          <div class="pt-manual">
-            <input placeholder="…o pegá el código / enlace del QR"
-              [ngModel]="manual()" (ngModelChange)="manual.set($event)" (keyup.enter)="verificarManual()" />
-            <button type="button" (click)="verificarManual()" [disabled]="manual().trim().length === 0">Verificar</button>
-          </div>
+    @switch (vista()) {
+
+      @case ('home') {
+        <div class="pt-stats">
+          <div><b>{{ resumen().adentroAhora }}</b><small>Adentro ahora</small></div>
+          <div><b>{{ resumen().entradasHoy }}</b><small>Entradas hoy</small></div>
+          <div><b>{{ resumen().salidasHoy }}</b><small>Salidas hoy</small></div>
         </div>
+
+        <p class="pt-sec">Entradas</p>
+        <button type="button" class="pt-card pt-card--hero" (click)="ir('escanear')">
+          <span class="pt-card__ic pt-card__ic--qr">⛶</span>
+          <span class="pt-card__b"><b>Escanear QR</b><small>Validá el pase de un visitante</small></span>
+          <span class="pt-card__go">›</span>
+        </button>
+        <button type="button" class="pt-card" (click)="ir('manual')">
+          <span class="pt-card__ic">👤➕</span>
+          <span class="pt-card__b"><b>Entrada manual</b><small>Registrá una visita sin código</small></span>
+          <span class="pt-card__go">›</span>
+        </button>
+
+        <p class="pt-sec">Salidas</p>
+        <button type="button" class="pt-card" (click)="ir('salidas')">
+          <span class="pt-card__ic">🚪</span>
+          <span class="pt-card__b"><b>Registrar salidas</b><small>Marcá a los visitantes que salen</small></span>
+          <span class="pt-card__go">›</span>
+        </button>
+
+        <p class="pt-sec">Bitácora</p>
+        <button type="button" class="pt-card" (click)="ir('bitacora')">
+          <span class="pt-card__ic">📋</span>
+          <span class="pt-card__b"><b>Bitácora digital</b><small>Historial de entradas y salidas</small></span>
+          <span class="pt-card__go">›</span>
+        </button>
+
+        <p class="pt-sec">Avisos comunitarios</p>
+        <button type="button" class="pt-card" (click)="ir('alertas')">
+          <span class="pt-card__ic pt-card__ic--alert">📣</span>
+          <span class="pt-card__b"><b>Alertas comunitarias</b><small>Avisos para la comunidad</small></span>
+          <span class="pt-card__go">›</span>
+        </button>
       }
 
-      @case ('escaneando') {
-        <div class="pt-scan">
-          @if (soportaCamara()) {
-            <video #video playsinline muted></video>
-            <div class="pt-scan__frame"></div>
-            <p class="pt-scan__hint">Buscando un código QR…</p>
-          }
-          <div class="pt-manual">
-            <input placeholder="Ingresá el código a mano"
-              [ngModel]="manual()" (ngModelChange)="manual.set($event)" (keyup.enter)="verificarManual()" />
-            <button type="button" (click)="verificarManual()" [disabled]="manual().trim().length === 0">Verificar</button>
-          </div>
-          <button type="button" class="pt-btn pt-btn--ghost" (click)="siguiente()">Cancelar</button>
-        </div>
-      }
-
-      @case ('verificando') {
-        <div class="pt-idle"><div class="pt-idle__ic">⏳</div><h1>Verificando…</h1></div>
-      }
-
-      @case ('resultado') {
+      @case ('escanear') {
         @if (resultado(); as r) {
           <div class="pt-res" [class.is-ok]="r.valido" [class.is-bad]="!r.valido">
             <div class="pt-res__badge">{{ r.valido ? '✓' : '✕' }}</div>
@@ -57,8 +69,124 @@
               @if (r.patente) { <div><small>Patente</small><b>{{ r.patente }}</b></div> }
               @if (r.valido) { <div><small>Ingresos restantes</small><b>{{ r.usosRestantes }}</b></div> }
             </div>
-            <button type="button" class="pt-btn pt-btn--primary" (click)="siguiente()">Escanear otro</button>
+            <button type="button" class="pt-btn pt-btn--primary" (click)="otroEscaneo()">Escanear otro</button>
           </div>
+        } @else if (verificando()) {
+          <div class="pt-idle"><div class="pt-idle__ic">⏳</div><h1>Verificando…</h1></div>
+        } @else {
+          <div class="pt-scan">
+            @if (soportaCamara()) {
+              <div class="pt-scan__cam">
+                <video #video playsinline muted></video>
+                <div class="pt-scan__frame"></div>
+              </div>
+              <p class="pt-scan__hint">Posicioná el código QR en el marco</p>
+            }
+            <div class="pt-manual">
+              <input placeholder="…o ingresá el código a mano"
+                [ngModel]="manualToken()" (ngModelChange)="manualToken.set($event)" (keyup.enter)="verificarManual()" />
+              <button type="button" (click)="verificarManual()" [disabled]="manualToken().trim().length === 0">Verificar</button>
+            </div>
+          </div>
+        }
+      }
+
+      @case ('manual') {
+        <div class="pt-form">
+          <p class="pt-sec">Motivo de ingreso</p>
+          <div class="pt-tiles">
+            @for (t of tiposVisita; track t.value) {
+              <button type="button" class="pt-tile" [class.is-sel]="em().tipoVisita === t.value"
+                (click)="setEm('tipoVisita', t.value)"><span>{{ t.icon }}</span>{{ t.label }}</button>
+            }
+          </div>
+
+          <p class="pt-sec">Vehículo</p>
+          <div class="pt-tiles pt-tiles--3">
+            @for (v of tiposVehiculo; track v.value) {
+              <button type="button" class="pt-tile" [class.is-sel]="em().vehiculo === v.value"
+                (click)="setEm('vehiculo', v.value)"><span>{{ v.icon }}</span>{{ v.label }}</button>
+            }
+          </div>
+          @if (em().vehiculo !== 'SinVehiculo') {
+            <input class="pt-input" placeholder="Patente" [ngModel]="em().patente" (ngModelChange)="setEm('patente', $event)" />
+          }
+
+          <p class="pt-sec">Detalles del visitante</p>
+          <input class="pt-input" placeholder="Nombre del visitante"
+            [ngModel]="em().visitanteNombre" (ngModelChange)="setEm('visitanteNombre', $event)" />
+          <select class="pt-input" [ngModel]="em().unidadId" (ngModelChange)="setEm('unidadId', $event)">
+            <option [ngValue]="null">Unidad — Administración</option>
+            @for (u of unidades(); track u.id) { <option [ngValue]="u.id">{{ u.nombre }}</option> }
+          </select>
+          <input class="pt-input" placeholder="Nota (opcional)" [ngModel]="em().nota" (ngModelChange)="setEm('nota', $event)" />
+
+          <button type="button" class="pt-btn pt-btn--primary pt-form__submit"
+            [disabled]="!emValida() || guardandoEm()" (click)="registrarManual()">
+            {{ guardandoEm() ? 'Registrando…' : '👤➕ Registrar entrada' }}
+          </button>
+        </div>
+      }
+
+      @case ('salidas') {
+        @if (cargandoLista()) { <p class="pt-loading">Cargando…</p> }
+        @else if (adentro().length === 0) {
+          <div class="pt-idle"><div class="pt-idle__ic">✓</div><h1>Nadie adentro</h1><p>No hay visitantes para registrar salida.</p></div>
+        } @else {
+          <ul class="pt-list">
+            @for (r of adentro(); track r.id) {
+              <li class="pt-litem">
+                <div>
+                  <b>{{ r.visitanteNombre }}</b>
+                  <small>{{ iconVisita[r.tipoVisita] }} {{ labelVisita[r.tipoVisita] }} · {{ r.unidad }} · entró {{ r.ingresoUtc | date:'HH:mm' }}</small>
+                </div>
+                <button type="button" class="pt-out" (click)="registrarSalida(r)">Registrar salida</button>
+              </li>
+            }
+          </ul>
+        }
+      }
+
+      @case ('bitacora') {
+        @if (cargandoLista()) { <p class="pt-loading">Cargando…</p> }
+        @else if (bitacora().registros.length === 0) {
+          <div class="pt-idle"><div class="pt-idle__ic">📋</div><h1>Sin registros</h1><p>Los últimos 7 días no tienen movimientos.</p></div>
+        } @else {
+          <ul class="pt-list">
+            @for (r of bitacora().registros; track r.id) {
+              <li class="pt-litem pt-litem--log">
+                <div>
+                  <b>{{ r.visitanteNombre }}</b>
+                  <small>{{ iconVisita[r.tipoVisita] }} {{ labelVisita[r.tipoVisita] }} · {{ r.unidad }}
+                    @if (r.patente) { · {{ r.patente }} }</small>
+                  <small class="pt-litem__t">
+                    Entró {{ r.ingresoUtc | date:'d MMM HH:mm' }}
+                    @if (r.egresoUtc) { · Salió {{ r.egresoUtc | date:'HH:mm' }} }
+                  </small>
+                </div>
+                <span class="pt-badge" [class.is-in]="!r.egresoUtc">{{ r.egresoUtc ? 'Salió' : 'Adentro' }}</span>
+              </li>
+            }
+          </ul>
+        }
+      }
+
+      @case ('alertas') {
+        @if (cargandoLista()) { <p class="pt-loading">Cargando…</p> }
+        @else if (alertas().length === 0) {
+          <div class="pt-idle"><div class="pt-idle__ic">📣</div><h1>Sin avisos</h1><p>No hay alertas comunitarias.</p></div>
+        } @else {
+          <ul class="pt-list">
+            @for (a of alertas(); track a.id) {
+              <li class="pt-litem pt-litem--log">
+                <div>
+                  <b>{{ a.titulo || 'Aviso' }}</b>
+                  <small>{{ a.cuerpo }}</small>
+                  <small class="pt-litem__t">{{ a.publicadoUtc | date:'d MMM y, HH:mm' }} · {{ a.autorNombre }}</small>
+                </div>
+              </li>
+            }
+          </ul>
         }
       }
     }

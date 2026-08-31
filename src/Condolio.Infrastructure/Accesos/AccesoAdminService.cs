@@ -194,6 +194,84 @@ public class AccesoAdminService : IAccesoAdminService
         return n == 0 ? Result.Fail("Registro no encontrado o ya tiene egreso.") : Result.Ok();
     }
 
+    public async Task<Result<ResumenAccesoDto>> ResumenAsync(Guid consorcioId, CancellationToken ct = default)
+    {
+        var hoy = DateTime.UtcNow.Date;
+        var q = _db.RegistrosVisita.IgnoreQueryFilters().Where(v => v.ConsorcioId == consorcioId);
+        var adentro = await q.CountAsync(v => v.EgresoUtc == null, ct);
+        var entradasHoy = await q.CountAsync(v => v.IngresoUtc.Date == hoy, ct);
+        var salidasHoy = await q.CountAsync(v => v.EgresoUtc != null && v.EgresoUtc.Value.Date == hoy, ct);
+        return Result<ResumenAccesoDto>.Ok(new ResumenAccesoDto(adentro, entradasHoy, salidasHoy));
+    }
+
+    public async Task<Result<IReadOnlyList<RegistroBitacoraDto>>> AdentroAhoraAsync(Guid consorcioId, CancellationToken ct = default)
+    {
+        var registros = await _db.RegistrosVisita.IgnoreQueryFilters()
+            .Where(v => v.ConsorcioId == consorcioId && v.EgresoUtc == null)
+            .Select(v => new
+            {
+                v,
+                unidad = v.UnidadId == Guid.Empty ? null
+                    : _db.Unidades.IgnoreQueryFilters().Where(u => u.Id == v.UnidadId).Select(u => u.Nombre).FirstOrDefault(),
+            })
+            .ToListAsync(ct);
+
+        var lista = registros
+            .OrderByDescending(x => x.v.IngresoUtc)
+            .Select(x => new RegistroBitacoraDto(
+                x.v.Id, x.v.VisitanteNombre, x.v.TipoVisita, x.v.Vehiculo, x.v.Patente,
+                string.IsNullOrEmpty(x.unidad) ? "Administración" : x.unidad!,
+                x.v.IngresoUtc, x.v.EgresoUtc,
+                string.IsNullOrWhiteSpace(x.v.RegistradoPorNombre) ? "Portería" : x.v.RegistradoPorNombre,
+                x.v.Nota))
+            .ToList();
+        return Result<IReadOnlyList<RegistroBitacoraDto>>.Ok(lista);
+    }
+
+    public async Task<Result<RegistroBitacoraDto>> RegistrarEntradaManualAsync(
+        Guid consorcioId, EntradaManualDto dto, string guardiaId, string guardiaNombre, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(dto.VisitanteNombre))
+            return Result<RegistroBitacoraDto>.Fail("El nombre del visitante es obligatorio.");
+
+        var admin = await _db.Consorcios.IgnoreQueryFilters()
+            .Where(c => c.Id == consorcioId).Select(c => (Guid?)c.AdministradorId).FirstOrDefaultAsync(ct);
+        if (admin is not { } adminId) return Result<RegistroBitacoraDto>.Fail("Consorcio no encontrado.");
+
+        string unidadNombre = "Administración";
+        var unidadId = Guid.Empty;
+        if (dto.UnidadId is { } uid)
+        {
+            var u = await _db.Unidades.IgnoreQueryFilters()
+                .Where(x => x.Id == uid && x.ConsorcioId == consorcioId).Select(x => x.Nombre).FirstOrDefaultAsync(ct);
+            if (u is null) return Result<RegistroBitacoraDto>.Fail("Unidad no encontrada.");
+            unidadId = uid;
+            unidadNombre = u;
+        }
+
+        var conVehiculo = dto.Vehiculo != TipoVehiculo.SinVehiculo;
+        var r = new RegistroVisita
+        {
+            AdministradorId = adminId,
+            ConsorcioId = consorcioId,
+            UnidadId = unidadId,
+            VisitanteNombre = dto.VisitanteNombre.Trim(),
+            TipoVisita = dto.TipoVisita,
+            Vehiculo = dto.Vehiculo,
+            Patente = conVehiculo && !string.IsNullOrWhiteSpace(dto.Patente) ? dto.Patente.Trim().ToUpperInvariant() : null,
+            IngresoUtc = DateTime.UtcNow,
+            RegistradoPorUsuarioId = guardiaId,
+            RegistradoPorNombre = guardiaNombre,
+            Nota = string.IsNullOrWhiteSpace(dto.Nota) ? null : dto.Nota.Trim(),
+        };
+        _db.RegistrosVisita.Add(r);
+        await _db.SaveChangesAsync(ct);
+
+        return Result<RegistroBitacoraDto>.Ok(new RegistroBitacoraDto(
+            r.Id, r.VisitanteNombre, r.TipoVisita, r.Vehiculo, r.Patente, unidadNombre,
+            r.IngresoUtc, null, guardiaNombre, r.Nota));
+    }
+
     // ---- helpers ----
 
     private static EstadoPase EstadoReal(PaseAcceso p)

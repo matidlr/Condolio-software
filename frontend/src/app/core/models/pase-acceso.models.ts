@@ -1,7 +1,8 @@
 export type TipoPase = 'UnaEntrada' | 'Temporal' | 'PaseFiesta';
 export type TipoVisita =
   | 'Familia' | 'Amigo' | 'Huesped' | 'EntregaComida'
-  | 'EntregaDomicilio' | 'ProveedorServicios' | 'Empleado';
+  | 'EntregaDomicilio' | 'ProveedorServicios' | 'Empleado'
+  | 'Visita' | 'Taxi' | 'Residente' | 'Otro';
 export type TipoVehiculo = 'SinVehiculo' | 'Auto' | 'Motocicleta';
 export type EstadoPase = 'Activo' | 'Usado' | 'Vencido' | 'Revocado';
 
@@ -12,13 +13,17 @@ export const TIPOS_PASE: { value: TipoPase; label: string; icon: string }[] = [
 ];
 
 export const TIPOS_VISITA: { value: TipoVisita; label: string; icon: string }[] = [
+  { value: 'Visita', label: 'Visita', icon: '👋' },
   { value: 'Familia', label: 'Familia', icon: '👪' },
   { value: 'Amigo', label: 'Amigo', icon: '🧑' },
   { value: 'Huesped', label: 'Huésped', icon: '🛏' },
-  { value: 'EntregaComida', label: 'Entrega de comida', icon: '🍴' },
-  { value: 'EntregaDomicilio', label: 'Entrega a domicilio', icon: '📦' },
-  { value: 'ProveedorServicios', label: 'Proveedor de servicios', icon: '🔧' },
   { value: 'Empleado', label: 'Empleado', icon: '🛠' },
+  { value: 'Taxi', label: 'Taxi / transporte', icon: '🚕' },
+  { value: 'EntregaComida', label: 'Entrega de comida', icon: '🍴' },
+  { value: 'EntregaDomicilio', label: 'Entrega de paquetería', icon: '📦' },
+  { value: 'ProveedorServicios', label: 'Proveedor de servicios', icon: '🔧' },
+  { value: 'Residente', label: 'Residente', icon: '🏠' },
+  { value: 'Otro', label: 'Otro', icon: '···' },
 ];
 
 export const TIPOS_VEHICULO: { value: TipoVehiculo; label: string; icon: string }[] = [
