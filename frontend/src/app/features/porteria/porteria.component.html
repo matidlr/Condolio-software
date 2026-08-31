@@ -61,7 +61,7 @@
         @if (resultado(); as r) {
           <div class="pt-res" [class.is-ok]="r.valido" [class.is-bad]="!r.valido">
             <div class="pt-res__badge">{{ r.valido ? '✓' : '✕' }}</div>
-            <h1>{{ r.valido ? 'Acceso permitido' : 'Acceso denegado' }}</h1>
+            <h1>{{ r.valido ? 'Entrada registrada' : 'Acceso denegado' }}</h1>
             @if (!r.valido && r.motivo) { <p class="pt-res__motivo">{{ r.motivo }}</p> }
             <div class="pt-res__card">
               <div><small>Visitante</small><b>{{ r.visitanteNombre || '—' }}</b></div>
@@ -71,6 +71,39 @@
             </div>
             <button type="button" class="pt-btn pt-btn--primary" (click)="otroEscaneo()">Escanear otro</button>
           </div>
+        } @else if (preview()) {
+          @if (preview()!; as p) {
+          <div class="pt-prev">
+            <div class="pt-prev__hd">
+              <span class="pt-prev__ok">✓</span>
+              <div><small>ENTRADA QR</small><b>Código QR válido</b>
+                <em>{{ p.fechaEntrada | date:'d MMM' }}@if (p.validoHastaUtc) { – {{ p.validoHastaUtc | date:'d MMM' }} }</em>
+              </div>
+            </div>
+
+            <p class="pt-sec">Detalles del visitante</p>
+            <div class="pt-res__card">
+              <div><small>Nombre</small><b>{{ p.visitanteNombre }}</b></div>
+              <div><small>Unidad</small><b>{{ p.unidadNombre }}</b></div>
+              <div><small>Motivo</small><b>{{ labelVisita[p.tipoVisita] }}</b></div>
+              <div><small>Vehículo</small><b>{{ p.vehiculo === 'SinVehiculo' ? 'Sin vehículo' : iconoVehiculo(p.vehiculo) + ' ' + p.vehiculo }}</b></div>
+            </div>
+
+            <p class="pt-sec">Datos del ingreso</p>
+            <input class="pt-input" inputmode="numeric" placeholder="N° de documento del visitante"
+              [ngModel]="docVisitante()" (ngModelChange)="docVisitante.set($event)" />
+            @if (pidePatente()) {
+              <input class="pt-input" placeholder="N° de patente"
+                [ngModel]="patenteVisitante()" (ngModelChange)="patenteVisitante.set($event)" />
+            }
+
+            <button type="button" class="pt-btn pt-btn--primary pt-form__submit"
+              [disabled]="!puedeConfirmar() || confirmando()" (click)="confirmarEntrada()">
+              {{ confirmando() ? 'Confirmando…' : '✓ Confirmar entrada' }}
+            </button>
+            <button type="button" class="pt-btn pt-btn--ghost" (click)="otroEscaneo()">Cancelar</button>
+          </div>
+          }
         } @else if (verificando()) {
           <div class="pt-idle"><div class="pt-idle__ic">⏳</div><h1>Verificando…</h1></div>
         } @else {
@@ -129,18 +162,42 @@
       }
 
       @case ('salidas') {
+        <div class="pt-sbar">
+          <div class="pt-sbar__main"><b>{{ adentro().length }}</b><small>adentro ahora</small></div>
+          <div class="pt-sbar__v">
+            <div><span>🚗</span><b>{{ adentroPorVehiculo().autos }}</b><small>autos</small></div>
+            <div><span>🏍</span><b>{{ adentroPorVehiculo().motos }}</b><small>motos</small></div>
+            <div><span>👣</span><b>{{ adentroPorVehiculo().aPie }}</b><small>a pie</small></div>
+          </div>
+        </div>
+        <div class="pt-search2">
+          <span>⌕</span>
+          <input placeholder="Nombre, patente o unidad…"
+            [ngModel]="busquedaSalidas()" (ngModelChange)="busquedaSalidas.set($event)" />
+        </div>
+
         @if (cargandoLista()) { <p class="pt-loading">Cargando…</p> }
-        @else if (adentro().length === 0) {
+        @else if (adentroFiltrado().length === 0) {
           <div class="pt-idle"><div class="pt-idle__ic">✓</div><h1>Nadie adentro</h1><p>No hay visitantes para registrar salida.</p></div>
         } @else {
           <ul class="pt-list">
-            @for (r of adentro(); track r.id) {
-              <li class="pt-litem">
-                <div>
-                  <b>{{ r.visitanteNombre }}</b>
-                  <small>{{ iconVisita[r.tipoVisita] }} {{ labelVisita[r.tipoVisita] }} · {{ r.unidad }} · entró {{ r.ingresoUtc | date:'HH:mm' }}</small>
+            @for (r of adentroFiltrado(); track r.id) {
+              <li class="pt-scard">
+                <div class="pt-scard__top">
+                  <span class="pt-scard__av">{{ iconVisita[r.tipoVisita] }}</span>
+                  <div class="pt-scard__b">
+                    <b>{{ r.visitanteNombre }}</b>
+                    <small>🏠 {{ r.unidad }}</small>
+                  </div>
+                  <span class="pt-scard__motivo">{{ labelVisita[r.tipoVisita] }}</span>
                 </div>
-                <button type="button" class="pt-out" (click)="registrarSalida(r)">Registrar salida</button>
+                <div class="pt-scard__foot">
+                  <span>{{ r.vehiculo === 'SinVehiculo' ? '👣 A pie' : iconoVehiculo(r.vehiculo) + ' ' + (r.patente || r.vehiculo) }}</span>
+                  <span class="pt-scard__t">⏱ {{ tiempoAdentro(r.ingresoUtc) }}</span>
+                </div>
+                <button type="button" class="pt-btn pt-btn--primary pt-scard__out" (click)="registrarSalida(r)">
+                  🚪 Registrar salida
+                </button>
               </li>
             }
           </ul>

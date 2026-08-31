@@ -39,7 +39,11 @@ export class PorteriaComponent implements OnDestroy {
   // escáner
   escaneando = signal(false);
   verificando = signal(false);
+  preview = signal<Verificacion | null>(null);
   resultado = signal<Verificacion | null>(null);
+  docVisitante = signal('');
+  patenteVisitante = signal('');
+  confirmando = signal(false);
   manualToken = signal('');
   soportaCamara = signal('BarcodeDetector' in window);
   private stream: MediaStream | null = null;
@@ -57,6 +61,31 @@ export class PorteriaComponent implements OnDestroy {
   bitacora = signal<Bitacora>({ registros: [], adentroAhora: 0 });
   cargandoLista = signal(false);
   alertas = signal<any[]>([]);
+  busquedaSalidas = signal('');
+
+  adentroFiltrado = computed(() => {
+    const q = this.busquedaSalidas().trim().toLowerCase();
+    if (!q) return this.adentro();
+    return this.adentro().filter((r) =>
+      r.visitanteNombre.toLowerCase().includes(q) ||
+      (r.patente ?? '').toLowerCase().includes(q) ||
+      r.unidad.toLowerCase().includes(q));
+  });
+  adentroPorVehiculo = computed(() => {
+    const l = this.adentro();
+    return {
+      autos: l.filter((r) => r.vehiculo === 'Auto').length,
+      motos: l.filter((r) => r.vehiculo === 'Motocicleta').length,
+      aPie: l.filter((r) => r.vehiculo === 'SinVehiculo').length,
+    };
+  });
+
+  tiempoAdentro(iso: string): string {
+    const min = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
+    if (min < 60) return `${min} min`;
+    const h = Math.floor(min / 60);
+    return h < 24 ? `${h} h ${min % 60} min` : `${Math.floor(h / 24)} d`;
+  }
 
   nombre = computed(() => this.ctx()?.casetaNombre ?? 'Portería');
 
@@ -91,6 +120,9 @@ export class PorteriaComponent implements OnDestroy {
   // ---- escáner ----
   async escanear(): Promise<void> {
     this.resultado.set(null);
+    this.preview.set(null);
+    this.docVisitante.set('');
+    this.patenteVisitante.set('');
     this.ultimoToken = '';
     if (!this.soportaCamara()) { this.escaneando.set(true); return; }
     this.escaneando.set(true);
@@ -131,7 +163,12 @@ export class PorteriaComponent implements OnDestroy {
     this.escaneando.set(false);
     this.verificando.set(true);
     this.api.verificar(token).subscribe({
-      next: (r) => { this.resultado.set(r); this.verificando.set(false); this.cargarResumen(); },
+      next: (r) => {
+        this.verificando.set(false);
+        this.patenteVisitante.set(r.patente ?? '');
+        if (r.valido) this.preview.set(r);
+        else this.resultado.set(r);
+      },
       error: (e) => {
         this.toasts.error(e?.error?.message ?? 'No se pudo verificar el código.');
         this.verificando.set(false);
@@ -140,9 +177,29 @@ export class PorteriaComponent implements OnDestroy {
     });
   }
 
+  pidePatente = computed(() => this.preview()?.vehiculo !== 'SinVehiculo');
+  puedeConfirmar = computed(() => {
+    if (this.docVisitante().trim().length < 4) return false;
+    if (this.pidePatente() && this.patenteVisitante().trim().length < 3) return false;
+    return true;
+  });
+
+  confirmarEntrada(): void {
+    const p = this.preview();
+    if (!p || !this.puedeConfirmar() || this.confirmando()) return;
+    this.confirmando.set(true);
+    this.api.confirmarIngreso(p.token, this.docVisitante().trim(), this.patenteVisitante().trim() || null).subscribe({
+      next: (r) => { this.confirmando.set(false); this.preview.set(null); this.resultado.set(r); this.cargarResumen(); },
+      error: (e) => { this.confirmando.set(false); this.toasts.error(e?.error?.message ?? 'No se pudo confirmar el ingreso.'); },
+    });
+  }
+
   otroEscaneo(): void {
     this.resultado.set(null);
+    this.preview.set(null);
     this.manualToken.set('');
+    this.docVisitante.set('');
+    this.patenteVisitante.set('');
     this.escanear();
   }
 

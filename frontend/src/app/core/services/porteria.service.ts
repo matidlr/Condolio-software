@@ -22,8 +22,10 @@ export interface RegistroBitacora {
 export interface Bitacora { registros: RegistroBitacora[]; adentroAhora: number; }
 
 export interface Verificacion {
-  valido: boolean; motivo?: string | null; visitanteNombre: string; tipoVisita: string;
+  valido: boolean; motivo?: string | null; visitanteNombre: string;
+  tipoVisita: TipoVisita; vehiculo: TipoVehiculo;
   patente?: string | null; unidadNombre: string; consorcioNombre: string; usosRestantes: number;
+  token: string; fechaEntrada: string; validoHastaUtc?: string | null;
 }
 
 export interface EntradaManual {
@@ -45,6 +47,9 @@ export class PorteriaService {
   contexto(): Observable<PorteriaContexto> { return this.http.get<PorteriaContexto>(`${this.base}/contexto`); }
   resumen(): Observable<ResumenAcceso> { return this.http.get<ResumenAcceso>(`${this.base}/resumen`); }
   verificar(token: string): Observable<Verificacion> { return this.http.post<Verificacion>(`${this.base}/verificar`, { token }); }
+  confirmarIngreso(token: string, documento: string | null, patente: string | null): Observable<Verificacion> {
+    return this.http.post<Verificacion>(`${this.base}/confirmar-ingreso`, { token, documento, patente });
+  }
   entradaManual(dto: EntradaManual): Observable<RegistroBitacora> { return this.http.post<RegistroBitacora>(`${this.base}/entrada-manual`, dto); }
   adentro(): Observable<RegistroBitacora[]> { return this.http.get<RegistroBitacora[]>(`${this.base}/adentro`); }
   salida(id: string): Observable<void> { return this.http.post<void>(`${this.base}/salida/${id}`, {}); }

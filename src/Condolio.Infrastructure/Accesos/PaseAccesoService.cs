@@ -115,11 +115,63 @@ public class PaseAccesoService : IPaseAccesoService
     public async Task<Result<VerificarPaseResultado>> VerificarAsync(
         Guid consorcioId, string token, string guardiaUsuarioId, string guardiaNombre, CancellationToken ct = default)
     {
+        var (p, unidad, motivo) = await EvaluarAsync(consorcioId, token, ct);
+        if (p is null)
+            return Result<VerificarPaseResultado>.Ok(NoValido(token, "El código QR no corresponde a este consorcio."));
+
+        return Result<VerificarPaseResultado>.Ok(new VerificarPaseResultado(
+            motivo is null, motivo, p.VisitanteNombre, p.TipoVisita, p.Vehiculo, p.Patente,
+            unidad?.Nombre ?? "—", unidad?.Consorcio ?? "—", Math.Max(0, p.UsosMax - p.UsosCount - 1),
+            p.Token, p.FechaEntrada, p.ValidoHastaUtc));
+    }
+
+    public async Task<Result<VerificarPaseResultado>> ConfirmarIngresoAsync(
+        Guid consorcioId, string token, string? documento, string? patente,
+        string guardiaUsuarioId, string guardiaNombre, CancellationToken ct = default)
+    {
+        var (p, unidad, motivo) = await EvaluarAsync(consorcioId, token, ct);
+        if (p is null)
+            return Result<VerificarPaseResultado>.Fail("El código QR no corresponde a este consorcio.");
+        if (motivo is not null)
+            return Result<VerificarPaseResultado>.Fail(motivo);
+
+        var patenteFinal = string.IsNullOrWhiteSpace(patente)
+            ? p.Patente
+            : patente.Trim().ToUpperInvariant();
+
+        p.UsosCount++;
+        p.PrimerUsoUtc ??= DateTime.UtcNow;
+        if (p.UsosCount >= p.UsosMax) p.Estado = EstadoPase.Usado;
+
+        _db.RegistrosVisita.Add(new RegistroVisita
+        {
+            AdministradorId = p.AdministradorId,
+            ConsorcioId = p.ConsorcioId,
+            UnidadId = p.UnidadId,
+            PaseAccesoId = p.Id,
+            VisitanteNombre = p.VisitanteNombre,
+            TipoVisita = p.TipoVisita,
+            Vehiculo = p.Vehiculo,
+            Patente = patenteFinal,
+            DocumentoVisitante = string.IsNullOrWhiteSpace(documento) ? null : documento.Trim(),
+            IngresoUtc = DateTime.UtcNow,
+            RegistradoPorUsuarioId = guardiaUsuarioId,
+            RegistradoPorNombre = guardiaNombre,
+        });
+        await _db.SaveChangesAsync(ct);
+
+        return Result<VerificarPaseResultado>.Ok(new VerificarPaseResultado(
+            true, null, p.VisitanteNombre, p.TipoVisita, p.Vehiculo, patenteFinal,
+            unidad?.Nombre ?? "—", unidad?.Consorcio ?? "—", Math.Max(0, p.UsosMax - p.UsosCount),
+            p.Token, p.FechaEntrada, p.ValidoHastaUtc));
+    }
+
+    private async Task<(PaseAcceso? pase, dynamic? unidad, string? motivo)> EvaluarAsync(
+        Guid consorcioId, string token, CancellationToken ct)
+    {
         var p = await _db.PasesAcceso.IgnoreQueryFilters()
             .FirstOrDefaultAsync(x => x.Token == token && x.ConsorcioId == consorcioId, ct);
-        if (p is null)
-            return Result<VerificarPaseResultado>.Ok(new VerificarPaseResultado(
-                false, "El código QR no corresponde a este consorcio.", "", TipoVisita.Familia, null, "", "", 0));
+        if (p is null) return (null, null, null);
 
         var unidad = await _db.Unidades.IgnoreQueryFilters()
             .Where(u => u.Id == p.UnidadId)
@@ -135,35 +187,11 @@ public class PaseAccesoService : IPaseAccesoService
             _ when p.UsosCount >= p.UsosMax => "El pase no tiene ingresos disponibles.",
             _ => null,
         };
-
-        var res = new VerificarPaseResultado(
-            motivo is null, motivo, p.VisitanteNombre, p.TipoVisita, p.Patente,
-            unidad?.Nombre ?? "—", unidad?.Consorcio ?? "—", Math.Max(0, p.UsosMax - p.UsosCount - 1));
-
-        if (motivo is not null) return Result<VerificarPaseResultado>.Ok(res);
-
-        p.UsosCount++;
-        p.PrimerUsoUtc ??= DateTime.UtcNow;
-        if (p.UsosCount >= p.UsosMax) p.Estado = EstadoPase.Usado;
-
-        _db.RegistrosVisita.Add(new RegistroVisita
-        {
-            AdministradorId = p.AdministradorId,
-            ConsorcioId = p.ConsorcioId,
-            UnidadId = p.UnidadId,
-            PaseAccesoId = p.Id,
-            VisitanteNombre = p.VisitanteNombre,
-            TipoVisita = p.TipoVisita,
-            Vehiculo = p.Vehiculo,
-            Patente = p.Patente,
-            IngresoUtc = DateTime.UtcNow,
-            RegistradoPorUsuarioId = guardiaUsuarioId,
-            RegistradoPorNombre = guardiaNombre,
-        });
-        await _db.SaveChangesAsync(ct);
-
-        return Result<VerificarPaseResultado>.Ok(res);
+        return (p, unidad, motivo);
     }
+
+    private static VerificarPaseResultado NoValido(string token, string motivo) => new(
+        false, motivo, "", TipoVisita.Familia, TipoVehiculo.SinVehiculo, null, "", "", 0, token, DateTime.UtcNow, null);
 
     // ---- helpers ----
 

@@ -41,6 +41,7 @@ public class PorteriaAppController : ApiControllerBase
 
     public record ContextoDto(Guid ConsorcioId, string ConsorcioNombre, string CasetaNombre);
     public record VerificarBody(string Token);
+    public record ConfirmarBody(string Token, string? Documento, string? Patente);
 
     [HttpGet("contexto")]
     public async Task<IActionResult> Contexto(CancellationToken ct)
@@ -66,11 +67,23 @@ public class PorteriaAppController : ApiControllerBase
         var ctx = await CtxAsync(ct);
         if (ctx is not { } c) return NotFound(new { message = "Esta cuenta no está vinculada a ninguna caseta." });
 
-        var token = (body.Token ?? "").Trim();
-        var idx = token.LastIndexOf('/');
-        if (idx >= 0) token = token[(idx + 1)..];
+        return ToResult(await _pases.VerificarAsync(c.consorcioId, Limpiar(body.Token), Uid, c.casetaNombre, ct));
+    }
 
-        return ToResult(await _pases.VerificarAsync(c.consorcioId, token, Uid, c.casetaNombre, ct));
+    [HttpPost("confirmar-ingreso")]
+    public async Task<IActionResult> ConfirmarIngreso(ConfirmarBody body, CancellationToken ct)
+    {
+        var ctx = await CtxAsync(ct);
+        if (ctx is not { } c) return NotFound(new { message = "Esta cuenta no está vinculada a ninguna caseta." });
+        return ToResult(await _pases.ConfirmarIngresoAsync(
+            c.consorcioId, Limpiar(body.Token), body.Documento, body.Patente, Uid, c.casetaNombre, ct));
+    }
+
+    private static string Limpiar(string? token)
+    {
+        var t = (token ?? "").Trim();
+        var idx = t.LastIndexOf('/');
+        return idx >= 0 ? t[(idx + 1)..] : t;
     }
 
     [HttpPost("entrada-manual")]

@@ -47,10 +47,14 @@ public record VerificarPaseResultado(
     string? Motivo,
     string VisitanteNombre,
     TipoVisita TipoVisita,
+    TipoVehiculo Vehiculo,
     string? Patente,
     string UnidadNombre,
     string ConsorcioNombre,
-    int UsosRestantes);
+    int UsosRestantes,
+    string Token,
+    DateTime FechaEntrada,
+    DateTime? ValidoHastaUtc);
 
 public interface IPaseAccesoService
 {
@@ -61,6 +65,11 @@ public interface IPaseAccesoService
 
     Task<Result<IReadOnlyList<VisitaDto>>> MisVisitasAsync(string usuarioId, CancellationToken ct = default);
 
-    /// <summary>Portería: valida un token de QR y registra el ingreso.</summary>
+    /// <summary>Portería: valida un token de QR (sin registrar el ingreso).</summary>
     Task<Result<VerificarPaseResultado>> VerificarAsync(Guid consorcioId, string token, string guardiaUsuarioId, string guardiaNombre, CancellationToken ct = default);
+
+    /// <summary>Portería: confirma el ingreso de un pase válido, cargando documento y patente.</summary>
+    Task<Result<VerificarPaseResultado>> ConfirmarIngresoAsync(
+        Guid consorcioId, string token, string? documento, string? patente,
+        string guardiaUsuarioId, string guardiaNombre, CancellationToken ct = default);
 }

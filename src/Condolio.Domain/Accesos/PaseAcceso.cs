@@ -85,6 +85,8 @@ public class RegistroVisita : Entity, ITenantOwned
     public TipoVisita TipoVisita { get; set; } = TipoVisita.Familia;
     public TipoVehiculo Vehiculo { get; set; } = TipoVehiculo.SinVehiculo;
     public string? Patente { get; set; }
+    /// <summary>Nº de documento del visitante, cargado por la portería al confirmar el ingreso.</summary>
+    public string? DocumentoVisitante { get; set; }
 
     public DateTime IngresoUtc { get; set; } = DateTime.UtcNow;
     public DateTime? EgresoUtc { get; set; }
