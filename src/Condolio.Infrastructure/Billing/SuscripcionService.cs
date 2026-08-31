@@ -63,7 +63,7 @@ public class SuscripcionService : ISuscripcionService
     public async Task<Result<EstadoSuscripcionDto>> ObtenerEstadoAsync(Guid administradorId, CancellationToken ct = default)
     {
         var s = await _db.Suscripciones
-            .Include(x => x.Plan)
+            .Include(x => x.Plan).ThenInclude(p => p.Tramos)
             .FirstOrDefaultAsync(x => x.AdministradorId == administradorId, ct);
         if (s is null) return Result<EstadoSuscripcionDto>.Fail("Sin suscripción.");
 
@@ -76,8 +76,18 @@ public class SuscripcionService : ISuscripcionService
             _ => false,
         };
 
+        var unidades = await _db.Unidades.IgnoreQueryFilters()
+            .CountAsync(u => u.AdministradorId == administradorId && u.Facturable, ct);
+        var precioUnidad = s.Plan.Tramos.OrderByDescending(t => t.DesdeUnidad)
+            .FirstOrDefault(t => unidades > t.DesdeUnidad)?.PrecioPorUnidad
+            ?? s.Plan.Tramos.OrderBy(t => t.DesdeUnidad).FirstOrDefault()?.PrecioPorUnidad
+            ?? 0m;
+        var mensualEstimado = s.Plan.CalcularImporte(unidades);
+        var diasTrial = Math.Max(0, (int)Math.Ceiling((s.TrialFinUtc - ahora).TotalDays));
+
         return Result<EstadoSuscripcionDto>.Ok(new EstadoSuscripcionDto(
             s.Estado, s.TrialFinUtc, s.ProximoCobroUtc, s.UnidadesFacturadas,
-            s.ImporteMensual, s.Plan.Moneda, acceso));
+            s.ImporteMensual, s.Plan.Moneda, acceso,
+            unidades, precioUnidad, mensualEstimado, mensualEstimado * 10m, diasTrial));
     }
 }

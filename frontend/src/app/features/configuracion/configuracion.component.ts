@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ConsorcioService } from '../../core/services/consorcio.service';
 import { UnidadService } from '../../core/services/unidad.service';
+import { BillingService, EstadoSuscripcionDto } from '../../core/services/billing.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { ConsorcioDetalle, TIPOS_CONSORCIO, TipoConsorcio, Unidad } from '../../core/models/consorcio.models';
@@ -28,6 +29,7 @@ const PROVINCIAS_AR = [
 export class ConfiguracionComponent {
   consorcios = inject(ConsorcioService);
   private unidadesApi = inject(UnidadService);
+  private billing = inject(BillingService);
   private auth = inject(AuthService);
   private toasts = inject(ToastService);
   private router = inject(Router);
@@ -42,7 +44,7 @@ export class ConfiguracionComponent {
         { id: 'administradores', label: 'Administradores', icon: '👥', listo: false },
         { id: 'secciones', label: 'Secciones', icon: '🗂️', listo: true },
         { id: 'preferencias', label: 'Preferencias', icon: '🎛️', listo: false },
-        { id: 'suscripcion', label: 'Suscripción', icon: '💳', listo: false },
+        { id: 'suscripcion', label: 'Suscripción', icon: '💳', listo: true },
         { id: 'avanzado', label: 'Avanzado', icon: '🛡️', listo: true },
       ],
     },
@@ -249,6 +251,33 @@ export class ConfiguracionComponent {
       },
       error: (e) => { this.cambiandoClave.set(false); this.toasts.error(e?.error?.message ?? 'No se pudo cambiar la contraseña.'); },
     });
+  }
+
+  // ---- Suscripción ----
+  suscripcion = signal<EstadoSuscripcionDto | null>(null);
+  cargandoSusc = signal(false);
+  ciclo = signal<'mensual' | 'anual'>('mensual');
+  mpAviso = signal(false);
+
+  private cargarSuscripcion(): void {
+    if (this.suscripcion() || this.cargandoSusc()) return;
+    this.cargandoSusc.set(true);
+    this.billing.estado().subscribe({
+      next: (s) => { this.suscripcion.set(s); this.cargandoSusc.set(false); },
+      error: () => this.cargandoSusc.set(false),
+    });
+  }
+
+  irA(t: Tab): void {
+    this.tab.set(t);
+    if (t === 'suscripcion') this.cargarSuscripcion();
+  }
+
+  fechaLarga(iso: string): string {
+    return new Date(iso).toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+  plata(n: number): string {
+    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n);
   }
 
   // ---- Avanzado ----

@@ -19,23 +19,32 @@ public static class DataSeeder
             if (!await roleManager.RoleExistsAsync(rol))
                 await roleManager.CreateAsync(new IdentityRole(rol));
 
-        // ---- Plan por defecto (editable luego desde el panel del super admin) ----
-        if (!await db.Planes.AnyAsync())
+        // ---- Plan por defecto: $700 ARS por unidad por mes, sin cargo fijo ----
+        var planId = await db.Planes.AsNoTracking()
+            .Where(p => p.Activo).Select(p => (Guid?)p.Id).FirstOrDefaultAsync();
+        if (planId is null)
         {
-            var plan = new Plan
+            db.Planes.Add(new Plan
             {
                 Nombre = "Estándar",
                 Moneda = "ARS",
                 CargoBaseMensual = 0m,
-                Tramos =
-                {
-                    new PlanTramo { DesdeUnidad = 0, HastaUnidad = 20, PrecioPorUnidad = 900m },
-                    new PlanTramo { DesdeUnidad = 20, HastaUnidad = 50, PrecioPorUnidad = 750m },
-                    new PlanTramo { DesdeUnidad = 50, HastaUnidad = null, PrecioPorUnidad = 600m },
-                },
-            };
-            db.Planes.Add(plan);
+                Tramos = { new PlanTramo { DesdeUnidad = 0, HastaUnidad = null, PrecioPorUnidad = 700m } },
+            });
             await db.SaveChangesAsync();
+        }
+        else
+        {
+            var tramos = await db.PlanTramos.AsNoTracking().Where(t => t.PlanId == planId).ToListAsync();
+            var yaEsCanonico = tramos is [{ PrecioPorUnidad: 700m, HastaUnidad: null, DesdeUnidad: 0 }];
+            if (!yaEsCanonico)
+            {
+                await db.PlanTramos.Where(t => t.PlanId == planId).ExecuteDeleteAsync();
+                await db.Planes.Where(p => p.Id == planId)
+                    .ExecuteUpdateAsync(s => s.SetProperty(p => p.CargoBaseMensual, 0m).SetProperty(p => p.Moneda, "ARS"));
+                db.PlanTramos.Add(new PlanTramo { PlanId = planId.Value, DesdeUnidad = 0, HastaUnidad = null, PrecioPorUnidad = 700m });
+                await db.SaveChangesAsync();
+            }
         }
 
         // ---- Super admin ----

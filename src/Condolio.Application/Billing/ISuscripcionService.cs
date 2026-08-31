@@ -10,7 +10,12 @@ public record EstadoSuscripcionDto(
     int UnidadesFacturadas,
     decimal ImporteMensual,
     string Moneda,
-    bool AccesoPermitido);
+    bool AccesoPermitido,
+    int UnidadesActuales,
+    decimal PrecioPorUnidad,
+    decimal ImporteMensualEstimado,
+    decimal ImporteAnualEstimado,
+    int DiasTrialRestantes);
 
 public interface ISuscripcionService
 {

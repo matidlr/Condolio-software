@@ -14,7 +14,7 @@
         @if (g.titulo) { <p class="cfg-nav__grp">{{ g.titulo }}</p> }
         @for (it of g.items; track it.id) {
           <button type="button" class="cfg-nav__item" [class.is-active]="tab() === it.id"
-            (click)="tab.set(it.id)">
+            (click)="irA(it.id)">
             <span>{{ it.icon }}</span>{{ it.label }}
             @if (!it.listo) { <em>pronto</em> }
           </button>
@@ -151,6 +151,64 @@
             <p class="cfg-hint">La edición del perfil (nombre, teléfono, foto) va a estar disponible pronto.
               Para cambiar la contraseña, andá a <b>Seguridad</b>.</p>
           </div>
+        }
+
+        @case ('suscripcion') {
+          <h2>Suscripción y facturación</h2>
+          <p class="cfg-sub">Tu plan, el precio según las unidades y el método de pago.</p>
+
+          @if (cargandoSusc()) { <p class="cfg-loading">Cargando…</p> }
+          @else if (suscripcion()) {
+            @if (suscripcion()!; as s) {
+            <div class="cfg-card">
+              <div class="cfg-plan__hd">
+                <div>
+                  <small>PLAN ACTUAL</small>
+                  <b>{{ s.estado === 'Trial' ? 'Prueba gratuita' : s.estado === 'Activa' ? 'Suscripción activa' : s.estado }}</b>
+                </div>
+                <span class="cfg-chip" [class.cfg-chip--warn]="s.estado !== 'Activa'">
+                  {{ s.estado === 'Trial' ? 'En prueba' : s.estado === 'Activa' ? 'Al día' : 'Atención' }}
+                </span>
+              </div>
+
+              @if (s.estado === 'Trial') {
+                <p class="cfg-plan__trial">
+                  <b>{{ s.diasTrialRestantes }}</b> días restantes ·
+                  termina el {{ fechaLarga(s.trialFinUtc) }}.
+                  Después, la administración queda bloqueada hasta suscribirte.
+                </p>
+              } @else if (s.proximoCobroUtc) {
+                <p class="cfg-plan__trial">Próximo cobro: {{ fechaLarga(s.proximoCobroUtc) }}.</p>
+              }
+
+              <div class="cfg-cycle">
+                <button type="button" [class.is-on]="ciclo() === 'mensual'" (click)="ciclo.set('mensual')">Mensual</button>
+                <button type="button" [class.is-on]="ciclo() === 'anual'" (click)="ciclo.set('anual')">
+                  Anual <em>−17%</em>
+                </button>
+              </div>
+
+              <div class="cfg-price">
+                @if (ciclo() === 'mensual') {
+                  <b>{{ plata(s.importeMensualEstimado) }}</b><span>/mes + IVA</span>
+                } @else {
+                  <b>{{ plata(s.importeAnualEstimado) }}</b><span>/año + IVA · equivale a 10 meses</span>
+                }
+                <small>{{ s.unidadesActuales }} unidades × {{ plata(s.precioPorUnidad) }} por unidad</small>
+              </div>
+
+              <button type="button" class="cfg-mp" (click)="mpAviso.set(true)">
+                <span>💳</span> Suscribirme con Mercado Pago
+              </button>
+              @if (mpAviso()) {
+                <p class="cfg-hint">Estamos terminando la integración con Mercado Pago. Mientras tanto, tu
+                  prueba gratuita sigue activa hasta el {{ fechaLarga(s.trialFinUtc) }} y no se interrumpe nada.</p>
+              }
+            </div>
+            }
+          } @else {
+            <div class="cfg-card"><p class="cfg-hint">No se pudo cargar el estado de la suscripción.</p></div>
+          }
         }
 
         @case ('avanzado') {
