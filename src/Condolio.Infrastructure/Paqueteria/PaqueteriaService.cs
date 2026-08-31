@@ -1,5 +1,7 @@
 using Condolio.Application.Common;
+using Condolio.Application.Notificaciones;
 using Condolio.Application.Paqueteria;
+using Condolio.Domain.Notificaciones;
 using Condolio.Domain.Paqueteria;
 using Condolio.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -9,20 +11,29 @@ namespace Condolio.Infrastructure.Paqueteria;
 public class PaqueteriaService : IPaqueteriaService
 {
     private readonly CondolioDbContext _db;
+    private readonly INotificacionService _notificaciones;
 
-    public PaqueteriaService(CondolioDbContext db) => _db = db;
+    public PaqueteriaService(CondolioDbContext db, INotificacionService notificaciones)
+    {
+        _db = db;
+        _notificaciones = notificaciones;
+    }
 
     public async Task<Result<ResumenPaqueteriaDto>> ResumenAsync(Guid consorcioId, CancellationToken ct = default)
     {
         var hoy = DateTime.Now.Date;
         var manana = hoy.AddDays(1);
+        var limiteAtencion = DateTime.Now.AddDays(-3);
         var q = _db.Paquetes.IgnoreQueryFilters().Where(p => p.ConsorcioId == consorcioId);
 
+        var total = await q.CountAsync(ct);
         var porEntregar = await q.CountAsync(p => p.Estado == EstadoPaquete.EnRecepcion, ct);
         var llegaronHoy = await q.CountAsync(p => p.LlegadaUtc >= hoy && p.LlegadaUtc < manana, ct);
         var entregadosHoy = await q.CountAsync(p => p.EntregaUtc != null && p.EntregaUtc >= hoy && p.EntregaUtc < manana, ct);
+        var necesitanAtencion = await q.CountAsync(p => p.Estado == EstadoPaquete.EnRecepcion && p.LlegadaUtc < limiteAtencion, ct);
 
-        return Result<ResumenPaqueteriaDto>.Ok(new ResumenPaqueteriaDto(porEntregar, llegaronHoy, entregadosHoy));
+        return Result<ResumenPaqueteriaDto>.Ok(new ResumenPaqueteriaDto(
+            porEntregar, llegaronHoy, entregadosHoy, total, necesitanAtencion));
     }
 
     public async Task<Result<PaquetesListaDto>> ListarAsync(
@@ -61,6 +72,21 @@ public class PaqueteriaService : IPaqueteriaService
             : Result<PaqueteDto>.Ok(Map(p));
     }
 
+    public async Task<Result<PaqueteDetalleDto>> ObtenerDetalleAsync(Guid consorcioId, Guid id, CancellationToken ct = default)
+    {
+        var p = await _db.Paquetes.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.Id == id && x.ConsorcioId == consorcioId, ct);
+        if (p is null) return Result<PaqueteDetalleDto>.Fail("Paquete no encontrado.");
+
+        var residentes = await _db.UnidadPersonas.IgnoreQueryFilters()
+            .Where(u => u.UnidadId == p.UnidadId)
+            .OrderByDescending(u => u.EsContactoPrincipal)
+            .Select(u => (u.Nombre + " " + u.Apellido).Trim())
+            .ToListAsync(ct);
+
+        return Result<PaqueteDetalleDto>.Ok(new PaqueteDetalleDto(Map(p), Referencia(p.Id), residentes));
+    }
+
     public async Task<Result<PaqueteDto>> RegistrarAsync(
         Guid consorcioId, RegistrarPaqueteDto dto, string registradoPor, CancellationToken ct = default)
     {
@@ -95,6 +121,9 @@ public class PaqueteriaService : IPaqueteriaService
         _db.Paquetes.Add(p);
         await _db.SaveChangesAsync(ct);
 
+        await NotificarUnidadAsync(consorcioId, p,
+            "Llegó un paquete", $"Tenés un paquete de {p.Transportista ?? "un transportista"} esperando en la caseta.", ct);
+
         return Result<PaqueteDto>.Ok(Map(p));
     }
 
@@ -114,6 +143,40 @@ public class PaqueteriaService : IPaqueteriaService
 
         return Result<PaqueteDto>.Ok(Map(p));
     }
+
+    public async Task<Result> EnviarRecordatorioAsync(Guid consorcioId, Guid id, CancellationToken ct = default)
+    {
+        var p = await _db.Paquetes.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.Id == id && x.ConsorcioId == consorcioId, ct);
+        if (p is null) return Result.Fail("Paquete no encontrado.");
+        if (p.Estado == EstadoPaquete.Entregado) return Result.Fail("El paquete ya fue entregado.");
+
+        var enviados = await NotificarUnidadAsync(consorcioId, p,
+            "Recordatorio: paquete sin retirar",
+            $"Todavía tenés un paquete de {p.Transportista ?? "un transportista"} esperando en la caseta.", ct);
+
+        return enviados == 0
+            ? Result.Fail("La unidad no tiene residentes con cuenta para notificar.")
+            : Result.Ok();
+    }
+
+    private async Task<int> NotificarUnidadAsync(Guid consorcioId, Paquete p, string titulo, string cuerpo, CancellationToken ct)
+    {
+        var usuarios = await _db.UnidadPersonas.IgnoreQueryFilters()
+            .Where(u => u.UnidadId == p.UnidadId && u.UsuarioId != null)
+            .Select(u => u.UsuarioId!)
+            .Distinct()
+            .ToListAsync(ct);
+
+        foreach (var uid in usuarios)
+            await _notificaciones.CrearParaUsuarioAsync(consorcioId, uid,
+                CategoriaNotificacion.EdificioEntregas, TipoNotificacion.PaqueteRecibido,
+                titulo, cuerpo, "/portal/notificaciones", ct);
+
+        return usuarios.Count;
+    }
+
+    private static string Referencia(Guid id) => "PKG-" + id.ToString("N")[..12];
 
     private static PaqueteDto Map(Paquete p) => new(
         p.Id, p.UnidadId, p.UnidadNombre, p.Tipo, p.Cantidad, p.Transportista, p.Descripcion,

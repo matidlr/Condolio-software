@@ -40,6 +40,7 @@ const ICONOS = {
   poll: '<path d="M5 21V10M12 21V4M19 21v-7"/>',
   bell: '<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10 20a2 2 0 0 0 4 0"/>',
   shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+  package: '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9zM4 7.5l8 4.5 8-4.5M12 12v9"/>',
 } as const;
 
 @Component({
@@ -108,6 +109,7 @@ export class AdminShellComponent {
           { label: 'Credenciales de caseta', ruta: '/panel/seguridad/credenciales', disponible: true },
         ],
       },
+      { label: 'Paquetería', ruta: '/panel/paqueteria', icon: 'package', disponible: true },
       { label: 'Anuncios', ruta: '/panel/anuncios', icon: 'megaphone', disponible: true },
       { label: 'Calendario', ruta: '/panel/calendario', icon: 'calendar', disponible: true },
       { label: 'Encuestas', ruta: '/panel/encuestas', icon: 'poll', disponible: true, badge: enc || undefined },

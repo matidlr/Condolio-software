@@ -219,6 +219,11 @@ export const routes: Routes = [
           import('./features/anuncios/anuncios.component').then((m) => m.AnunciosComponent),
       },
       {
+        path: 'paqueteria',
+        loadComponent: () =>
+          import('./features/paqueteria/paqueteria.component').then((m) => m.PaqueteriaComponent),
+      },
+      {
         path: 'calendario',
         loadComponent: () =>
           import('./features/calendario/calendario.component').then((m) => m.CalendarioComponent),

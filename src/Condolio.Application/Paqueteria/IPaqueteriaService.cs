@@ -18,9 +18,12 @@ public record PaqueteDto(
     string? EntregadoPorNombre,
     string? RetiradoPorNombre);
 
-public record ResumenPaqueteriaDto(int PorEntregar, int LlegaronHoy, int EntregadosHoy);
+public record ResumenPaqueteriaDto(
+    int PorEntregar, int LlegaronHoy, int EntregadosHoy, int Total, int NecesitanAtencion);
 
 public record PaquetesListaDto(IReadOnlyList<PaqueteDto> Paquetes);
+
+public record PaqueteDetalleDto(PaqueteDto Paquete, string Referencia, IReadOnlyList<string> Residentes);
 
 public record RegistrarPaqueteDto(
     Guid UnidadId,
@@ -37,6 +40,8 @@ public interface IPaqueteriaService
     Task<Result<ResumenPaqueteriaDto>> ResumenAsync(Guid consorcioId, CancellationToken ct = default);
     Task<Result<PaquetesListaDto>> ListarAsync(Guid consorcioId, EstadoPaquete? estado, string? busqueda, int anio, int mes, CancellationToken ct = default);
     Task<Result<PaqueteDto>> ObtenerAsync(Guid consorcioId, Guid id, CancellationToken ct = default);
+    Task<Result<PaqueteDetalleDto>> ObtenerDetalleAsync(Guid consorcioId, Guid id, CancellationToken ct = default);
     Task<Result<PaqueteDto>> RegistrarAsync(Guid consorcioId, RegistrarPaqueteDto dto, string registradoPor, CancellationToken ct = default);
     Task<Result<PaqueteDto>> EntregarAsync(Guid consorcioId, Guid id, EntregarPaqueteDto dto, string entregadoPor, CancellationToken ct = default);
+    Task<Result> EnviarRecordatorioAsync(Guid consorcioId, Guid id, CancellationToken ct = default);
 }

@@ -15,6 +15,7 @@ public enum TipoNotificacion
     IncidenciaActualizada = 8,
     RespuestaIncidencia = 9,
     NuevoAnuncio = 10,
+    PaqueteRecibido = 11,
 }
 
 /// <summary>Grupos de notificaciones para las preferencias del residente.</summary>

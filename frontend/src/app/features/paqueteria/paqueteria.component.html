@@ -1,0 +1,177 @@
+<section class="pq">
+  <header class="pq-banner">
+    <div>
+      <h1>Paquetería</h1>
+      <p>Gestionar entregas y seguimiento de paquetes</p>
+    </div>
+    <button type="button" class="pq-banner__btn" [class.is-on]="soloHistorial()"
+      (click)="soloHistorial.set(!soloHistorial()); pagina.set(1)">
+      ⟲ {{ soloHistorial() ? 'Ver todos' : 'Ver historial' }}
+    </button>
+  </header>
+
+  <div class="pq-stats">
+    <div class="pq-stat"><span>Total de paquetes</span><b>{{ resumen().total }}</b><i class="pq-ic pq-ic--blue">📦</i></div>
+    <div class="pq-stat"><span>Pendientes de recogida</span><b>{{ resumen().porEntregar }}</b><i class="pq-ic pq-ic--amber">⏱</i></div>
+    <div class="pq-stat"><span>Entregados hoy</span><b>{{ resumen().entregadosHoy }}</b><i class="pq-ic pq-ic--green">✓</i></div>
+    <div class="pq-stat" [class.is-alert]="resumen().necesitanAtencion > 0">
+      <span>Necesitan atención</span><b>{{ resumen().necesitanAtencion }}</b><i class="pq-ic pq-ic--red">⚠</i>
+    </div>
+  </div>
+
+  <div class="pq-panel">
+    <div class="pq-toolbar">
+      <div class="pq-search">
+        <span>⌕</span>
+        <input type="search" placeholder="Buscar paquetes por número de unidad o transportista…"
+          [ngModel]="busqueda()" (ngModelChange)="busqueda.set($event); pagina.set(1)" />
+      </div>
+      <button type="button" class="pq-icon" (click)="refrescar()" aria-label="Refrescar">⟳</button>
+    </div>
+
+    <div class="pq-tabs">
+      <button type="button" [class.is-on]="tab() === 'Todos'" (click)="setTab('Todos')">Todos</button>
+      <button type="button" [class.is-on]="tab() === 'EnRecepcion'" (click)="setTab('EnRecepcion')">En caseta</button>
+      <button type="button" [class.is-on]="tab() === 'Entregado'" (click)="setTab('Entregado')">Entregados</button>
+    </div>
+
+    @if (cargando()) {
+      <p class="pq-loading">Cargando…</p>
+    } @else if (filtrados().length === 0) {
+      <div class="pq-empty">
+        <div class="pq-empty__ic">📦</div>
+        <h2>Sin paquetes</h2>
+        <p>Los paquetes que registra la portería aparecen acá.</p>
+      </div>
+    } @else {
+      <div class="pq-tablewrap">
+        <table class="pq-table">
+          <thead><tr>
+            <th>Estado</th><th>Unidad</th><th>Transportista</th><th>Fecha de llegada</th>
+            <th class="pq-num">Cantidad</th><th class="pq-acc">Acciones</th>
+          </tr></thead>
+          <tbody>
+            @for (p of page(); track p.id) {
+              <tr class="pq-row" (click)="abrirDetalle(p)">
+                <td>
+                  <span class="pq-badge" [class.is-ok]="p.estado === 'Entregado'" [class.is-alert]="necesitaAtencion(p)">
+                    {{ p.estado === 'Entregado' ? 'Entregado' : 'En caseta' }}
+                  </span>
+                </td>
+                <td class="pq-strong">{{ p.unidadNombre }}</td>
+                <td>📦 {{ p.transportista || labelTipo[p.tipo] }}</td>
+                <td>{{ desde(p.llegadaUtc) }}</td>
+                <td class="pq-num">{{ p.cantidad }}</td>
+                <td class="pq-acc" (click)="$event.stopPropagation()">
+                  <div class="pq-kebab">
+                    <button type="button" class="pq-icon" (click)="toggleMenu(p.id, $event)" aria-label="Acciones">⋮</button>
+                    @if (menuId() === p.id) {
+                      <div class="pq-menu">
+                        @if (p.estado === 'EnRecepcion') {
+                          <button type="button" (click)="recordatorio(p)">🔔 Enviar recordatorio</button>
+                          <button type="button" class="is-primary" (click)="entregar(p)">✓ Marcar como entregado</button>
+                        } @else {
+                          <button type="button" (click)="abrirDetalle(p); menuId.set(null)">Ver detalle</button>
+                        }
+                      </div>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pq-pager">
+        <span>Mostrando {{ page().length }} de {{ filtrados().length }}</span>
+        <div class="pq-pager__nav">
+          <button type="button" [disabled]="pagina() <= 1" (click)="irPagina(1)">«</button>
+          <button type="button" [disabled]="pagina() <= 1" (click)="irPagina(pagina() - 1)">‹</button>
+          <b>Página {{ pagina() }} de {{ totalPaginas() }}</b>
+          <button type="button" [disabled]="pagina() >= totalPaginas()" (click)="irPagina(pagina() + 1)">›</button>
+          <button type="button" [disabled]="pagina() >= totalPaginas()" (click)="irPagina(totalPaginas())">»</button>
+        </div>
+      </div>
+    }
+  </div>
+</section>
+
+<!-- Detalle -->
+@if (detalle(); as d) {
+  <div class="pq-overlay" (click)="detalle.set(null)">
+    <div class="pq-modal" (click)="$event.stopPropagation()">
+      <header>
+        <h3>Detalles del paquete</h3>
+        <button type="button" (click)="detalle.set(null)" aria-label="Cerrar">✕</button>
+      </header>
+
+      <div class="pq-modal__grid">
+        <div class="pq-col">
+          <div class="pq-mcard">
+            <h4>👤 Destinatario</h4>
+            <div class="pq-kv"><span>Unidad</span><b>{{ d.paquete.unidadNombre }}</b></div>
+            <div class="pq-kv"><span>Residentes</span>
+              <b>{{ d.residentes.length ? d.residentes.join(', ') : 'Sin residentes asignados' }}</b></div>
+          </div>
+
+          <div class="pq-mcard">
+            <h4>📦 Información del paquete</h4>
+            <div class="pq-kv"><span>Estado</span>
+              <b><span class="pq-badge" [class.is-ok]="d.paquete.estado === 'Entregado'">
+                {{ d.paquete.estado === 'Entregado' ? 'Entregado' : 'En caseta' }}</span></b></div>
+            <div class="pq-kv"><span>Transportista</span><b>{{ d.paquete.transportista || '—' }}</b></div>
+            <div class="pq-kv"><span>Tipo</span><b>{{ labelTipo[d.paquete.tipo] }}</b></div>
+            <div class="pq-kv"><span>Cantidad</span><b>{{ d.paquete.cantidad }}</b></div>
+            <div class="pq-kv"><span>Fecha de llegada</span><b>{{ d.paquete.llegadaUtc | date:'d MMM y, HH:mm' }}</b></div>
+          </div>
+        </div>
+
+        <div class="pq-col">
+          <div class="pq-mcard">
+            <h4>Línea de tiempo</h4>
+            <ol class="pq-timeline">
+              <li class="is-done">
+                <span class="pq-tl__dot">📥</span>
+                <div>
+                  <small>{{ d.paquete.llegadaUtc | date:'EEEE, d MMM y, HH:mm' }}</small>
+                  <b>Paquete recibido</b>
+                  <em>Registrado por {{ d.paquete.registradoPorNombre }}</em>
+                </div>
+              </li>
+              @if (d.paquete.estado === 'Entregado') {
+                <li class="is-done">
+                  <span class="pq-tl__dot">✓</span>
+                  <div>
+                    <small>{{ d.paquete.entregaUtc | date:'EEEE, d MMM y, HH:mm' }}</small>
+                    <b>Entregado</b>
+                    <em>
+                      @if (d.paquete.retiradoPorNombre) { Retirado por {{ d.paquete.retiradoPorNombre }} · }
+                      Gestionado por {{ d.paquete.entregadoPorNombre }}
+                    </em>
+                  </div>
+                </li>
+              } @else {
+                <li>
+                  <span class="pq-tl__dot pq-tl__dot--wait">⏱</span>
+                  <div><b>Esperando recolección</b>
+                    <em>El residente todavía no retiró el paquete.</em></div>
+                </li>
+              }
+            </ol>
+          </div>
+        </div>
+      </div>
+
+      <footer>
+        <code>{{ d.referencia }}</code>
+        @if (d.paquete.estado === 'EnRecepcion') {
+          <div class="pq-modal__actions">
+            <button type="button" class="btn btn--ghost u-btn" (click)="recordatorio(d.paquete)">🔔 Enviar recordatorio</button>
+            <button type="button" class="btn btn--primary u-btn" (click)="entregar(d.paquete)">✓ Marcar como entregado</button>
+          </div>
+        }
+      </footer>
+    </div>
+  </div>
+}
