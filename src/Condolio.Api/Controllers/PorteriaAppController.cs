@@ -111,12 +111,22 @@ public class PorteriaAppController : ApiControllerBase
     }
 
     [HttpGet("bitacora")]
-    public async Task<IActionResult> Bitacora([FromQuery] int dias, [FromQuery] string? q, CancellationToken ct)
+    public async Task<IActionResult> Bitacora(
+        [FromQuery] int anio, [FromQuery] int mes, [FromQuery] string? q, CancellationToken ct)
     {
         var ctx = await CtxAsync(ct);
         if (ctx is not { } c) return NotFound();
-        return ToResult(await _accesos.BitacoraAsync(
-            c.consorcioId, DateOnly.FromDateTime(DateTime.UtcNow), dias <= 0 ? 7 : dias, null, q, ct));
+
+        var ahora = DateTime.UtcNow;
+        var y = anio == 0 ? ahora.Year : anio;
+        var m = mes == 0 ? ahora.Month : mes;
+        var diasMes = DateTime.DaysInMonth(y, m);
+        // fecha = último día del mes (acotado a hoy si es el mes actual), dias = para cubrir desde el 1
+        var ultimoDia = (y == ahora.Year && m == ahora.Month)
+            ? DateOnly.FromDateTime(ahora)
+            : new DateOnly(y, m, diasMes);
+        var dias = ultimoDia.Day;
+        return ToResult(await _accesos.BitacoraAsync(c.consorcioId, ultimoDia, dias, null, q, ct));
     }
 
     [HttpGet("unidades")]

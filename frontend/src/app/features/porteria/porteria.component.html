@@ -178,11 +178,15 @@
 
         @if (cargandoLista()) { <p class="pt-loading">Cargando…</p> }
         @else if (adentroFiltrado().length === 0) {
-          <div class="pt-idle"><div class="pt-idle__ic">✓</div><h1>Nadie adentro</h1><p>No hay visitantes para registrar salida.</p></div>
+          <div class="pt-idle">
+            <div class="pt-idle__ic pt-idle__ic--ok">🧑✓</div>
+            <h1>No hay visitantes esperando para salir</h1>
+            <p>Todos los visitantes fueron registrados de salida. Las nuevas entradas aparecen acá.</p>
+          </div>
         } @else {
           <ul class="pt-list">
             @for (r of adentroFiltrado(); track r.id) {
-              <li class="pt-scard">
+              <li class="pt-scard" (click)="visitaSel.set(r)">
                 <div class="pt-scard__top">
                   <span class="pt-scard__av">{{ iconVisita[r.tipoVisita] }}</span>
                   <div class="pt-scard__b">
@@ -195,9 +199,6 @@
                   <span>{{ r.vehiculo === 'SinVehiculo' ? '👣 A pie' : iconoVehiculo(r.vehiculo) + ' ' + (r.patente || r.vehiculo) }}</span>
                   <span class="pt-scard__t">⏱ {{ tiempoAdentro(r.ingresoUtc) }}</span>
                 </div>
-                <button type="button" class="pt-btn pt-btn--primary pt-scard__out" (click)="registrarSalida(r)">
-                  🚪 Registrar salida
-                </button>
               </li>
             }
           </ul>
@@ -205,26 +206,48 @@
       }
 
       @case ('bitacora') {
+        <div class="pt-monthnav">
+          <button type="button" (click)="cambiarBitMes(-1)">‹</button>
+          <div><small>REGISTRO MENSUAL</small><b>{{ bitMesLabel() }}</b></div>
+          <button type="button" (click)="cambiarBitMes(1)">›</button>
+        </div>
+        <div class="pt-stats pt-stats--3">
+          <div><b>{{ bitStats().visitas }}</b><small>visitas</small></div>
+          <div><b>{{ bitStats().completadas }}</b><small>completadas</small></div>
+          <div><b>{{ bitStats().adentro }}</b><small>aún adentro</small></div>
+        </div>
+        <div class="pt-search2">
+          <span>⌕</span>
+          <input placeholder="Nombre, patente o unidad…" [ngModel]="busquedaBit()" (ngModelChange)="busquedaBit.set($event)" />
+        </div>
+
         @if (cargandoLista()) { <p class="pt-loading">Cargando…</p> }
-        @else if (bitacora().registros.length === 0) {
-          <div class="pt-idle"><div class="pt-idle__ic">📋</div><h1>Sin registros</h1><p>Los últimos 7 días no tienen movimientos.</p></div>
+        @else if (bitVisibles().length === 0) {
+          <div class="pt-idle"><div class="pt-idle__ic">📋</div><h1>Sin registros</h1><p>No hubo movimientos este mes.</p></div>
         } @else {
-          <ul class="pt-list">
-            @for (r of bitacora().registros; track r.id) {
-              <li class="pt-litem pt-litem--log">
-                <div>
-                  <b>{{ r.visitanteNombre }}</b>
-                  <small>{{ iconVisita[r.tipoVisita] }} {{ labelVisita[r.tipoVisita] }} · {{ r.unidad }}
-                    @if (r.patente) { · {{ r.patente }} }</small>
-                  <small class="pt-litem__t">
-                    Entró {{ r.ingresoUtc | date:'d MMM HH:mm' }}
-                    @if (r.egresoUtc) { · Salió {{ r.egresoUtc | date:'HH:mm' }} }
-                  </small>
-                </div>
-                <span class="pt-badge" [class.is-in]="!r.egresoUtc">{{ r.egresoUtc ? 'Salió' : 'Adentro' }}</span>
-              </li>
-            }
-          </ul>
+          @for (g of bitVisibles(); track g.label) {
+            <p class="pt-daygroup">{{ g.label }} <b>{{ g.items.length }}</b></p>
+            <ul class="pt-list">
+              @for (r of g.items; track r.id) {
+                <li class="pt-scard" (click)="visitaSel.set(r)">
+                  <div class="pt-scard__top">
+                    <span class="pt-scard__av">{{ iconVisita[r.tipoVisita] }}</span>
+                    <div class="pt-scard__b"><b>{{ r.visitanteNombre }}</b><small>🏠 {{ r.unidad }}</small></div>
+                    <span class="pt-scard__motivo">{{ labelVisita[r.tipoVisita] }}</span>
+                  </div>
+                  <div class="pt-scard__foot">
+                    <span>🚪 {{ r.ingresoUtc | date:'HH:mm' }}
+                      @if (r.egresoUtc) { → 🚪 {{ r.egresoUtc | date:'HH:mm' }} }
+                      @if (r.vehiculo !== 'SinVehiculo') { · {{ iconoVehiculo(r.vehiculo) }} }
+                    </span>
+                    <span class="pt-scard__t" [class.is-in]="!r.egresoUtc">
+                      {{ r.egresoUtc ? '✓ ' + duracion(r) : 'Adentro' }}
+                    </span>
+                  </div>
+                </li>
+              }
+            </ul>
+          }
         }
       }
 
@@ -249,3 +272,53 @@
     }
   </main>
 </div>
+
+<!-- Detalle de visita (compartido: salidas + bitácora) -->
+@if (visitaSel(); as v) {
+  <div class="pt-vov" (click)="visitaSel.set(null)">
+    <div class="pt-vd" (click)="$event.stopPropagation()">
+      <button type="button" class="pt-vd__x" (click)="visitaSel.set(null)">✕ Cerrar</button>
+      <div class="pt-vd__hero">
+        <span class="pt-vd__av">{{ iconVisita[v.tipoVisita] }}</span>
+        <b>{{ v.visitanteNombre }}</b>
+        <small>🏠 {{ v.unidad }}</small>
+        <span class="pt-scard__motivo">{{ labelVisita[v.tipoVisita] }}</span>
+      </div>
+
+      <div class="pt-vd__card">
+        <b>{{ v.vehiculo === 'SinVehiculo' ? '👣 A pie' : iconoVehiculo(v.vehiculo) + ' ' + v.vehiculo }}</b>
+        <span>Patente: {{ v.patente || '—' }}</span>
+        @if (v.documento) { <span>Documento: {{ v.documento }}</span> }
+      </div>
+
+      <div class="pt-vd__times">
+        <div><small>🚪 Hora de entrada</small><b>{{ v.ingresoUtc | date:'HH:mm' }}</b><em>{{ v.ingresoUtc | date:'EEE d MMM y' }}</em></div>
+        <div>
+          <small>🚪 Hora de salida</small>
+          <b>{{ v.egresoUtc ? (v.egresoUtc | date:'HH:mm') : '—' }}</b>
+          @if (v.egresoUtc) { <em>{{ v.egresoUtc | date:'EEE d MMM y' }}</em> }
+        </div>
+      </div>
+      <div class="pt-vd__row"><span>🕐 Duración</span><b>{{ v.egresoUtc ? duracion(v) : 'En curso · ' + tiempoAdentro(v.ingresoUtc) }}</b></div>
+      <div class="pt-vd__row"><span>{{ v.conQr ? '⛶ Entrada con QR' : '👤 Entrada manual' }}</span><b class="pt-vd__ok">✓</b></div>
+
+      @if (!v.egresoUtc) {
+        <p class="pt-vd__hint">La salida se registrará a las {{ ahoraHora }}</p>
+        <button type="button" class="pt-btn pt-btn--exit" (click)="confirmSalida.set(true)">🚪 Registrar salida</button>
+      }
+    </div>
+  </div>
+}
+
+@if (confirmSalida()) {
+  <div class="pt-vov" (click)="confirmSalida.set(false)">
+    <div class="pt-cdlg" (click)="$event.stopPropagation()">
+      <h3>Confirmar salida</h3>
+      <p>¿Seguro que querés registrar esta salida?</p>
+      <div class="pt-cdlg__btns">
+        <button type="button" (click)="confirmSalida.set(false)">No</button>
+        <button type="button" class="is-yes" (click)="visitaSel() && registrarSalida(visitaSel()!)">Sí</button>
+      </div>
+    </div>
+  </div>
+}

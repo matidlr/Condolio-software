@@ -42,9 +42,11 @@ public record RegistroBitacoraDto(
     TipoVisita TipoVisita,
     TipoVehiculo Vehiculo,
     string? Patente,
+    string? Documento,
     string Unidad,
     DateTime IngresoUtc,
     DateTime? EgresoUtc,
+    bool ConQr,
     string RegistradoPor,
     string? Nota);
 

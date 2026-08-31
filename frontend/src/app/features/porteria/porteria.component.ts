@@ -62,6 +62,51 @@ export class PorteriaComponent implements OnDestroy {
   cargandoLista = signal(false);
   alertas = signal<any[]>([]);
   busquedaSalidas = signal('');
+  bitMes = signal(new Date().getMonth() + 1);
+  bitAnio = signal(new Date().getFullYear());
+  busquedaBit = signal('');
+
+  visitaSel = signal<RegistroBitacora | null>(null);
+  confirmSalida = signal(false);
+
+  bitMesLabel = computed(() =>
+    new Date(this.bitAnio(), this.bitMes() - 1, 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }));
+  bitStats = computed(() => {
+    const l = this.bitacora().registros;
+    return { visitas: l.length, completadas: l.filter((r) => r.egresoUtc).length, adentro: l.filter((r) => !r.egresoUtc).length };
+  });
+  bitVisibles = computed(() => {
+    const q = this.busquedaBit().trim().toLowerCase();
+    const l = q ? this.bitacora().registros.filter((r) =>
+      r.visitanteNombre.toLowerCase().includes(q) || (r.patente ?? '').toLowerCase().includes(q) || r.unidad.toLowerCase().includes(q))
+      : this.bitacora().registros;
+    // agrupar por día
+    const grupos = new Map<string, RegistroBitacora[]>();
+    for (const r of l) {
+      const k = r.ingresoUtc.slice(0, 10);
+      (grupos.get(k) ?? grupos.set(k, []).get(k)!).push(r);
+    }
+    const hoy = new Date().toISOString().slice(0, 10);
+    return [...grupos.entries()].map(([k, items]) => ({
+      label: k === hoy ? 'Hoy' : new Date(k + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }),
+      items,
+    }));
+  });
+
+  cambiarBitMes(delta: number): void {
+    let m = this.bitMes() + delta, a = this.bitAnio();
+    if (m < 1) { m = 12; a--; }
+    if (m > 12) { m = 1; a++; }
+    this.bitMes.set(m); this.bitAnio.set(a);
+    this.cargarBitacora();
+  }
+
+  duracion(r: RegistroBitacora): string {
+    if (!r.egresoUtc) return '—';
+    const min = Math.max(0, Math.round((new Date(r.egresoUtc).getTime() - new Date(r.ingresoUtc).getTime()) / 60000));
+    if (min < 60) return `${min} min`;
+    return `${Math.floor(min / 60)} h ${min % 60} min`;
+  }
 
   adentroFiltrado = computed(() => {
     const q = this.busquedaSalidas().trim().toLowerCase();
@@ -88,6 +133,10 @@ export class PorteriaComponent implements OnDestroy {
   }
 
   nombre = computed(() => this.ctx()?.casetaNombre ?? 'Portería');
+
+  get ahoraHora(): string {
+    return new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+  }
 
   constructor() {
     this.api.contexto().subscribe({
@@ -239,7 +288,13 @@ export class PorteriaComponent implements OnDestroy {
   }
   registrarSalida(r: RegistroBitacora): void {
     this.api.salida(r.id).subscribe({
-      next: () => { this.toasts.exito('Salida registrada'); this.cargarAdentro(); this.cargarResumen(); },
+      next: () => {
+        this.toasts.exito('Salida registrada');
+        this.confirmSalida.set(false);
+        this.visitaSel.set(null);
+        this.cargarAdentro();
+        this.cargarResumen();
+      },
       error: (e) => this.toasts.error(e?.error?.message ?? 'No se pudo registrar.'),
     });
   }
@@ -247,7 +302,7 @@ export class PorteriaComponent implements OnDestroy {
   // ---- bitácora ----
   cargarBitacora(): void {
     this.cargandoLista.set(true);
-    this.api.bitacora(7).subscribe({
+    this.api.bitacora(this.bitAnio(), this.bitMes()).subscribe({
       next: (b) => { this.bitacora.set(b); this.cargandoLista.set(false); },
       error: () => { this.cargandoLista.set(false); this.toasts.error('No pudimos cargar la bitácora.'); },
     });

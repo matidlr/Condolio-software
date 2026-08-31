@@ -13,9 +13,11 @@ export interface RegistroBitacora {
   tipoVisita: TipoVisita;
   vehiculo: TipoVehiculo;
   patente?: string | null;
+  documento?: string | null;
   unidad: string;
   ingresoUtc: string;
   egresoUtc?: string | null;
+  conQr: boolean;
   registradoPor: string;
   nota?: string | null;
 }
@@ -53,7 +55,9 @@ export class PorteriaService {
   entradaManual(dto: EntradaManual): Observable<RegistroBitacora> { return this.http.post<RegistroBitacora>(`${this.base}/entrada-manual`, dto); }
   adentro(): Observable<RegistroBitacora[]> { return this.http.get<RegistroBitacora[]>(`${this.base}/adentro`); }
   salida(id: string): Observable<void> { return this.http.post<void>(`${this.base}/salida/${id}`, {}); }
-  bitacora(dias = 7, q = ''): Observable<Bitacora> { return this.http.get<Bitacora>(`${this.base}/bitacora`, { params: { dias, q } }); }
+  bitacora(anio: number, mes: number, q = ''): Observable<Bitacora> {
+    return this.http.get<Bitacora>(`${this.base}/bitacora`, { params: { anio, mes, q } });
+  }
   unidades(): Observable<UnidadRef[]> { return this.http.get<UnidadRef[]>(`${this.base}/unidades`); }
   alertas(): Observable<{ anuncios: any[] }> { return this.http.get<{ anuncios: any[] }>(`${this.base}/alertas`); }
 }

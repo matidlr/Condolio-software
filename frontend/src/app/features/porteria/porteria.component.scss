@@ -181,3 +181,79 @@ select.pt-input { appearance: auto; }
 .pt-prev__hd small { font-size: 0.66rem; letter-spacing: .06em; color: #f59e0b; font-weight: 700; }
 .pt-prev__hd b { display: block; font-size: 1.1rem; }
 .pt-prev__hd em { font-style: normal; font-size: 0.8rem; color: #c7cfda; }
+
+.pt-idle__ic--ok { background: color-mix(in srgb, #16a34a 12%, transparent); color: #16a34a; }
+.pt-stats--3 > div b { font-size: 1.3rem; }
+
+.pt-monthnav {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: var(--c-navy-800); color: #fff; border-radius: 14px; padding: 12px 16px; margin-bottom: 12px;
+}
+.pt-monthnav button { width: 32px; height: 32px; border: none; background: rgba(255,255,255,.12); color: #fff; border-radius: 50%; cursor: pointer; font-size: 1.1rem; }
+.pt-monthnav > div { text-align: center; }
+.pt-monthnav small { font-size: 0.62rem; letter-spacing: .06em; color: #f59e0b; font-weight: 700; }
+.pt-monthnav b { display: block; font-size: 1.15rem; text-transform: capitalize; }
+
+.pt-search2 { position: relative; }
+.pt-daygroup {
+  display: flex; align-items: center; gap: 8px; margin: 16px 0 8px;
+  font-size: 0.74rem; font-weight: 700; text-transform: capitalize; color: var(--c-text-soft);
+}
+.pt-daygroup::after { content: ''; flex: 1; height: 1px; background: var(--c-border); }
+.pt-daygroup b { background: var(--c-bg); border-radius: 999px; padding: 1px 8px; font-size: 0.72rem; }
+
+.pt-scard__t.is-in { color: #1d4ed8; }
+.pt-scard__foot span:first-child { font-variant-numeric: tabular-nums; }
+
+/* detalle de visita */
+.pt-vov {
+  position: fixed; inset: 0; z-index: 80; background: rgba(15,27,45,.5);
+  display: flex; align-items: flex-start; justify-content: center; padding: 0; overflow-y: auto;
+}
+.pt-vd {
+  background: var(--c-bg); width: 100%; max-width: 560px; min-height: 100vh;
+}
+.pt-vd__x {
+  position: sticky; top: 0; width: 100%; text-align: left; border: none;
+  background: var(--c-navy-800); color: #fff; font: inherit; font-size: 0.95rem; padding: 16px; cursor: pointer; z-index: 2;
+}
+.pt-vd__hero {
+  background: var(--c-navy-800); color: #fff; padding: 24px 18px; text-align: left;
+}
+.pt-vd__av {
+  width: 64px; height: 64px; border-radius: 16px; display: grid; place-items: center;
+  background: rgba(255,255,255,.12); font-size: 1.8rem; margin-bottom: 10px;
+}
+.pt-vd__hero b { display: block; font-size: 1.5rem; }
+.pt-vd__hero small { color: #c7cfda; }
+.pt-vd__hero .pt-scard__motivo { display: inline-block; margin-top: 8px; }
+
+.pt-vd__card, .pt-vd__times, .pt-vd__row {
+  background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 14px;
+  margin: 12px 16px; padding: 14px 16px;
+}
+.pt-vd__card b { display: block; font-size: 0.95rem; }
+.pt-vd__card span { display: block; color: var(--c-text-muted); font-size: 0.86rem; margin-top: 3px; }
+.pt-vd__times { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.pt-vd__times small { display: block; font-size: 0.7rem; color: var(--c-text-soft); text-transform: uppercase; }
+.pt-vd__times b { display: block; font-size: 1.5rem; }
+.pt-vd__times em { font-style: normal; font-size: 0.76rem; color: var(--c-text-soft); }
+.pt-vd__row { display: flex; align-items: center; justify-content: space-between; }
+.pt-vd__ok { color: #16a34a; }
+.pt-vd__hint { text-align: center; color: var(--c-text-soft); font-size: 0.84rem; margin: 16px 0 8px; }
+.pt-btn--exit { background: #16a34a; color: #fff; margin: 0 16px 24px; width: calc(100% - 32px); }
+
+.pt-cdlg {
+  background: var(--c-surface); border-radius: 16px; width: 100%; max-width: 320px;
+  margin: auto; align-self: center; padding: 22px 20px 0; text-align: center;
+  box-shadow: 0 24px 60px rgba(15,27,45,.4);
+}
+.pt-cdlg h3 { margin: 0 0 6px; font-size: 1.1rem; }
+.pt-cdlg p { margin: 0 0 16px; color: var(--c-text-muted); font-size: 0.9rem; }
+.pt-cdlg__btns { display: flex; border-top: 1px solid var(--c-border); }
+.pt-cdlg__btns button {
+  flex: 1; border: none; background: none; padding: 14px; font: inherit; font-size: 1rem; font-weight: 600;
+  color: var(--c-navy-800); cursor: pointer;
+}
+.pt-cdlg__btns button:first-child { border-right: 1px solid var(--c-border); }
+.pt-cdlg__btns .is-yes { color: var(--c-primary); }

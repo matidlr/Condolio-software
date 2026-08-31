@@ -176,9 +176,9 @@ public class AccesoAdminService : IAccesoAdminService
                 || (x.unidad ?? "").ToLowerInvariant().Contains(q))
             .OrderByDescending(x => x.v.IngresoUtc)
             .Select(x => new RegistroBitacoraDto(
-                x.v.Id, x.v.VisitanteNombre, x.v.TipoVisita, x.v.Vehiculo, x.v.Patente,
+                x.v.Id, x.v.VisitanteNombre, x.v.TipoVisita, x.v.Vehiculo, x.v.Patente, x.v.DocumentoVisitante,
                 string.IsNullOrEmpty(x.unidad) ? "Administración" : x.unidad!,
-                x.v.IngresoUtc, x.v.EgresoUtc,
+                x.v.IngresoUtc, x.v.EgresoUtc, x.v.PaseAccesoId != null,
                 string.IsNullOrWhiteSpace(x.v.RegistradoPorNombre) ? "Portería" : x.v.RegistradoPorNombre,
                 x.v.Nota))
             .ToList();
@@ -219,9 +219,9 @@ public class AccesoAdminService : IAccesoAdminService
         var lista = registros
             .OrderByDescending(x => x.v.IngresoUtc)
             .Select(x => new RegistroBitacoraDto(
-                x.v.Id, x.v.VisitanteNombre, x.v.TipoVisita, x.v.Vehiculo, x.v.Patente,
+                x.v.Id, x.v.VisitanteNombre, x.v.TipoVisita, x.v.Vehiculo, x.v.Patente, x.v.DocumentoVisitante,
                 string.IsNullOrEmpty(x.unidad) ? "Administración" : x.unidad!,
-                x.v.IngresoUtc, x.v.EgresoUtc,
+                x.v.IngresoUtc, x.v.EgresoUtc, x.v.PaseAccesoId != null,
                 string.IsNullOrWhiteSpace(x.v.RegistradoPorNombre) ? "Portería" : x.v.RegistradoPorNombre,
                 x.v.Nota))
             .ToList();
@@ -268,8 +268,8 @@ public class AccesoAdminService : IAccesoAdminService
         await _db.SaveChangesAsync(ct);
 
         return Result<RegistroBitacoraDto>.Ok(new RegistroBitacoraDto(
-            r.Id, r.VisitanteNombre, r.TipoVisita, r.Vehiculo, r.Patente, unidadNombre,
-            r.IngresoUtc, null, guardiaNombre, r.Nota));
+            r.Id, r.VisitanteNombre, r.TipoVisita, r.Vehiculo, r.Patente, null, unidadNombre,
+            r.IngresoUtc, null, false, guardiaNombre, r.Nota));
     }
 
     // ---- helpers ----
