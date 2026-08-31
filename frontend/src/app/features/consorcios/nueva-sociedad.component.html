@@ -1,0 +1,214 @@
+<div class="ns">
+  <header class="ns-steps">
+    <div class="ns-steps__bar"><span [style.width.%]="progreso()"></span></div>
+    <ol>
+      @for (s of pasos; track s.n) {
+        <li [class.is-done]="paso() > s.n" [class.is-active]="paso() === s.n">
+          <span class="ns-steps__dot">{{ paso() > s.n ? '✓' : s.n }}</span>
+          <small>{{ s.label }}</small>
+        </li>
+      }
+    </ol>
+  </header>
+
+  <main class="ns-card">
+    @switch (paso()) {
+
+      @case (1) {
+        <div class="ns-welcome">
+          <div class="ns-welcome__ic">🏙️</div>
+          <h1>Nueva sociedad</h1>
+          <p>Vamos a crearla paso a paso: nombre, tipo, ubicación, unidades y residentes.
+            Podés dejar residentes para después.</p>
+        </div>
+      }
+
+      @case (2) {
+        <h1>Información básica</h1>
+        <p class="ns-sub">Empecemos con algunos datos de tu sociedad.</p>
+
+        <label class="ns-field">
+          <span>Nombre de la sociedad *</span>
+          <input [ngModel]="d().nombre" (ngModelChange)="set('nombre', $event)"
+            placeholder="Ej. Consorcio San Agustín" />
+        </label>
+
+        <span class="ns-field__label">Tipo de sociedad *</span>
+        <div class="ns-tipos">
+          @for (t of tipos; track t.value) {
+            <button type="button" class="ns-tipo" [class.is-sel]="d().tipo === t.value"
+              (click)="set('tipo', t.value)">
+              <b>{{ t.label }}</b>
+              <small>{{ t.desc }}</small>
+            </button>
+          }
+        </div>
+      }
+
+      @case (3) {
+        <h1>Ubicación</h1>
+        <p class="ns-sub">¿Dónde está ubicada tu sociedad?</p>
+
+        <div class="ns-ubic">
+          <div>
+            <div class="ns-grid">
+              <label class="ns-field"><span>País</span><input value="Argentina" disabled /></label>
+              <label class="ns-field">
+                <span>Provincia *</span>
+                <select [ngModel]="d().provincia" (ngModelChange)="set('provincia', $event)">
+                  <option value="">Elegí una provincia…</option>
+                  @for (p of provincias; track p) { <option [value]="p">{{ p }}</option> }
+                </select>
+              </label>
+              <label class="ns-field">
+                <span>Ciudad / localidad *</span>
+                <input [ngModel]="d().ciudad" (ngModelChange)="set('ciudad', $event)" placeholder="Ej. Córdoba" />
+              </label>
+              <label class="ns-field">
+                <span>Código postal *</span>
+                <input [ngModel]="d().codigoPostal" (ngModelChange)="set('codigoPostal', $event)" placeholder="Ej. 5000" />
+              </label>
+              <label class="ns-field ns-field--full">
+                <span>Dirección *</span>
+                <input [ngModel]="d().direccion" (ngModelChange)="set('direccion', $event)" placeholder="Calle y número" />
+              </label>
+            </div>
+
+            @if (coords(); as c) {
+              <div class="ns-coords">
+                <span class="ns-field__label">Coordenadas</span>
+                <p>Lat <b>{{ c.lat }}</b> · Lng <b>{{ c.lon }}</b></p>
+                <small>Se guardan junto con la ubicación.</small>
+              </div>
+            }
+            <p class="ns-hint">Zona horaria: Argentina (GMT-3).@if (geocodificando()) { · buscando en el mapa… }</p>
+          </div>
+
+          <div class="ns-mapa">
+            <span class="ns-field__label">Vista previa del mapa</span>
+            @if (mapaUrl(); as url) {
+              <iframe [src]="url" title="Mapa de la ubicación" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+            } @else {
+              <div class="ns-mapa__empty"><span>📍</span><p>Elegí una provincia para verla en el mapa.</p></div>
+            }
+          </div>
+        </div>
+      }
+
+      @case (4) {
+        <h1>Unidades</h1>
+        <p class="ns-sub">
+          {{ esBarrio() ? 'Cuántas casas tiene el barrio.' : 'Contanos cómo está organizado el edificio.' }}
+        </p>
+
+        <div class="ns-cfg">
+          @if (!esBarrio()) {
+            <div class="ns-tipos ns-tipos--2">
+              <button type="button" class="ns-tipo" [class.is-sel]="!cfg().varios" (click)="setCfg('varios', false)">
+                <b>🏢 Un solo edificio</b><small>Un edificio con múltiples pisos</small>
+              </button>
+              <button type="button" class="ns-tipo" [class.is-sel]="cfg().varios" (click)="setCfg('varios', true)">
+                <b>🏬 Varios edificios / torres</b><small>Dos o más edificios o torres separados</small>
+              </button>
+            </div>
+          }
+
+          @if (esBarrio()) {
+            <label class="ns-field ns-field--sm">
+              <span>Cantidad de casas</span>
+              <input type="number" min="1" [ngModel]="cfg().total" (ngModelChange)="setCfg('total', +$event)" />
+            </label>
+          } @else if (!cfg().varios) {
+            <div class="ns-grid">
+              <label class="ns-field"><span>Número de pisos</span>
+                <input type="number" min="1" [ngModel]="cfg().pisos" (ngModelChange)="setCfg('pisos', +$event)" /></label>
+              <label class="ns-field"><span>Número de unidades</span>
+                <input type="number" min="1" [ngModel]="cfg().total" (ngModelChange)="setCfg('total', +$event)" /></label>
+            </div>
+          } @else {
+            <div class="ns-edif-hd"><span>Nombre del edificio</span><span>Pisos</span><span>Unidades</span><span></span></div>
+            @for (e of cfg().edificios; track $index) {
+              <div class="ns-edif">
+                <input placeholder="Ej. Torre A" [ngModel]="e.nombre" (ngModelChange)="setEdificio($index, 'nombre', $event)" />
+                <input type="number" min="1" [ngModel]="e.pisos" (ngModelChange)="setEdificio($index, 'pisos', +$event)" />
+                <input type="number" min="0" placeholder="0" [ngModel]="e.unidades" (ngModelChange)="setEdificio($index, 'unidades', +$event)" />
+                <button type="button" class="ns-edif__x" (click)="quitarEdificio($index)" aria-label="Quitar">🗑</button>
+              </div>
+            }
+            <button type="button" class="ns-link" (click)="addEdificio()">＋ Agregar edificio</button>
+          }
+
+          <button type="button" class="ns-btn ns-btn--dark" (click)="generarFilas()">
+            ✨ Generar {{ cfgTotal() }} unidades
+          </button>
+        </div>
+
+        @if (filas().length) {
+          <div class="ns-cuota"><span class="ns-cuota__n">{{ filas().length }} unidades</span></div>
+          <div class="ns-tabla ns-tabla--2">
+            <div class="ns-tabla__hd"><span>Nombre</span><span>Piso</span><span></span></div>
+            <div class="ns-tabla__body">
+              @for (f of filas(); track $index) {
+                <div class="ns-tr" [class.is-bad]="!filaValida(f)">
+                  <input placeholder="Nombre" [ngModel]="f.nombre" (ngModelChange)="setFila($index, 'nombre', $event)" />
+                  <input type="number" [ngModel]="f.piso" (ngModelChange)="setFila($index, 'piso', +$event)" />
+                  <button type="button" class="ns-edif__x" (click)="quitarFila($index)" aria-label="Quitar">🗑</button>
+                </div>
+              }
+            </div>
+          </div>
+          <button type="button" class="ns-link" (click)="agregarFila()">＋ Agregar unidad</button>
+        }
+
+        <p class="ns-hint">Las expensas se calculan después según los gastos del consorcio y el coeficiente
+          de cada unidad. Podés ajustar todo desde <b>Unidades</b> (incluye importación por CSV).</p>
+      }
+
+      @case (5) {
+        <h1>Residentes</h1>
+        <p class="ns-sub">Invitá a los propietarios ahora, o dejalo para después.</p>
+
+        @for (inv of invites(); track $index) {
+          <div class="ns-inv">
+            <input type="email" placeholder="correo@ejemplo.com"
+              [ngModel]="inv.email" (ngModelChange)="setInvite($index, 'email', $event)" />
+            @if (invites().length > 1) {
+              <button type="button" class="ns-edif__x" (click)="quitarInvite($index)" aria-label="Quitar">🗑</button>
+            }
+          </div>
+        }
+        <button type="button" class="ns-link" (click)="addInvite()">＋ Agregar otro</button>
+        <p class="ns-hint">Cada persona recibe un correo para crear su cuenta. Podés asignarles la unidad
+          después desde <b>Residentes → Directorio</b>.</p>
+      }
+
+      @case (6) {
+        <div class="ns-done">
+          <div class="ns-done__ic">✓</div>
+          <h1>¡Sociedad creada!</h1>
+          <p><b>{{ d().nombre }}</b> ya está lista y seleccionada, con {{ filas().length }} unidades cargadas.</p>
+          <button type="button" class="ns-btn ns-btn--primary" (click)="irAlPanel()">Ir al panel</button>
+        </div>
+      }
+    }
+  </main>
+
+  @if (paso() < 6) {
+    <footer class="ns-foot">
+      <button type="button" class="ns-btn ns-btn--ghost" (click)="paso() === 1 ? salir() : atras()"
+        [disabled]="paso() > 1 && !puedeVolver()">
+        {{ paso() === 1 ? '✕ Salir' : '‹ Atrás' }}
+      </button>
+      <span class="ns-foot__n">Paso {{ paso() }} de {{ pasos.length }}</span>
+      <button type="button" class="ns-btn ns-btn--primary"
+        [disabled]="!puedeAvanzar() || guardando()" (click)="siguiente()">
+        @switch (paso()) {
+          @case (3) { {{ guardando() ? 'Creando…' : 'Crear sociedad ›' }} }
+          @case (4) { {{ guardando() ? 'Generando…' : 'Crear unidades ›' }} }
+          @case (5) { {{ guardando() ? 'Enviando…' : 'Finalizar ›' }} }
+          @default { Siguiente › }
+        }
+      </button>
+    </footer>
+  }
+</div>

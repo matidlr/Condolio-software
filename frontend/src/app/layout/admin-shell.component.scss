@@ -179,29 +179,53 @@
 
 .shell__consorcio {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 0.95rem;
 }
-
-.shell__consorcio label {
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--c-text-soft);
-}
-
-.shell__consorcio select {
-  height: 36px;
-  padding: 0 30px 0 12px;
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-sm);
-  background: #f3f6fb;
-  font-size: 0.92rem;
-  font-weight: 600;
-  color: var(--c-text);
-}
-
+.shell__consorcio b { font-weight: 700; }
+.shell__consorcio span { color: var(--c-text-soft); font-size: 0.85rem; }
 .shell__consorcio-empty { color: var(--c-text-soft); font-size: 0.9rem; }
+
+/* --- Switcher de sociedad --- */
+.shell__switcher { position: relative; margin-bottom: 14px; }
+.shell__switcher-btn,
+.shell__switcher-item,
+.shell__switcher-new {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  border: none; background: none; cursor: pointer; font: inherit; text-align: left;
+  padding: 8px; border-radius: 10px; color: #fff;
+}
+.shell__switcher-btn { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.10); }
+.shell__switcher-btn:hover { background: rgba(255,255,255,0.12); }
+.shell__switcher-mark {
+  display: grid; place-items: center; min-width: 30px; height: 30px; border-radius: 8px;
+  background: rgba(255,255,255,0.18); font-weight: 700; font-size: 0.9rem; flex-shrink: 0;
+}
+.shell__switcher-text { flex: 1; min-width: 0; }
+.shell__switcher-text b {
+  display: block; font-size: 0.9rem; font-weight: 700;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.shell__switcher-text small { display: block; font-size: 0.74rem; color: rgba(255,255,255,0.55); }
+.shell__switcher-caret { color: rgba(255,255,255,0.6); font-size: 0.9rem; }
+
+.shell__switcher-menu {
+  position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 40;
+  background: #16273c; border: 1px solid rgba(255,255,255,0.12); border-radius: 12px;
+  padding: 6px; box-shadow: 0 20px 48px rgba(0,0,0,0.4);
+}
+.shell__switcher-item:hover, .shell__switcher-new:hover { background: rgba(255,255,255,0.08); }
+.shell__switcher-item.is-active { background: rgba(255,255,255,0.10); }
+.shell__switcher-check { color: #7fe0a8; font-size: 0.85rem; }
+.shell__switcher-new {
+  border-top: 1px solid rgba(255,255,255,0.10); border-radius: 0 0 8px 8px;
+  margin-top: 4px; padding-top: 12px; color: rgba(255,255,255,0.8); font-size: 0.88rem;
+}
+.shell__switcher-plus { font-size: 1rem; }
+
+.shell--collapsed .shell__switcher-text,
+.shell--collapsed .shell__switcher-caret { display: none; }
 
 .shell__user {
   position: relative;

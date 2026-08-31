@@ -1,6 +1,9 @@
+export type TipoConsorcio = 'EdificioResidencial' | 'ResidencialPrivada';
+
 export interface Consorcio {
   id: string;
   nombre: string;
+  tipo: TipoConsorcio;
   direccion: string;
   localidad?: string | null;
   provincia?: string | null;
@@ -15,7 +18,22 @@ export interface CrearConsorcio {
   provincia?: string | null;
   pais?: string | null;
   cuit?: string | null;
+  tipo?: TipoConsorcio;
+  codigoPostal?: string | null;
+  latitud?: number | null;
+  longitud?: number | null;
 }
+
+export const TIPOS_CONSORCIO: { value: TipoConsorcio; label: string; desc: string }[] = [
+  {
+    value: 'EdificioResidencial', label: 'Edificio residencial',
+    desc: 'Un edificio de múltiples unidades con pisos y departamentos. Vas a poder agregar pisos, unidades y áreas comunes más adelante.',
+  },
+  {
+    value: 'ResidencialPrivada', label: 'Residencial privada / barrio',
+    desc: 'Una comunidad de casas independientes con amenidades compartidas. Cada casa se trata como una unidad individual.',
+  },
+];
 
 export type TipoUnidad = 'Departamento' | 'Local' | 'Cochera' | 'Baulera';
 

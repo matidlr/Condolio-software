@@ -154,6 +154,13 @@ export const routes: Routes = [
     ],
   },
   {
+    path: 'nueva-sociedad',
+    canActivate: [authGuard, rolGuard],
+    data: { roles: ['Administrador', 'SuperAdmin'] },
+    loadComponent: () =>
+      import('./features/consorcios/nueva-sociedad.component').then((m) => m.NuevaSociedadComponent),
+  },
+  {
     path: 'panel',
     canActivate: [authGuard, rolGuard],
     data: { roles: ['Administrador', 'SuperAdmin'] },

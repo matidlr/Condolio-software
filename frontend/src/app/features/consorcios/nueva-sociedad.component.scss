@@ -1,0 +1,172 @@
+.ns {
+  min-height: 100vh; background: var(--c-bg);
+  display: flex; flex-direction: column; align-items: center;
+  padding: 24px 16px 100px;
+}
+
+/* Stepper */
+.ns-steps { width: 100%; max-width: 1040px; margin-bottom: 22px; }
+.ns-steps__bar {
+  height: 4px; background: var(--c-border); border-radius: 2px; overflow: hidden; margin-bottom: 14px;
+}
+.ns-steps__bar span { display: block; height: 100%; background: #16a34a; transition: width .3s; }
+.ns-steps ol {
+  list-style: none; margin: 0; padding: 0; display: flex; justify-content: space-between; gap: 4px;
+}
+.ns-steps li {
+  display: flex; flex-direction: column; align-items: center; gap: 5px; flex: 1; min-width: 0;
+  color: var(--c-text-soft); font-size: 0.72rem; text-align: center;
+}
+.ns-steps__dot {
+  width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--c-surface); border: 2px solid var(--c-border); font-size: 0.8rem; font-weight: 700;
+}
+.ns-steps li.is-active { color: var(--c-text); font-weight: 600; }
+.ns-steps li.is-active .ns-steps__dot { border-color: var(--c-primary); color: var(--c-primary); }
+.ns-steps li.is-done .ns-steps__dot { background: #16a34a; border-color: #16a34a; color: #fff; }
+.ns-steps li small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+
+/* Card */
+.ns-card {
+  width: 100%; max-width: 900px; background: var(--c-surface);
+  border: 1px solid var(--c-border); border-radius: 18px; padding: 32px;
+  box-shadow: 0 12px 40px rgba(15,27,45,.06);
+}
+.ns-card h1 { margin: 0 0 4px; font-size: 1.5rem; text-align: center; }
+.ns-sub { margin: 0 0 24px; text-align: center; color: var(--c-text-muted); }
+
+/* Fields */
+.ns-field { display: block; margin-bottom: 16px; }
+.ns-field > span, .ns-field__label {
+  display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 6px;
+}
+.ns-field input, .ns-field select {
+  width: 100%; height: 42px; padding: 0 12px; border: 1px solid var(--c-border);
+  border-radius: 10px; background: var(--c-surface); font: inherit; font-size: 0.92rem;
+}
+.ns-field input:disabled { background: var(--c-bg); color: var(--c-text-muted); }
+.ns-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+.ns-field--full { grid-column: 1 / -1; }
+.ns-hint { margin: 4px 0 0; font-size: 0.8rem; color: var(--c-text-soft); }
+
+/* Tipo cards */
+.ns-tipos { display: grid; gap: 10px; }
+.ns-tipos--2 { grid-template-columns: 1fr 1fr; margin-bottom: 18px; }
+@media (max-width: 640px) { .ns-tipos--2 { grid-template-columns: 1fr; } }
+.ns-tipo {
+  text-align: left; border: 1px solid var(--c-border); border-radius: 12px; padding: 14px 16px;
+  background: var(--c-surface); cursor: pointer; font: inherit;
+  border-left: 4px solid transparent;
+}
+.ns-tipo:hover { border-color: var(--c-slate-500); }
+.ns-tipo.is-sel { border-color: var(--c-primary); border-left-color: var(--c-primary); background: color-mix(in srgb, var(--c-primary) 5%, transparent); }
+.ns-tipo b { display: block; font-size: 0.98rem; margin-bottom: 3px; }
+.ns-tipo small { color: var(--c-text-muted); font-size: 0.85rem; line-height: 1.45; }
+
+/* Ubicación layout */
+.ns-ubic { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+.ns-mapa iframe {
+  width: 100%; height: 320px; border: 1px solid var(--c-border); border-radius: 12px; margin-top: 6px;
+}
+.ns-mapa__empty {
+  height: 320px; margin-top: 6px; border: 1px dashed var(--c-border); border-radius: 12px;
+  display: grid; place-items: center; text-align: center; color: var(--c-text-soft);
+}
+.ns-mapa__empty span { font-size: 1.8rem; }
+.ns-mapa__empty p { margin: 8px 0 0; font-size: 0.86rem; }
+
+/* Coords box */
+.ns-coords {
+  border: 1px solid var(--c-border); border-radius: 12px; padding: 12px 14px; margin-top: 4px;
+  background: var(--c-bg);
+}
+.ns-coords p { margin: 2px 0; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.ns-coords small { color: var(--c-text-soft); font-size: 0.78rem; }
+
+/* Welcome / done */
+.ns-welcome, .ns-done { text-align: center; padding: 12px 0; }
+.ns-welcome__ic { font-size: 2.6rem; margin-bottom: 10px; }
+.ns-welcome p { max-width: 460px; margin: 0 auto 12px; color: var(--c-text-muted); line-height: 1.55; }
+
+.ns-done__ic {
+  width: 64px; height: 64px; margin: 0 auto 12px; border-radius: 50%;
+  background: #16a34a; color: #fff; display: grid; place-items: center; font-size: 1.8rem;
+}
+.ns-done p { color: var(--c-text-muted); margin: 0 0 18px; }
+
+/* Footer */
+.ns-foot {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: var(--c-surface); border-top: 1px solid var(--c-border);
+  padding: 14px 24px;
+}
+.ns-foot__n { font-size: 0.82rem; color: var(--c-text-soft); }
+.ns-btn {
+  border: none; border-radius: 10px; padding: 11px 20px; font: inherit; font-size: 0.92rem;
+  font-weight: 600; cursor: pointer;
+}
+.ns-btn--primary { background: var(--c-navy-800); color: #fff; }
+.ns-btn--primary:disabled { opacity: .45; cursor: default; }
+.ns-btn--ghost { background: var(--c-surface); border: 1px solid var(--c-border); color: var(--c-text); }
+
+@media (max-width: 800px) {
+  .ns-grid, .ns-ubic { grid-template-columns: 1fr; }
+  .ns-steps li small { display: none; }
+  .ns-card { padding: 22px; }
+}
+
+/* Paso 4 - config + grilla */
+.ns-field--sm { max-width: 240px; }
+.ns-cfg { border: 1px solid var(--c-border); border-radius: 14px; padding: 18px; margin-bottom: 18px; }
+.ns-cfg .ns-btn--dark { margin-top: 10px; }
+
+.ns-edif-hd, .ns-tabla__hd {
+  display: grid; grid-template-columns: 1fr 90px 130px 40px; gap: 8px;
+  font-size: 0.74rem; font-weight: 600; color: var(--c-text-soft); text-transform: uppercase;
+  letter-spacing: .04em; padding: 4px 0;
+}
+.ns-edif { display: grid; grid-template-columns: 1fr 90px 130px 40px; gap: 8px; margin-bottom: 8px; }
+.ns-edif input {
+  height: 40px; padding: 0 10px; border: 1px solid var(--c-border); border-radius: 9px;
+  background: var(--c-surface); font: inherit; font-size: 0.9rem;
+}
+.ns-edif__x {
+  border: none; background: none; cursor: pointer; font-size: 0.95rem; color: var(--c-text-soft);
+}
+.ns-edif__x:hover { color: var(--c-danger); }
+
+.ns-link {
+  border: none; background: none; color: var(--c-primary); font: inherit; font-size: 0.88rem;
+  font-weight: 600; cursor: pointer; padding: 8px 0;
+}
+
+.ns-cuota { display: flex; align-items: center; gap: 10px; margin: 6px 0 12px; flex-wrap: wrap; }
+.ns-cuota__in {
+  height: 38px; width: 160px; padding: 0 10px; border: 1px solid var(--c-border); border-radius: 9px;
+  font: inherit; font-size: 0.9rem;
+}
+.ns-cuota__n { font-size: 0.82rem; color: var(--c-text-soft); }
+
+.ns-tabla { border: 1px solid var(--c-border); border-radius: 12px; overflow: hidden; }
+.ns-tabla__hd { padding: 10px 14px; background: var(--c-bg); }
+.ns-tabla__body { max-height: 320px; overflow-y: auto; }
+.ns-tr {
+  display: grid; grid-template-columns: 1fr 90px 130px 40px; gap: 8px; align-items: center;
+  padding: 8px 14px; border-top: 1px solid var(--c-border);
+}
+.ns-tabla--2 .ns-tabla__hd, .ns-tabla--2 .ns-tr { grid-template-columns: 1fr 90px 40px; }
+.ns-tr.is-bad { background: #fef2f2; }
+.ns-tr input {
+  height: 36px; padding: 0 10px; border: 1px solid var(--c-border); border-radius: 8px;
+  background: var(--c-surface); font: inherit; font-size: 0.88rem;
+}
+
+.ns-btn--dark { background: var(--c-navy-800); color: #fff; }
+
+/* Paso 5 - invitaciones */
+.ns-inv { display: flex; gap: 8px; margin-bottom: 8px; }
+.ns-inv input {
+  flex: 1; height: 42px; padding: 0 12px; border: 1px solid var(--c-border); border-radius: 10px;
+  background: var(--c-surface); font: inherit; font-size: 0.92rem;
+}

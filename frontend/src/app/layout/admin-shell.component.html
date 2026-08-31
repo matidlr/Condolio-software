@@ -5,6 +5,37 @@
       <span class="shell__logo-text">Condolio</span>
     </a>
 
+    <div class="shell__switcher">
+      <button type="button" class="shell__switcher-btn"
+        (click)="$event.stopPropagation(); switcherAbierto.set(!switcherAbierto())">
+        <span class="shell__switcher-mark">{{ iniConsorcio(consorcioActivo()?.nombre) }}</span>
+        <span class="shell__switcher-text">
+          <b>{{ consorcioActivo()?.nombre || 'Sin sociedad' }}</b>
+          <small>{{ consorcioActivo()?.localidad || consorcioActivo()?.provincia || '—' }}</small>
+        </span>
+        <span class="shell__switcher-caret">⌄</span>
+      </button>
+
+      @if (switcherAbierto()) {
+        <div class="shell__switcher-menu" (click)="$event.stopPropagation()">
+          @for (c of consorcios.consorcios(); track c.id) {
+            <button type="button" class="shell__switcher-item" [class.is-active]="c.id === consorcios.activoId()"
+              (click)="elegirConsorcio(c.id)">
+              <span class="shell__switcher-mark">{{ iniConsorcio(c.nombre) }}</span>
+              <span class="shell__switcher-text">
+                <b>{{ c.nombre }}</b>
+                <small>{{ c.localidad || c.provincia || '—' }}</small>
+              </span>
+              @if (c.id === consorcios.activoId()) { <span class="shell__switcher-check">✓</span> }
+            </button>
+          }
+          <button type="button" class="shell__switcher-new" (click)="crearSociedad()">
+            <span class="shell__switcher-plus">＋</span> Crear nueva sociedad
+          </button>
+        </div>
+      }
+    </div>
+
     <nav class="shell__nav">
       @for (item of nav(); track item.label) {
         @if (item.hijos) {
@@ -63,16 +94,11 @@
   <div class="shell__main">
     <header class="shell__topbar">
       <div class="shell__consorcio">
-        @if (consorcios.consorcios().length) {
-          <label for="cons">Consorcio</label>
-          <select id="cons" [value]="consorcios.activoId()"
-            (change)="cambiarConsorcio($any($event.target).value)">
-            @for (c of consorcios.consorcios(); track c.id) {
-              <option [value]="c.id">{{ c.nombre }}</option>
-            }
-          </select>
+        @if (consorcioActivo(); as c) {
+          <b>{{ c.nombre }}</b>
+          @if (c.localidad) { <span>· {{ c.localidad }}</span> }
         } @else {
-          <span class="shell__consorcio-empty">Sin consorcios todavía</span>
+          <span class="shell__consorcio-empty">Sin sociedades todavía</span>
         }
       </div>
 

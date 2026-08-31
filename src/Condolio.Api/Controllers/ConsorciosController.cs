@@ -25,4 +25,8 @@ public class ConsorciosController : ApiControllerBase
     [HttpPost]
     public async Task<IActionResult> Crear(CrearConsorcioDto dto, CancellationToken ct) =>
         ToResult(await _consorcios.CrearAsync(dto, ct));
+
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Eliminar(Guid id, CancellationToken ct) =>
+        ToResult(await _consorcios.EliminarAsync(id, ct));
 }

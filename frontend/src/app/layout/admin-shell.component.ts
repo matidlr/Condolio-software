@@ -49,6 +49,7 @@ const ICONOS = {
   imports: [RouterOutlet, RouterLink, RouterLinkActive, NotificacionesPanelComponent],
   templateUrl: './admin-shell.component.html',
   styleUrl: './admin-shell.component.scss',
+  host: { '(document:click)': 'switcherAbierto.set(false); menuAbierto.set(false)' },
 })
 export class AdminShellComponent {
   private auth = inject(AuthService);
@@ -63,6 +64,25 @@ export class AdminShellComponent {
   colapsado = signal(false);
   menuAbierto = signal(false);
   panelNotif = signal(false);
+  switcherAbierto = signal(false);
+
+  consorcioActivo = computed(() =>
+    this.consorcios.consorcios().find((c) => c.id === this.consorcios.activoId()) ?? null);
+
+  iniConsorcio(nombre: string | undefined | null): string {
+    return (nombre ?? 'S').trim().charAt(0).toUpperCase() || 'S';
+  }
+
+  elegirConsorcio(id: string): void {
+    this.switcherAbierto.set(false);
+    if (id === this.consorcios.activoId()) return;
+    this.cambiarConsorcio(id);
+  }
+
+  crearSociedad(): void {
+    this.switcherAbierto.set(false);
+    this.router.navigate(['/nueva-sociedad']);
+  }
 
   nombre = this.auth.nombre;
   iniciales = computed(() =>
