@@ -83,6 +83,12 @@
           <span class="shell__badge">{{ notificacionesApi.resumen().noLeidas }}</span>
         }
       </button>
+
+      <span class="shell__nav-sep"></span>
+      <a class="shell__nav-item" routerLink="/panel/configuracion" routerLinkActive="is-active">
+        <span class="shell__nav-icon" [innerHTML]="icono('gear')"></span>
+        <span class="shell__nav-label">Configuración</span>
+      </a>
     </nav>
 
     <button class="shell__collapse" (click)="colapsado.set(!colapsado())" type="button"

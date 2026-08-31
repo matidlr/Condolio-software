@@ -22,9 +22,17 @@ public class ConsorciosController : ApiControllerBase
     public async Task<IActionResult> Obtener(Guid id, CancellationToken ct) =>
         ToResult(await _consorcios.ObtenerAsync(id, ct));
 
+    [HttpGet("{id:guid}/detalle")]
+    public async Task<IActionResult> Detalle(Guid id, CancellationToken ct) =>
+        ToResult(await _consorcios.DetalleAsync(id, ct));
+
     [HttpPost]
     public async Task<IActionResult> Crear(CrearConsorcioDto dto, CancellationToken ct) =>
         ToResult(await _consorcios.CrearAsync(dto, ct));
+
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> Actualizar(Guid id, ActualizarConsorcioDto dto, CancellationToken ct) =>
+        ToResult(await _consorcios.ActualizarAsync(id, dto, ct));
 
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Eliminar(Guid id, CancellationToken ct) =>

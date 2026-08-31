@@ -63,6 +63,10 @@
   transition: background 0.15s ease, color 0.15s ease;
 }
 
+.shell__nav-sep {
+  display: block; height: 1px; margin: 10px 8px; background: rgba(255,255,255,0.10);
+}
+
 .shell__nav-btn {
   width: 100%;
   border: none;

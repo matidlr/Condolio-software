@@ -1,0 +1,278 @@
+<div class="cfg">
+  <header class="cfg-banner">
+    <div>
+      <h1>Configuración</h1>
+      <p>Configurá tu sociedad y tu cuenta</p>
+    </div>
+    <button type="button" class="cfg-banner__x" (click)="volver()">✕</button>
+  </header>
+
+  <div class="cfg-body">
+    <nav class="cfg-nav">
+      <p class="cfg-nav__tenant">{{ consorcios.activo?.nombre || 'Sociedad' }}</p>
+      @for (g of grupos; track g.titulo) {
+        @if (g.titulo) { <p class="cfg-nav__grp">{{ g.titulo }}</p> }
+        @for (it of g.items; track it.id) {
+          <button type="button" class="cfg-nav__item" [class.is-active]="tab() === it.id"
+            (click)="tab.set(it.id)">
+            <span>{{ it.icon }}</span>{{ it.label }}
+            @if (!it.listo) { <em>pronto</em> }
+          </button>
+        }
+      }
+    </nav>
+
+    <section class="cfg-main">
+      @switch (tab()) {
+
+        @case ('general') {
+          <h2>Configuración de la comunidad</h2>
+          <p class="cfg-sub">Administrá el perfil, la dirección y la zona horaria de tu sociedad.</p>
+
+          @if (cargando()) { <p class="cfg-loading">Cargando…</p> }
+          @else if (detalle()) {
+            @if (detalle()!; as d) {
+            <div class="cfg-card">
+              <div class="cfg-card__hd">
+                <div class="cfg-profile">
+                  <span class="cfg-profile__av">{{ (d.nombre[0] || 'S').toUpperCase() }}</span>
+                  <div>
+                    <b>{{ d.nombre }}</b>
+                    <small>🌐 {{ d.localidad || d.provincia || 'Argentina' }} (GMT-3)</small>
+                    <span class="cfg-chip">{{ labelTipo(d.tipo) }}</span>
+                  </div>
+                </div>
+                @if (!editandoPerfil()) {
+                  <button type="button" class="btn btn--ghost u-btn" (click)="editarPerfil()">✎ Editar</button>
+                }
+              </div>
+
+              @if (editandoPerfil()) {
+                <div class="cfg-form">
+                  <label class="cfg-field"><span>Nombre</span>
+                    <input [ngModel]="fNombre()" (ngModelChange)="fNombre.set($event)" /></label>
+                  <label class="cfg-field"><span>Tipo</span>
+                    <select [ngModel]="fTipo()" (ngModelChange)="fTipo.set($event)">
+                      @for (t of tipos; track t.value) { <option [value]="t.value">{{ t.label }}</option> }
+                    </select></label>
+                  <div class="cfg-form__acts">
+                    <button type="button" class="btn btn--ghost u-btn" (click)="editandoPerfil.set(false)">Cancelar</button>
+                    <button type="button" class="btn btn--primary u-btn" [disabled]="guardando() || !fNombre().trim()" (click)="guardarPerfil()">
+                      {{ guardando() ? 'Guardando…' : 'Guardar' }}
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <div class="cfg-card">
+              <div class="cfg-card__hd">
+                <h3>Dirección</h3>
+                @if (!editandoDireccion()) {
+                  <button type="button" class="btn btn--ghost u-btn" (click)="editarDireccion()">✎ Editar</button>
+                }
+              </div>
+
+              @if (editandoDireccion()) {
+                <div class="cfg-form">
+                  <label class="cfg-field cfg-field--full"><span>Calle y número</span>
+                    <input [ngModel]="fCalle()" (ngModelChange)="fCalle.set($event)" /></label>
+                  <label class="cfg-field"><span>Ciudad / localidad</span>
+                    <input [ngModel]="fCiudad()" (ngModelChange)="fCiudad.set($event)" /></label>
+                  <label class="cfg-field"><span>Provincia</span>
+                    <select [ngModel]="fProvincia()" (ngModelChange)="fProvincia.set($event)">
+                      <option value="">—</option>
+                      @for (p of provincias; track p) { <option [value]="p">{{ p }}</option> }
+                    </select></label>
+                  <label class="cfg-field"><span>Código postal</span>
+                    <input [ngModel]="fCp()" (ngModelChange)="fCp.set($event)" /></label>
+                  <label class="cfg-field"><span>País</span><input value="Argentina" disabled /></label>
+                  <div class="cfg-form__acts">
+                    <button type="button" class="btn btn--ghost u-btn" (click)="editandoDireccion.set(false)">Cancelar</button>
+                    <button type="button" class="btn btn--primary u-btn" [disabled]="guardando()" (click)="guardarDireccion()">
+                      {{ guardando() ? 'Guardando…' : 'Guardar' }}
+                    </button>
+                  </div>
+                </div>
+              } @else {
+                <dl class="cfg-dl">
+                  <div><dt>Calle</dt><dd>{{ d.direccion || '—' }}</dd></div>
+                  <div><dt>Ciudad</dt><dd>{{ d.localidad || '—' }}</dd></div>
+                  <div><dt>Provincia</dt><dd>{{ d.provincia || '—' }}</dd></div>
+                  <div><dt>Código postal</dt><dd>{{ d.codigoPostal || '—' }}</dd></div>
+                  <div><dt>País</dt><dd>Argentina</dd></div>
+                  @if (d.latitud != null) { <div><dt>Coordenadas</dt><dd>{{ d.latitud }}, {{ d.longitud }}</dd></div> }
+                </dl>
+              }
+            </div>
+            }
+          }
+        }
+
+        @case ('secciones') {
+          <div class="cfg-hd2">
+            <div>
+              <h2>Secciones</h2>
+              <p class="cfg-sub">Organizá las unidades por torres, bloques o calles.</p>
+            </div>
+            <button type="button" class="btn btn--primary u-btn" (click)="abrirSeccion()">＋ Agregar sección</button>
+          </div>
+
+          @if (secciones().length === 0) {
+            <div class="cfg-soon">
+              <div class="cfg-soon__ic">🗂️</div>
+              <h2>Sin secciones</h2>
+              <p>Agrupá unidades por ubicación física para filtrar, comunicar y reportar por grupo.</p>
+              <button type="button" class="btn btn--primary u-btn" (click)="abrirSeccion()">＋ Crear primera sección</button>
+            </div>
+          } @else {
+            @for (s of secciones(); track s.nombre) {
+              <div class="cfg-seccard">
+                <span class="cfg-seccard__ic">🏢</span>
+                <div class="cfg-seccard__b">
+                  <b>{{ s.nombre }}</b>
+                  <small>Pisos: {{ s.pisos }} · Unidades: {{ s.unidades }}</small>
+                </div>
+                <button type="button" class="cfg-ic" (click)="abrirSeccion(s.nombre)" aria-label="Editar">✎</button>
+                <button type="button" class="cfg-ic cfg-ic--del" (click)="secBorrar.set(s.nombre)" aria-label="Eliminar">🗑</button>
+              </div>
+            }
+          }
+        }
+
+        @case ('perfil') {
+          <h2>Información personal</h2>
+          <p class="cfg-sub">Datos de tu cuenta de administrador.</p>
+          <div class="cfg-card">
+            <div class="cfg-form">
+              <label class="cfg-field"><span>Nombre</span><input [value]="cuenta()?.nombre || ''" disabled /></label>
+              <label class="cfg-field"><span>Correo electrónico</span><input [value]="cuenta()?.email || ''" disabled /></label>
+            </div>
+            <p class="cfg-hint">La edición del perfil (nombre, teléfono, foto) va a estar disponible pronto.
+              Para cambiar la contraseña, andá a <b>Seguridad</b>.</p>
+          </div>
+        }
+
+        @case ('avanzado') {
+          <h2>Avanzado</h2>
+          <p class="cfg-sub">Configuraciones avanzadas y acciones irreversibles.</p>
+          <div class="cfg-card cfg-danger">
+            <b class="cfg-danger__t">⚠ Zona de peligro</b>
+            <p>Acciones irreversibles que afectan a toda la comunidad.</p>
+            <div class="cfg-danger__row">
+              <div>
+                <b>Eliminar comunidad</b>
+                <small>Elimina permanentemente esta comunidad y todos sus datos.</small>
+              </div>
+              <button type="button" class="btn u-btn cfg-btn-del" (click)="textoEliminar.set(''); dlgEliminar.set(true)">🗑 Eliminar</button>
+            </div>
+          </div>
+        }
+
+        @case ('seguridad') {
+          <h2>Seguridad</h2>
+          <p class="cfg-sub">Cambiá la contraseña de tu cuenta.</p>
+          <div class="cfg-card">
+            <div class="cfg-form">
+              <label class="cfg-field cfg-field--full"><span>Contraseña actual</span>
+                <input type="password" [ngModel]="claveActual()" (ngModelChange)="claveActual.set($event)" /></label>
+              <label class="cfg-field"><span>Nueva contraseña</span>
+                <input type="password" [ngModel]="claveNueva()" (ngModelChange)="claveNueva.set($event)" /></label>
+              <label class="cfg-field"><span>Repetir nueva</span>
+                <input type="password" [ngModel]="claveNueva2()" (ngModelChange)="claveNueva2.set($event)" /></label>
+            </div>
+            @if (claveNueva() && claveNueva().length < 6) { <p class="cfg-hint">Mínimo 6 caracteres.</p> }
+            @if (claveNueva2() && claveNueva() !== claveNueva2()) { <p class="cfg-hint cfg-hint--err">No coinciden.</p> }
+            <button type="button" class="btn btn--primary u-btn" [disabled]="!claveOk() || cambiandoClave()" (click)="cambiarClave()">
+              {{ cambiandoClave() ? 'Cambiando…' : 'Cambiar contraseña' }}
+            </button>
+          </div>
+        }
+
+        @default {
+          <div class="cfg-soon">
+            <div class="cfg-soon__ic">🚧</div>
+            <h2>Próximamente</h2>
+            <p>Esta parte de la configuración todavía no está disponible.</p>
+          </div>
+        }
+      }
+    </section>
+  </div>
+</div>
+
+<!-- Modal: agregar / editar sección -->
+@if (secModal()) {
+  <div class="cfg-ov" (click)="secModal.set(false)">
+    <div class="cfg-modal" (click)="$event.stopPropagation()">
+      <header>
+        <b>{{ secEditando() ? 'Editar sección' : 'Agregar sección' }}</b>
+        <button type="button" (click)="secModal.set(false)">✕</button>
+      </header>
+      <div class="cfg-modal__b">
+        <label class="cfg-field cfg-field--full"><span>Nombre de la sección *</span>
+          <input [ngModel]="secNombre()" (ngModelChange)="secNombre.set($event)"
+            placeholder="Ej. Torre A, Bloque 1, Calle Principal" /></label>
+
+        <div class="cfg-secpick">
+          <div class="cfg-secpick__hd">
+            <span>Unidades asignadas ({{ secSel().size }})</span>
+            <span>
+              <button type="button" class="cfg-link" (click)="selTodasSec(true)">Seleccionar todo</button>
+              <button type="button" class="cfg-link" (click)="selTodasSec(false)">Ninguna</button>
+            </span>
+          </div>
+          <input class="cfg-secpick__search" placeholder="Buscar unidades…"
+            [ngModel]="secBusca()" (ngModelChange)="secBusca.set($event)" />
+          <div class="cfg-secpick__list">
+            @for (u of unidadesFiltradas(); track u.id) {
+              <label class="cfg-secpick__row">
+                <input type="checkbox" [checked]="secSel().has(u.id)" (change)="toggleUnidadSec(u.id)" />
+                <span>{{ u.nombre }}</span>
+                @if (u.seccion && u.seccion !== secNombre()) { <em>en {{ u.seccion }}</em> }
+              </label>
+            } @empty { <p class="cfg-hint">Sin unidades.</p> }
+          </div>
+        </div>
+      </div>
+      <footer>
+        <button type="button" class="btn btn--ghost u-btn" (click)="secModal.set(false)">Cancelar</button>
+        <button type="button" class="btn btn--primary u-btn"
+          [disabled]="!secNombre().trim() || secSel().size === 0 || guardandoSec()" (click)="guardarSeccion()">
+          {{ guardandoSec() ? 'Guardando…' : 'Guardar' }}
+        </button>
+      </footer>
+    </div>
+  </div>
+}
+
+@if (dlgEliminar()) {
+  <div class="cfg-ov" (click)="dlgEliminar.set(false)">
+    <div class="cfg-dlg" (click)="$event.stopPropagation()">
+      <b>Eliminar comunidad</b>
+      <p>Esta acción es <b>irreversible</b>. Se eliminan todas las unidades, accesos, paquetes y datos de
+        <b>{{ detalle()?.nombre }}</b>. Solo se puede si la comunidad no tiene residentes cargados.</p>
+      <label class="cfg-field cfg-field--full"><span>Escribí “{{ detalle()?.nombre }}” para confirmar</span>
+        <input [ngModel]="textoEliminar()" (ngModelChange)="textoEliminar.set($event)" /></label>
+      <div class="cfg-dlg__btns">
+        <button type="button" class="btn btn--ghost u-btn" (click)="dlgEliminar.set(false)">Cancelar</button>
+        <button type="button" class="btn u-btn cfg-btn-del" [disabled]="!puedeEliminar() || eliminandoComunidad()" (click)="eliminarComunidad()">
+          {{ eliminandoComunidad() ? 'Eliminando…' : 'Eliminar comunidad' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (secBorrar(); as nombre) {
+  <div class="cfg-ov" (click)="secBorrar.set(null)">
+    <div class="cfg-dlg" (click)="$event.stopPropagation()">
+      <b>Eliminar sección</b>
+      <p>¿Seguro que querés eliminar “{{ nombre }}”? Las unidades asignadas van a quedar sin sección.</p>
+      <div class="cfg-dlg__btns">
+        <button type="button" class="btn btn--ghost u-btn" (click)="secBorrar.set(null)">Cancelar</button>
+        <button type="button" class="btn u-btn cfg-btn-del" (click)="confirmarEliminarSeccion()">Eliminar</button>
+      </div>
+    </div>
+  </div>
+}

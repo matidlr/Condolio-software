@@ -24,6 +24,34 @@ export interface CrearConsorcio {
   longitud?: number | null;
 }
 
+export interface ConsorcioDetalle {
+  id: string;
+  nombre: string;
+  tipo: TipoConsorcio;
+  direccion: string;
+  localidad?: string | null;
+  provincia?: string | null;
+  pais: string;
+  codigoPostal?: string | null;
+  cuit?: string | null;
+  latitud?: number | null;
+  longitud?: number | null;
+  cantidadUnidades: number;
+}
+
+export interface ActualizarConsorcio {
+  nombre: string;
+  tipo: TipoConsorcio;
+  direccion: string;
+  localidad?: string | null;
+  provincia?: string | null;
+  pais?: string | null;
+  codigoPostal?: string | null;
+  cuit?: string | null;
+  latitud?: number | null;
+  longitud?: number | null;
+}
+
 export const TIPOS_CONSORCIO: { value: TipoConsorcio; label: string; desc: string }[] = [
   {
     value: 'EdificioResidencial', label: 'Edificio residencial',
