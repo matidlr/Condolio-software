@@ -1,7 +1,7 @@
 <div class="pt">
   <header class="pt-top">
     @if (esSubvista()) {
-      <button type="button" class="pt-back" (click)="ir('entradas')">‹ Atrás</button>
+      <button type="button" class="pt-back" (click)="volver()">‹ Atrás</button>
     } @else { <span class="pt-back"></span> }
     <div class="pt-top__t">
       <b>{{ tituloVista() }}</b>
@@ -295,13 +295,189 @@
         }
       }
 
-      <!-- ============ PAQUETERÍA ============ -->
+      <!-- ============ PAQUETERÍA (hub) ============ -->
       @case ('paqueteria') {
-        <div class="pt-idle">
-          <div class="pt-idle__ic">📦</div>
-          <h1>Paquetería</h1>
-          <p>Pronto vas a poder registrar entregas de paquetes para las unidades desde acá.</p>
+        <div class="pt-stats">
+          <div><b class="pt-stats--warn">{{ pqResumen().porEntregar }}</b><small>Por entregar</small></div>
+          <div><b>{{ pqResumen().llegaronHoy }}</b><small>Llegaron hoy</small></div>
+          <div><b>{{ pqResumen().entregadosHoy }}</b><small>Entregados hoy</small></div>
         </div>
+
+        <p class="pt-sec">Paquetería</p>
+        <button type="button" class="pt-card pt-card--pq" (click)="ir('pq-nuevo')">
+          <span class="pt-card__ic pt-card__ic--pq">📦</span>
+          <span class="pt-card__b"><b>Nuevo paquete</b><small>Registrá un paquete que llega</small></span>
+          <span class="pt-card__go">›</span>
+        </button>
+        <button type="button" class="pt-card" (click)="ir('pq-entregar')">
+          <span class="pt-card__ic pt-card__ic--pqok">📬</span>
+          <span class="pt-card__b"><b>Entregar paquete</b><small>Entregáselo a un residente</small></span>
+          @if (pqResumen().porEntregar > 0) { <span class="pt-pill">{{ pqResumen().porEntregar }}</span> }
+          <span class="pt-card__go">›</span>
+        </button>
+
+        <p class="pt-sec">Bitácora</p>
+        <button type="button" class="pt-card" (click)="ir('pq-registro')">
+          <span class="pt-card__ic">📖</span>
+          <span class="pt-card__b"><b>Registro de paquetería</b><small>Historial de llegadas y entregas</small></span>
+          <span class="pt-card__go">›</span>
+        </button>
+      }
+
+      <!-- ============ NUEVO PAQUETE ============ -->
+      @case ('pq-nuevo') {
+        <div class="pt-form">
+          <p class="pt-sec">Llegada</p>
+          <div class="pt-row2">
+            <input class="pt-input" type="date" [ngModel]="nuevoPq().fecha" (ngModelChange)="setPq('fecha', $event)" />
+            <input class="pt-input" type="time" [ngModel]="nuevoPq().hora" (ngModelChange)="setPq('hora', $event)" />
+          </div>
+
+          <p class="pt-sec">Tipo de paquete</p>
+          <div class="pt-tiles pt-tiles--3">
+            @for (t of tiposPaquete; track t.value) {
+              <button type="button" class="pt-tile" [class.is-sel]="nuevoPq().tipo === t.value"
+                (click)="setPq('tipo', t.value)">{{ t.label }}</button>
+            }
+          </div>
+
+          <p class="pt-sec">Cantidad</p>
+          <div class="pt-stepper">
+            <button type="button" (click)="setPq('cantidad', nuevoPq().cantidad > 1 ? nuevoPq().cantidad - 1 : 1)">−</button>
+            <b>{{ nuevoPq().cantidad }}</b>
+            <button type="button" (click)="setPq('cantidad', nuevoPq().cantidad + 1)">+</button>
+          </div>
+
+          <p class="pt-sec">Transportista <em class="pt-req">obligatorio</em></p>
+          <select class="pt-input" [ngModel]="nuevoPq().transportista" (ngModelChange)="setPq('transportista', $event)">
+            <option [ngValue]="null" disabled>Seleccionar…</option>
+            @for (t of transportistas; track t) { <option [ngValue]="t">{{ t }}</option> }
+          </select>
+
+          <p class="pt-sec">Unidad <em class="pt-req">obligatorio</em></p>
+          <select class="pt-input" [ngModel]="nuevoPq().unidadId" (ngModelChange)="setPq('unidadId', $event)">
+            <option [ngValue]="null" disabled>Seleccionar…</option>
+            @for (u of unidades(); track u.id) {
+              <option [ngValue]="u.id">{{ u.nombre }}@if (u.contacto) { — {{ u.contacto }} }</option>
+            }
+          </select>
+
+          <p class="pt-sec">Nota (opcional)</p>
+          <input class="pt-input" placeholder="Descripción, casillero, etc."
+            [ngModel]="nuevoPq().descripcion" (ngModelChange)="setPq('descripcion', $event)" />
+
+          <button type="button" class="pt-btn pt-btn--primary pt-form__submit"
+            [disabled]="!nuevoPqValido() || guardandoPq()" (click)="crearPaquete()">
+            {{ guardandoPq() ? 'Creando…' : 'Crear paquete' }}
+          </button>
+        </div>
+      }
+
+      <!-- ============ ENTREGAR PAQUETE ============ -->
+      @case ('pq-entregar') {
+        @if (entregaUnidad(); as un) {
+          <div class="pt-ecard">
+            <span class="pt-ecard__ic">🏠</span>
+            <div><small>UNIDAD</small><b>{{ un }}</b>
+              <em>{{ pqSeleccionados().size }} {{ pqSeleccionados().size === 1 ? 'paquete seleccionado' : 'paquetes seleccionados' }}</em></div>
+          </div>
+
+          <p class="pt-daygroup"><span class="pt-num">1</span> PAQUETES A ENTREGAR <b>{{ entregaItems().length }}</b></p>
+          <ul class="pt-list">
+            @for (p of entregaItems(); track p.id) {
+              <li class="pt-pk" [class.is-on]="pqSeleccionados().has(p.id)" (click)="togglePq(p.id)">
+                <span class="pt-pk__chk">{{ pqSeleccionados().has(p.id) ? '✓' : '' }}</span>
+                <span class="pt-pk__ic">📦</span>
+                <div class="pt-pk__b">
+                  <b>{{ p.transportista || labelTipoPq(p.tipo) }}</b>
+                  <small>{{ horaPq(p.llegadaUtc) }}@if (p.cantidad > 1) { · {{ p.cantidad }} bultos }</small>
+                </div>
+              </li>
+            }
+          </ul>
+
+          <p class="pt-daygroup"><span class="pt-num">2</span> ¿QUIÉN RECIBE?</p>
+          @if (residentesUnidad().length === 0) {
+            <div class="pt-warn">
+              <span>🙍</span>
+              <p>Esta unidad actualmente no tiene residentes asignados</p>
+            </div>
+          } @else {
+            <div class="pt-tiles">
+              @for (r of residentesUnidad(); track r.nombre) {
+                <button type="button" class="pt-tile" [class.is-sel]="quienRecibe() === r.nombre"
+                  (click)="quienRecibe.set(r.nombre)"><span>🙍</span>{{ r.nombre }}</button>
+              }
+            </div>
+
+            <button type="button" class="pt-btn pt-btn--primary pt-form__submit"
+              [disabled]="!puedeEntregar()" (click)="confirmarEntrega()">
+              {{ entregando() ? 'Entregando…' : 'Confirmar entrega' }}
+            </button>
+          }
+        } @else {
+          <div class="pt-search2">
+            <span>⌕</span>
+            <input placeholder="Buscar por unidad, residente o transportista…"
+              [ngModel]="busquedaPq()" (ngModelChange)="busquedaPq.set($event)" />
+          </div>
+          @if (cargandoPq()) { <p class="pt-loading">Cargando…</p> }
+          @else if (pendientesVisible().length === 0) {
+            <div class="pt-idle"><div class="pt-idle__ic pt-idle__ic--ok">✓</div><h1>Nada por entregar</h1><p>No hay paquetes esperando en la caseta.</p></div>
+          } @else {
+            <p class="pt-daygroup">{{ pendientesVisible().length }} {{ pendientesVisible().length === 1 ? 'paquete' : 'paquetes' }} en caseta</p>
+            <ul class="pt-list">
+              @for (p of pendientesVisible(); track p.id) {
+                <li class="pt-pk" (click)="abrirEntrega(p.unidadNombre)">
+                  <span class="pt-pk__ic">📦</span>
+                  <div class="pt-pk__b">
+                    <b>{{ p.unidadNombre }}</b>
+                    <small>{{ contactoDe(p.unidadNombre) || '—' }} · {{ p.transportista || labelTipoPq(p.tipo) }}</small>
+                  </div>
+                  <small class="pt-pk__t">{{ horaPq(p.llegadaUtc) }}</small>
+                  <span class="pt-card__go">›</span>
+                </li>
+              }
+            </ul>
+          }
+        }
+      }
+
+      <!-- ============ REGISTRO DE PAQUETERÍA ============ -->
+      @case ('pq-registro') {
+        <div class="pt-monthnav">
+          <button type="button" (click)="cambiarPqMes(-1)">‹</button>
+          <div><small>REGISTRO MENSUAL</small><b>{{ pqMesLabel() }}</b></div>
+          <button type="button" (click)="cambiarPqMes(1)">›</button>
+        </div>
+        <div class="pt-search2">
+          <span>⌕</span>
+          <input placeholder="Unidad o transportista…" [ngModel]="busquedaPq()" (ngModelChange)="busquedaPq.set($event)" />
+        </div>
+
+        @if (cargandoPq()) { <p class="pt-loading">Cargando…</p> }
+        @else if (pqRegistroVisible().length === 0) {
+          <div class="pt-idle"><div class="pt-idle__ic">📖</div><h1>Sin registros</h1><p>No hubo movimientos este mes.</p></div>
+        } @else {
+          @for (g of pqRegistroVisible(); track g.label) {
+            <p class="pt-daygroup">{{ g.label }} <b>{{ g.items.length }}</b></p>
+            <ul class="pt-list">
+              @for (p of g.items; track p.id) {
+                <li class="pt-pk">
+                  <span class="pt-pk__ic">📦</span>
+                  <div class="pt-pk__b">
+                    <b>{{ p.unidadNombre }}</b>
+                    <small>{{ p.transportista || labelTipoPq(p.tipo) }}
+                      @if (p.cantidad > 1) { · {{ p.cantidad }} bultos }</small>
+                  </div>
+                  <span class="pt-pk__estado" [class.is-ok]="p.estado === 'Entregado'">
+                    {{ p.estado === 'Entregado' ? '✓ Entregado' : 'En caseta' }}
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+        }
       }
 
       <!-- ============ UNIDADES ============ -->

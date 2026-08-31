@@ -70,6 +70,7 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Contacto> Contactos => Set<Contacto>();
     public DbSet<Condolio.Domain.Personal.MiembroPersonal> Personal => Set<Condolio.Domain.Personal.MiembroPersonal>();
     public DbSet<Condolio.Domain.Personal.TurnoPorteria> TurnosPorteria => Set<Condolio.Domain.Personal.TurnoPorteria>();
+    public DbSet<Condolio.Domain.Paqueteria.Paquete> Paquetes => Set<Condolio.Domain.Paqueteria.Paquete>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -421,6 +422,18 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.NotasCierre).HasMaxLength(1000);
             e.HasIndex(x => new { x.CredencialUsuarioId, x.FinUtc });
             e.HasIndex(x => new { x.ConsorcioId, x.InicioUtc });
+        });
+
+        builder.Entity<Condolio.Domain.Paqueteria.Paquete>(e =>
+        {
+            e.Property(x => x.UnidadNombre).HasMaxLength(120).IsRequired();
+            e.Property(x => x.Transportista).HasMaxLength(120);
+            e.Property(x => x.Descripcion).HasMaxLength(500);
+            e.Property(x => x.RegistradoPorNombre).HasMaxLength(240);
+            e.Property(x => x.EntregadoPorNombre).HasMaxLength(240);
+            e.Property(x => x.RetiradoPorNombre).HasMaxLength(240);
+            e.HasIndex(x => new { x.ConsorcioId, x.Estado, x.LlegadaUtc });
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
         });
     }
 

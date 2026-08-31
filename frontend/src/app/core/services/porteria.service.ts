@@ -40,7 +40,40 @@ export interface EntradaManual {
   documento?: string | null;
 }
 
-export interface UnidadRef { id: string; nombre: string; }
+export interface UnidadRef { id: string; nombre: string; contacto?: string | null; }
+
+export type TipoPaquete = 'Paquete' | 'Correo' | 'Otro';
+export type EstadoPaquete = 'EnRecepcion' | 'Entregado';
+export interface Paquete {
+  id: string;
+  unidadId: string;
+  unidadNombre: string;
+  tipo: TipoPaquete;
+  cantidad: number;
+  transportista?: string | null;
+  descripcion?: string | null;
+  estado: EstadoPaquete;
+  llegadaUtc: string;
+  entregaUtc?: string | null;
+  registradoPorNombre: string;
+  entregadoPorNombre?: string | null;
+  retiradoPorNombre?: string | null;
+}
+export interface ResumenPaqueteria { porEntregar: number; llegaronHoy: number; entregadosHoy: number; }
+export interface RegistrarPaquete {
+  unidadId: string;
+  tipo: TipoPaquete;
+  cantidad: number;
+  transportista?: string | null;
+  descripcion?: string | null;
+  llegadaLocal?: string | null;
+}
+
+export const TRANSPORTISTAS = [
+  'Mercado Libre', 'Correo Argentino', 'OCA', 'Andreani', 'Cruz del Sur',
+  'Vía Cargo', 'Urbano Express', 'Integra Retail (Fravega/Garbarino)', 'DHL', 'FedEx',
+  'Entrega particular', 'Otro',
+];
 
 export interface PersonalTurno { id: string; nombre: string; apellido: string; tipo: string; }
 export interface TurnoActual { id: string; miembroPersonalId: string; personalNombre: string; inicioUtc: string; }
@@ -67,6 +100,19 @@ export class PorteriaService {
   unidades(): Observable<UnidadRef[]> { return this.http.get<UnidadRef[]>(`${this.base}/unidades`); }
   unidad(id: string): Observable<UnidadDetalle> { return this.http.get<UnidadDetalle>(`${this.base}/unidades/${id}`); }
   alertas(): Observable<{ anuncios: any[] }> { return this.http.get<{ anuncios: any[] }>(`${this.base}/alertas`); }
+
+  paqueteResumen(): Observable<ResumenPaqueteria> { return this.http.get<ResumenPaqueteria>(`${this.base}/paquetes/resumen`); }
+  paquetes(estado?: EstadoPaquete, q = '', anio = 0, mes = 0): Observable<{ paquetes: Paquete[] }> {
+    const params: Record<string, string | number> = { q, anio, mes };
+    if (estado) params['estado'] = estado;
+    return this.http.get<{ paquetes: Paquete[] }>(`${this.base}/paquetes`, { params });
+  }
+  registrarPaquete(dto: RegistrarPaquete): Observable<Paquete> {
+    return this.http.post<Paquete>(`${this.base}/paquetes`, dto);
+  }
+  entregarPaquete(id: string, retiradoPor: string | null): Observable<Paquete> {
+    return this.http.post<Paquete>(`${this.base}/paquetes/${id}/entregar`, { retiradoPor });
+  }
 
   personalCaseta(): Observable<PersonalTurno[]> { return this.http.get<PersonalTurno[]>(`${this.base}/personal`); }
   turnoActual(): Observable<TurnoActual | null> { return this.http.get<TurnoActual | null>(`${this.base}/turno`); }

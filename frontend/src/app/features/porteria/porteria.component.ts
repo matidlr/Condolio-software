@@ -5,19 +5,27 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import {
-  Bitacora, EntradaManual, PersonalTurno, PorteriaContexto, PorteriaService, RegistroBitacora,
-  ResumenAcceso, TurnoActual, UnidadDetalle, UnidadRef, Verificacion,
+  Bitacora, EntradaManual, Paquete, PersonalTurno, PorteriaContexto, PorteriaService, RegistrarPaquete,
+  RegistroBitacora, ResumenAcceso, ResumenPaqueteria, TipoPaquete, TRANSPORTISTAS, TurnoActual,
+  UnidadDetalle, UnidadRef, Verificacion,
 } from '../../core/services/porteria.service';
 import { LABEL_TIPO_PERSONAL, TipoPersonal, TIPOS_PERSONAL } from '../../core/services/personal.service';
 import { ICON_VISITA, LABEL_VISITA, TIPOS_VEHICULO, TIPOS_VISITA } from '../../core/models/pase-acceso.models';
 
 type Vista =
   | 'inicio' | 'entradas' | 'escanear' | 'manual' | 'salidas' | 'bitacora'
-  | 'paqueteria' | 'unidades' | 'config';
+  | 'paqueteria' | 'pq-nuevo' | 'pq-entregar' | 'pq-registro' | 'unidades' | 'config';
 type Tab = 'inicio' | 'entradas' | 'paqueteria' | 'unidades' | 'config';
 
 const LETRAS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 const NUMEROS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'del', '0', 'clear'];
+
+interface NuevoPaquete {
+  fecha: string; hora: string;
+  tipo: TipoPaquete; cantidad: number;
+  transportista: string | null; unidadId: string | null;
+  descripcion: string | null;
+}
 
 @Component({
   selector: 'app-porteria',
@@ -51,13 +59,17 @@ export class PorteriaComponent implements OnDestroy {
     return ((n[0]?.[0] ?? 'P') + (n[1]?.[0] ?? '')).toUpperCase();
   });
 
+  private subEntradas = ['escanear', 'manual', 'salidas', 'bitacora'];
+  private subPaq = ['pq-nuevo', 'pq-entregar', 'pq-registro'];
+
   tabActiva = computed<Tab>(() => {
     const v = this.vista();
-    if (v === 'entradas' || v === 'escanear' || v === 'manual' || v === 'salidas' || v === 'bitacora') return 'entradas';
+    if (v === 'entradas' || this.subEntradas.includes(v)) return 'entradas';
+    if (this.subPaq.includes(v)) return 'paqueteria';
     return v as Tab;
   });
-  esSubvista = computed(() =>
-    ['escanear', 'manual', 'salidas', 'bitacora'].includes(this.vista()));
+  esSubvista = computed(() => this.subEntradas.includes(this.vista()) || this.subPaq.includes(this.vista()));
+  private volverA = computed<Vista>(() => this.subPaq.includes(this.vista()) ? 'paqueteria' : 'entradas');
 
   tituloVista = computed(() => {
     switch (this.vista()) {
@@ -67,7 +79,10 @@ export class PorteriaComponent implements OnDestroy {
       case 'manual': return 'Nueva entrada';
       case 'salidas': return 'Registrar salidas';
       case 'bitacora': return 'Bitácora digital';
-      case 'paqueteria': return 'Paquetería';
+      case 'paqueteria': return 'Administración de paquetería';
+      case 'pq-nuevo': return 'Nuevo paquete';
+      case 'pq-entregar': return 'Entregar paquete';
+      case 'pq-registro': return 'Registro de paquetería';
       case 'unidades': return 'Unidades';
       case 'config': return 'Configuración';
     }
@@ -292,6 +307,181 @@ export class PorteriaComponent implements OnDestroy {
 
   nombre = computed(() => this.ctx()?.casetaNombre ?? 'Portería');
 
+  // ================= paquetería =================
+  transportistas = TRANSPORTISTAS;
+  tiposPaquete: { value: TipoPaquete; label: string }[] = [
+    { value: 'Paquete', label: 'Paquete' },
+    { value: 'Correo', label: 'Correo / sobre' },
+    { value: 'Otro', label: 'Otro' },
+  ];
+
+  pqResumen = signal<ResumenPaqueteria>({ porEntregar: 0, llegaronHoy: 0, entregadosHoy: 0 });
+  pqPendientes = signal<Paquete[]>([]);
+  pqRegistro = signal<Paquete[]>([]);
+  cargandoPq = signal(false);
+  pqMes = signal(new Date().getMonth() + 1);
+  pqAnio = signal(new Date().getFullYear());
+  busquedaPq = signal('');
+
+  nuevoPq = signal<NuevoPaquete>(this.nuevoPqVacio());
+  guardandoPq = signal(false);
+
+  // entrega
+  entregaUnidad = signal<string | null>(null);       // nombre de unidad
+  pqSeleccionados = signal<Set<string>>(new Set());
+  residentesUnidad = signal<{ nombre: string; rol: string }[]>([]);
+  quienRecibe = signal('');
+  entregando = signal(false);
+
+  private nuevoPqVacio(): NuevoPaquete {
+    const n = new Date();
+    const p = (x: number) => String(x).padStart(2, '0');
+    return {
+      fecha: `${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())}`,
+      hora: `${p(n.getHours())}:${p(n.getMinutes())}`,
+      tipo: 'Paquete', cantidad: 1, transportista: null, unidadId: null, descripcion: null,
+    };
+  }
+  setPq<K extends keyof NuevoPaquete>(k: K, v: NuevoPaquete[K]): void {
+    this.nuevoPq.update((e) => ({ ...e, [k]: v }));
+  }
+  nuevoPqValido = computed(() => {
+    const p = this.nuevoPq();
+    return !!p.unidadId && !!p.transportista && p.cantidad >= 1;
+  });
+  nuevoPqUnidadLabel = computed(() => {
+    const id = this.nuevoPq().unidadId;
+    return id ? (this.unidades().find((u) => u.id === id)?.nombre ?? 'Seleccionar') : 'Seleccionar';
+  });
+
+  pendientesVisible = computed(() => {
+    const q = this.busquedaPq().trim().toLowerCase();
+    if (!q) return this.pqPendientes();
+    return this.pqPendientes().filter((p) =>
+      p.unidadNombre.toLowerCase().includes(q)
+      || (p.transportista ?? '').toLowerCase().includes(q)
+      || (this.contactoDe(p.unidadNombre) ?? '').toLowerCase().includes(q));
+  });
+  contactoDe(unidadNombre: string): string | null {
+    return this.unidades().find((u) => u.nombre === unidadNombre)?.contacto ?? null;
+  }
+  entregaItems = computed(() => this.pqPendientes().filter((p) => p.unidadNombre === this.entregaUnidad()));
+  puedeEntregar = computed(() =>
+    this.pqSeleccionados().size > 0 && this.quienRecibe().trim().length > 0 && !this.entregando());
+
+  pqRegistroVisible = computed(() => {
+    const q = this.busquedaPq().trim().toLowerCase();
+    const l = q ? this.pqRegistro().filter((p) =>
+      p.unidadNombre.toLowerCase().includes(q) || (p.transportista ?? '').toLowerCase().includes(q))
+      : this.pqRegistro();
+    const grupos = new Map<string, Paquete[]>();
+    for (const p of l) {
+      const k = p.llegadaUtc.slice(0, 10);
+      (grupos.get(k) ?? grupos.set(k, []).get(k)!).push(p);
+    }
+    const hoy = new Date().toISOString().slice(0, 10);
+    return [...grupos.entries()].map(([k, items]) => ({
+      label: k === hoy ? 'Hoy' : new Date(k + 'T12:00:00').toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }),
+      items,
+    }));
+  });
+  pqMesLabel = computed(() =>
+    new Date(this.pqAnio(), this.pqMes() - 1, 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }));
+
+  cargarPqResumen(): void {
+    this.api.paqueteResumen().subscribe({ next: (r) => this.pqResumen.set(r), error: () => {} });
+  }
+  cargarPendientes(): void {
+    this.cargandoPq.set(true);
+    this.api.paquetes('EnRecepcion').subscribe({
+      next: (r) => { this.pqPendientes.set(r.paquetes); this.cargandoPq.set(false); },
+      error: () => { this.cargandoPq.set(false); this.toasts.error('No pudimos cargar los paquetes.'); },
+    });
+  }
+  cargarRegistroPq(): void {
+    this.cargandoPq.set(true);
+    this.api.paquetes(undefined, '', this.pqAnio(), this.pqMes()).subscribe({
+      next: (r) => { this.pqRegistro.set(r.paquetes); this.cargandoPq.set(false); },
+      error: () => { this.cargandoPq.set(false); this.toasts.error('No pudimos cargar el registro.'); },
+    });
+  }
+  cambiarPqMes(delta: number): void {
+    let m = this.pqMes() + delta, a = this.pqAnio();
+    if (m < 1) { m = 12; a--; }
+    if (m > 12) { m = 1; a++; }
+    this.pqMes.set(m); this.pqAnio.set(a);
+    this.cargarRegistroPq();
+  }
+
+  crearPaquete(): void {
+    if (!this.nuevoPqValido() || this.guardandoPq()) return;
+    this.guardandoPq.set(true);
+    const p = this.nuevoPq();
+    const dto: RegistrarPaquete = {
+      unidadId: p.unidadId!,
+      tipo: p.tipo,
+      cantidad: p.cantidad,
+      transportista: p.transportista,
+      descripcion: p.descripcion?.trim() || null,
+      llegadaLocal: `${p.fecha}T${p.hora}:00`,
+    };
+    this.api.registrarPaquete(dto).subscribe({
+      next: () => {
+        this.guardandoPq.set(false);
+        this.toasts.exito('Paquete registrado');
+        this.cargarPqResumen();
+        this.vista.set('paqueteria');
+      },
+      error: (e) => { this.guardandoPq.set(false); this.toasts.error(e?.error?.message ?? 'No se pudo registrar.'); },
+    });
+  }
+
+  abrirEntrega(unidadNombre: string): void {
+    this.entregaUnidad.set(unidadNombre);
+    this.pqSeleccionados.set(new Set(this.pqPendientes().filter((p) => p.unidadNombre === unidadNombre).map((p) => p.id)));
+    this.quienRecibe.set('');
+    this.residentesUnidad.set([]);
+    const uid = this.pqPendientes().find((p) => p.unidadNombre === unidadNombre)?.unidadId;
+    if (uid) this.api.unidad(uid).subscribe({ next: (u) => this.residentesUnidad.set(u.residentes), error: () => {} });
+    this.vista.set('pq-entregar');
+  }
+  togglePq(id: string): void {
+    this.pqSeleccionados.update((s) => {
+      const n = new Set(s);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  }
+  confirmarEntrega(): void {
+    if (!this.puedeEntregar()) return;
+    this.entregando.set(true);
+    const ids = [...this.pqSeleccionados()];
+    const quien = this.quienRecibe().trim() || null;
+    let hechos = 0;
+    for (const id of ids) {
+      this.api.entregarPaquete(id, quien).subscribe({
+        next: () => {
+          if (++hechos === ids.length) {
+            this.entregando.set(false);
+            this.toasts.exito(ids.length === 1 ? 'Paquete entregado' : `${ids.length} paquetes entregados`);
+            this.cargarPqResumen();
+            this.cargarPendientes();
+            this.vista.set('paqueteria');
+          }
+        },
+        error: (e) => { this.entregando.set(false); this.toasts.error(e?.error?.message ?? 'No se pudo entregar.'); },
+      });
+    }
+  }
+  horaPq(iso: string): string {
+    const d = new Date(iso);
+    const hoy = new Date();
+    const mismoDia = d.toDateString() === hoy.toDateString();
+    const hh = d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+    return mismoDia ? `Hoy · ${hh}` : `${d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })} · ${hh}`;
+  }
+  labelTipoPq(t: TipoPaquete): string { return this.tiposPaquete.find((x) => x.value === t)?.label ?? t; }
+
   get ahoraHora(): string {
     return new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
   }
@@ -324,6 +514,15 @@ export class PorteriaComponent implements OnDestroy {
     if (v === 'manual') this.em.set(this.emVacia());
     if (v === 'inicio') { this.cargarResumen(); this.cargarTurno(); this.cargarAlertas(); }
     if (v === 'entradas') this.cargarResumen();
+    if (v === 'paqueteria') this.cargarPqResumen();
+    if (v === 'pq-nuevo') this.nuevoPq.set(this.nuevoPqVacio());
+    if (v === 'pq-entregar') { this.entregaUnidad.set(null); this.cargarPendientes(); }
+    if (v === 'pq-registro') this.cargarRegistroPq();
+  }
+
+  volver(): void {
+    if (this.vista() === 'pq-entregar' && this.entregaUnidad()) { this.entregaUnidad.set(null); return; }
+    this.ir(this.volverA());
   }
 
   // ---- escáner ----

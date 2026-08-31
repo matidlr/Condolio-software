@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using Condolio.Application.Accesos;
 using Condolio.Application.Comunicaciones;
+using Condolio.Application.Paqueteria;
+using Condolio.Domain.Paqueteria;
 using Condolio.Infrastructure.Identity;
 using Condolio.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
@@ -19,13 +21,16 @@ public class PorteriaAppController : ApiControllerBase
     private readonly IPaseAccesoService _pases;
     private readonly IAccesoAdminService _accesos;
     private readonly IAnuncioService _anuncios;
+    private readonly IPaqueteriaService _paquetes;
 
-    public PorteriaAppController(CondolioDbContext db, IPaseAccesoService pases, IAccesoAdminService accesos, IAnuncioService anuncios)
+    public PorteriaAppController(CondolioDbContext db, IPaseAccesoService pases, IAccesoAdminService accesos,
+        IAnuncioService anuncios, IPaqueteriaService paquetes)
     {
         _db = db;
         _pases = pases;
         _accesos = accesos;
         _anuncios = anuncios;
+        _paquetes = paquetes;
     }
 
     private string Uid => User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
@@ -151,7 +156,16 @@ public class PorteriaAppController : ApiControllerBase
         var us = await _db.Unidades.IgnoreQueryFilters()
             .Where(u => u.ConsorcioId == c.consorcioId)
             .OrderBy(u => u.Nombre)
-            .Select(u => new { u.Id, u.Nombre })
+            .Select(u => new
+            {
+                u.Id,
+                u.Nombre,
+                Contacto = _db.UnidadPersonas.IgnoreQueryFilters()
+                    .Where(p => p.UnidadId == u.Id)
+                    .OrderByDescending(p => p.EsContactoPrincipal)
+                    .Select(p => (p.Nombre + " " + p.Apellido).Trim())
+                    .FirstOrDefault(),
+            })
             .ToListAsync(ct);
         return Ok(us);
     }
@@ -234,6 +248,50 @@ public class PorteriaAppController : ApiControllerBase
         foreach (var a in abiertos) { a.FinUtc = ahora; a.NotasCierre = nota; }
         await _db.SaveChangesAsync(ct);
         return NoContent();
+    }
+
+    // ---- Paquetería ----
+
+    [HttpGet("paquetes/resumen")]
+    public async Task<IActionResult> ResumenPaquetes(CancellationToken ct)
+    {
+        var ctx = await CtxAsync(ct);
+        if (ctx is not { } c) return NotFound();
+        return ToResult(await _paquetes.ResumenAsync(c.consorcioId, ct));
+    }
+
+    [HttpGet("paquetes")]
+    public async Task<IActionResult> ListarPaquetes(
+        [FromQuery] EstadoPaquete? estado, [FromQuery] string? q,
+        [FromQuery] int anio, [FromQuery] int mes, CancellationToken ct)
+    {
+        var ctx = await CtxAsync(ct);
+        if (ctx is not { } c) return NotFound();
+        return ToResult(await _paquetes.ListarAsync(c.consorcioId, estado, q, anio, mes, ct));
+    }
+
+    [HttpGet("paquetes/{id:guid}")]
+    public async Task<IActionResult> ObtenerPaquete(Guid id, CancellationToken ct)
+    {
+        var ctx = await CtxAsync(ct);
+        if (ctx is not { } c) return NotFound();
+        return ToResult(await _paquetes.ObtenerAsync(c.consorcioId, id, ct));
+    }
+
+    [HttpPost("paquetes")]
+    public async Task<IActionResult> RegistrarPaquete(RegistrarPaqueteDto dto, CancellationToken ct)
+    {
+        var ctx = await CtxAsync(ct);
+        if (ctx is not { } c) return NotFound();
+        return ToResult(await _paquetes.RegistrarAsync(c.consorcioId, dto, c.registradoPor, ct));
+    }
+
+    [HttpPost("paquetes/{id:guid}/entregar")]
+    public async Task<IActionResult> EntregarPaquete(Guid id, EntregarPaqueteDto dto, CancellationToken ct)
+    {
+        var ctx = await CtxAsync(ct);
+        if (ctx is not { } c) return NotFound();
+        return ToResult(await _paquetes.EntregarAsync(c.consorcioId, id, dto, c.registradoPor, ct));
     }
 
     [HttpGet("unidades/{unidadId:guid}")]
