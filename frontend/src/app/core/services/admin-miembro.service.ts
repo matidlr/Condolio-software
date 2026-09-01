@@ -17,11 +17,13 @@ export const LABEL_AREA: Record<AreaAdmin, string> =
   Object.fromEntries(AREAS_ADMIN.map((a) => [a.value, a.label])) as Record<AreaAdmin, string>;
 
 export interface AdminMiembro {
-  usuarioId: string;
+  /** usuarioId de un miembro real, o "inv:{id}" de una invitación pendiente. */
+  id: string;
   nombre: string;
   email: string;
   esGeneral: boolean;
   esDueno: boolean;
+  pendiente: boolean;
   areas: AreaAdmin[];
 }
 
@@ -39,7 +41,7 @@ export class AdminMiembroService {
   cambiarRol(usuarioId: string, esGeneral: boolean, areas: AreaAdmin[]): Observable<AdminMiembro> {
     return this.http.put<AdminMiembro>(`${this.base}/${usuarioId}/rol`, { esGeneral, areas });
   }
-  quitar(usuarioId: string): Observable<void> {
-    return this.http.delete<void>(`${this.base}/${usuarioId}`);
+  quitar(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/${encodeURIComponent(id)}`);
   }
 }

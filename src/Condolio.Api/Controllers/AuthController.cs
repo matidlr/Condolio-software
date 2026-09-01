@@ -158,7 +158,8 @@ public class AuthController : ControllerBase
         if (!creado.Succeeded)
             return BadRequest(new { message = string.Join(" ", creado.Errors.Select(e => e.Description)) });
 
-        await CrearTenantAsync(user, req.Nombre, req.Apellido, email);
+        if (!await AceptarInvitacionAdminAsync(user, email))
+            await CrearTenantAsync(user, req.Nombre, req.Apellido, email);
 
         await GenerarYEnviarCodigo(user);
         await _users.UpdateAsync(user);
@@ -239,10 +240,40 @@ public class AuthController : ControllerBase
         if (!creado.Succeeded)
             return BadRequest(new { message = string.Join(" ", creado.Errors.Select(e => e.Description)) });
 
-        await CrearTenantAsync(nuevo, nombre, apellido, email);
+        if (!await AceptarInvitacionAdminAsync(nuevo, email))
+            await CrearTenantAsync(nuevo, nombre, apellido, email);
         await _users.UpdateAsync(nuevo);
 
         return Ok(await ConstruirRespuesta(nuevo));
+    }
+
+    /// <summary>
+    /// Si hay una invitación de administrador pendiente para <paramref name="email"/>, une al usuario
+    /// como co-administrador del tenant que lo invitó (sin crear un tenant nuevo ni trial propio).
+    /// </summary>
+    private async Task<bool> AceptarInvitacionAdminAsync(ApplicationUser user, string email)
+    {
+        var invitacion = await _db.InvitacionesAdmin
+            .Where(i => i.Email == email && i.Estado == Condolio.Domain.Tenancy.EstadoInvitacionAdmin.Pendiente
+                && i.ExpiraUtc > DateTime.UtcNow)
+            .OrderByDescending(i => i.CreadoUtc)
+            .FirstOrDefaultAsync();
+        if (invitacion is null) return false;
+
+        await _users.AddToRoleAsync(user, Roles.Administrador);
+        user.AdministradorId = invitacion.AdministradorId;
+
+        _db.AdminMiembros.Add(new Condolio.Domain.Tenancy.AdminMiembro
+        {
+            AdministradorId = invitacion.AdministradorId,
+            UsuarioId = user.Id,
+            EsGeneral = invitacion.EsGeneral,
+            AreasCsv = invitacion.EsGeneral ? string.Empty : invitacion.AreasCsv,
+            EsDueno = false,
+        });
+        invitacion.Estado = Condolio.Domain.Tenancy.EstadoInvitacionAdmin.Aceptada;
+        await _db.SaveChangesAsync();
+        return true;
     }
 
     /// <summary>Crea el Administrador (tenant) para <paramref name="user"/>, lo asocia y arranca el trial.</summary>

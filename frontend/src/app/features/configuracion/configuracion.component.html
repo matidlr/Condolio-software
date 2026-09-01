@@ -120,21 +120,28 @@
 
           @if (cargandoAdmins()) { <p class="cfg-loading">Cargando…</p> }
           @else {
-            @for (m of admins(); track m.usuarioId) {
-              <div class="cfg-seccard">
+            @for (m of admins(); track m.id) {
+              <div class="cfg-seccard" [class.is-pending]="m.pendiente">
                 <span class="cfg-seccard__ic">{{ (m.nombre[0] || '?').toUpperCase() }}</span>
                 <div class="cfg-seccard__b">
-                  <b>{{ m.nombre }} @if (m.esDueno) { <em class="cfg-owner">dueño</em> }</b>
-                  <small>{{ m.email }}</small>
+                  <b>{{ m.pendiente ? m.email : m.nombre }}
+                    @if (m.esDueno) { <em class="cfg-owner">dueño</em> }
+                    @if (m.pendiente) { <em class="cfg-owner cfg-owner--pend">invitación pendiente</em> }
+                  </b>
+                  @if (!m.pendiente) { <small>{{ m.email }}</small> }
+                  @else { <small>Va a activarse cuando esta persona se registre con ese correo.</small> }
                 </div>
                 @if (m.esGeneral) {
                   <span class="cfg-chip">General</span>
                 } @else {
                   @for (a of m.areas; track a) { <span class="cfg-chip cfg-chip--area">{{ labelArea[a] }}</span> }
                 }
-                <button type="button" class="cfg-ic" (click)="abrirEditarAdmin(m)" aria-label="Editar rol">✎</button>
+                @if (!m.pendiente) {
+                  <button type="button" class="cfg-ic" (click)="abrirEditarAdmin(m)" aria-label="Editar rol">✎</button>
+                }
                 @if (!m.esDueno) {
-                  <button type="button" class="cfg-ic cfg-ic--del" (click)="adminBorrar.set(m)" aria-label="Quitar">🗑</button>
+                  <button type="button" class="cfg-ic cfg-ic--del" (click)="adminBorrar.set(m)"
+                    [attr.aria-label]="m.pendiente ? 'Cancelar invitación' : 'Quitar'">🗑</button>
                 }
               </div>
             }
@@ -151,10 +158,15 @@
           </div>
 
           @if (secciones().length === 0) {
-            <div class="cfg-soon">
-              <div class="cfg-soon__ic">🗂️</div>
-              <h2>Sin secciones</h2>
-              <p>Agrupá unidades por ubicación física para filtrar, comunicar y reportar por grupo.</p>
+            <div class="cfg-empty">
+              <div class="cfg-empty__ic">🏢</div>
+              <h3>Agrupá tus unidades por ubicación física</h3>
+              <p>Las secciones te permiten organizar unidades para filtrar, comunicar y reportar por grupo.</p>
+              <div class="cfg-empty__ex">
+                <span>🏗️ Torre A, Torre B, Torre C</span>
+                <i></i>
+                <span>📍 Calle Castaño, Calle Pino, Calle Cedro</span>
+              </div>
               <button type="button" class="btn btn--primary u-btn" (click)="abrirSeccion()">＋ Crear primera sección</button>
             </div>
           } @else {
@@ -306,7 +318,8 @@
           <label class="cfg-field cfg-field--full"><span>Correo electrónico</span>
             <input type="email" [ngModel]="adminEmail()" (ngModelChange)="adminEmail.set($event)"
               placeholder="persona@ejemplo.com" /></label>
-          <p class="cfg-hint">Si el correo ya tiene una cuenta en Condolio, se agrega como administrador.</p>
+          <p class="cfg-hint">Si ya tiene cuenta, se agrega al toque. Si no, le llega una invitación por correo
+            y queda como administrador apenas se registre con ese mail.</p>
         }
 
         <span class="cfg-field__label" style="margin-top:14px">Rol</span>
@@ -343,11 +356,18 @@
 @if (adminBorrar(); as m) {
   <div class="cfg-ov" (click)="adminBorrar.set(null)">
     <div class="cfg-dlg" (click)="$event.stopPropagation()">
-      <b>Quitar administrador</b>
-      <p>¿Sacar a <b>{{ m.nombre }}</b> del equipo de administradores? Va a perder el acceso a esta cuenta.</p>
+      @if (m.pendiente) {
+        <b>Cancelar invitación</b>
+        <p>¿Cancelar la invitación a <b>{{ m.email }}</b>? Si se registra después, va a crear su propia cuenta.</p>
+      } @else {
+        <b>Quitar administrador</b>
+        <p>¿Sacar a <b>{{ m.nombre }}</b> del equipo de administradores? Va a perder el acceso a esta cuenta.</p>
+      }
       <div class="cfg-dlg__btns">
         <button type="button" class="btn btn--ghost u-btn" (click)="adminBorrar.set(null)">Cancelar</button>
-        <button type="button" class="btn u-btn cfg-btn-del" (click)="confirmarBorrarAdmin()">Quitar</button>
+        <button type="button" class="btn u-btn cfg-btn-del" (click)="confirmarBorrarAdmin()">
+          {{ m.pendiente ? 'Cancelar invitación' : 'Quitar' }}
+        </button>
       </div>
     </div>
   </div>

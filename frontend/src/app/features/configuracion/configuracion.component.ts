@@ -327,13 +327,13 @@ export class ConfiguracionComponent {
     this.guardandoAdmin.set(true);
     const edit = this.adminEdit();
     const obs = edit
-      ? this.adminsApi.cambiarRol(edit.usuarioId, this.adminGeneral(), areas)
+      ? this.adminsApi.cambiarRol(edit.id, this.adminGeneral(), areas)
       : this.adminsApi.agregar(this.adminEmail().trim(), this.adminGeneral(), areas);
     obs.subscribe({
-      next: () => {
+      next: (r) => {
         this.guardandoAdmin.set(false);
         this.adminModal.set(false);
-        this.toasts.exito(edit ? 'Rol actualizado' : 'Administrador agregado');
+        this.toasts.exito(edit ? 'Rol actualizado' : (r?.pendiente ? 'Invitación enviada' : 'Administrador agregado'));
         this.admins.set([]);
         this.cargandoAdmins.set(false);
         this.cargarAdmins();
@@ -345,8 +345,8 @@ export class ConfiguracionComponent {
   confirmarBorrarAdmin(): void {
     const m = this.adminBorrar();
     if (!m) return;
-    this.adminsApi.quitar(m.usuarioId).subscribe({
-      next: () => { this.adminBorrar.set(null); this.toasts.exito('Administrador quitado'); this.admins.set([]); this.cargandoAdmins.set(false); this.cargarAdmins(); },
+    this.adminsApi.quitar(m.id).subscribe({
+      next: () => { this.adminBorrar.set(null); this.toasts.exito(m.pendiente ? 'Invitación cancelada' : 'Administrador quitado'); this.admins.set([]); this.cargandoAdmins.set(false); this.cargarAdmins(); },
       error: (e) => this.toasts.error(e?.error?.message ?? 'No se pudo quitar.'),
     });
   }

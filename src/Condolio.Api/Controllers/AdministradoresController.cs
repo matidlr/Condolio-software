@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Condolio.Application.Common;
 using Condolio.Application.Tenancy;
 using Condolio.Infrastructure.Identity;
@@ -27,6 +28,8 @@ public class AdministradoresController : ApiControllerBase
         return id != Guid.Empty;
     }
 
+    private string Uid => User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+
     [HttpGet]
     public async Task<IActionResult> Listar(CancellationToken ct) =>
         TieneTenant(out var id)
@@ -36,7 +39,7 @@ public class AdministradoresController : ApiControllerBase
     [HttpPost]
     public async Task<IActionResult> Agregar(AgregarAdminDto dto, CancellationToken ct) =>
         TieneTenant(out var id)
-            ? ToResult(await _miembros.AgregarAsync(id, dto, ct))
+            ? ToResult(await _miembros.AgregarAsync(id, Uid, dto, ct))
             : BadRequest(new { message = "Sin cuenta de administrador." });
 
     [HttpPut("{usuarioId}/rol")]
@@ -45,9 +48,9 @@ public class AdministradoresController : ApiControllerBase
             ? ToResult(await _miembros.CambiarRolAsync(id, usuarioId, dto, ct))
             : BadRequest(new { message = "Sin cuenta de administrador." });
 
-    [HttpDelete("{usuarioId}")]
-    public async Task<IActionResult> Quitar(string usuarioId, CancellationToken ct) =>
-        TieneTenant(out var id)
-            ? ToResult(await _miembros.QuitarAsync(id, usuarioId, ct))
+    [HttpDelete("{*id}")]
+    public async Task<IActionResult> Quitar(string id, CancellationToken ct) =>
+        TieneTenant(out var tenantId)
+            ? ToResult(await _miembros.QuitarAsync(tenantId, id, ct))
             : BadRequest(new { message = "Sin cuenta de administrador." });
 }
