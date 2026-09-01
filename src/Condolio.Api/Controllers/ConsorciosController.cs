@@ -11,8 +11,13 @@ namespace Condolio.Api.Controllers;
 public class ConsorciosController : ApiControllerBase
 {
     private readonly IConsorcioService _consorcios;
+    private readonly IPreferenciasConsorcioService _preferencias;
 
-    public ConsorciosController(IConsorcioService consorcios) => _consorcios = consorcios;
+    public ConsorciosController(IConsorcioService consorcios, IPreferenciasConsorcioService preferencias)
+    {
+        _consorcios = consorcios;
+        _preferencias = preferencias;
+    }
 
     [HttpGet]
     public async Task<IActionResult> Listar(CancellationToken ct) =>
@@ -37,4 +42,12 @@ public class ConsorciosController : ApiControllerBase
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Eliminar(Guid id, CancellationToken ct) =>
         ToResult(await _consorcios.EliminarAsync(id, ct));
+
+    [HttpGet("{id:guid}/preferencias")]
+    public async Task<IActionResult> Preferencias(Guid id, CancellationToken ct) =>
+        ToResult(await _preferencias.ObtenerAsync(id, ct));
+
+    [HttpPut("{id:guid}/preferencias")]
+    public async Task<IActionResult> GuardarPreferencias(Guid id, PreferenciasConsorcioDto dto, CancellationToken ct) =>
+        ToResult(await _preferencias.GuardarAsync(id, dto, ct));
 }

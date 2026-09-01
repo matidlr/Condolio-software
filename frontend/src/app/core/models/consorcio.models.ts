@@ -39,6 +39,12 @@ export interface ConsorcioDetalle {
   cantidadUnidades: number;
 }
 
+export interface PreferenciasConsorcio {
+  residentesPublican: boolean;
+  comentariosHabilitados: boolean;
+  anunciosSiemprePorCorreo: boolean;
+}
+
 export interface ActualizarConsorcio {
   nombre: string;
   tipo: TipoConsorcio;

@@ -700,6 +700,11 @@ public class MiPortalService : IMiPortalService
         if (string.IsNullOrWhiteSpace(cuerpo) && (imagenes is null || imagenes.Count == 0))
             return Result<AnuncioDto>.Fail("Escribí algo o agregá una imagen.");
 
+        var permitePublicar = await _db.PreferenciasConsorcio.IgnoreQueryFilters()
+            .Where(p => p.ConsorcioId == o.ConsorcioId).Select(p => (bool?)p.ResidentesPublican).FirstOrDefaultAsync(ct);
+        if (permitePublicar == false)
+            return Result<AnuncioDto>.Fail("La administración desactivó las publicaciones de residentes en el muro.");
+
         var res = await _anuncios.CrearAsync(o.ConsorcioId,
             new GuardarAnuncioDto(null, string.IsNullOrWhiteSpace(cuerpo) ? " " : cuerpo.Trim(),
                 CategoriaAnuncio.General, false, null, null, null), ct);
@@ -742,6 +747,12 @@ public class MiPortalService : IMiPortalService
     {
         var o = await OrigenAsync(usuarioId, ct);
         if (o is null) return Result.Fail("No tenés una unidad asignada.");
+
+        var permiteComentar = await _db.PreferenciasConsorcio.IgnoreQueryFilters()
+            .Where(p => p.ConsorcioId == o.ConsorcioId).Select(p => (bool?)p.ComentariosHabilitados).FirstOrDefaultAsync(ct);
+        if (permiteComentar == false)
+            return Result.Fail("La administración desactivó los comentarios en el muro.");
+
         return await _anuncios.ComentarAsync(o.ConsorcioId, anuncioId, texto, ct);
     }
 

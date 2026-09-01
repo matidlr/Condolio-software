@@ -74,6 +74,7 @@ public static class DependencyInjection
 
         // ---- Application plane ----
         services.AddScoped<IConsorcioService, ConsorcioService>();
+        services.AddScoped<Condolio.Application.Consorcios.IPreferenciasConsorcioService, Condolio.Infrastructure.Consorcios.PreferenciasConsorcioService>();
         services.AddScoped<IActividadUnidadService, ActividadUnidadService>();
         services.AddScoped<IUnidadService, UnidadService>();
         services.AddScoped<INotaUnidadService, NotaUnidadService>();

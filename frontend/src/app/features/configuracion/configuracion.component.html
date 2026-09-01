@@ -148,6 +148,61 @@
           }
         }
 
+        @case ('preferencias') {
+          <h2>Preferencias</h2>
+          <p class="cfg-sub">Activá o desactivá funciones y permisos de la comunidad.</p>
+
+          @if (cargandoPrefs()) { <p class="cfg-loading">Cargando…</p> }
+          @else if (prefs()) {
+            @if (prefs()!; as p) {
+            <div class="cfg-card">
+              <div class="cfg-pref__hd">
+                <span>📣 Anuncios y muro</span>
+                <small>Cómo interactúan los residentes con las publicaciones en la app.</small>
+              </div>
+
+              <div class="cfg-pref">
+                <div>
+                  <b>Permitir que los residentes creen publicaciones</b>
+                  <small>Si está desactivado, solo la administración puede publicar en el muro.</small>
+                </div>
+                <button type="button" class="cfg-sw" [class.is-on]="p.residentesPublican"
+                  [disabled]="guardandoPref() === 'residentesPublican'" (click)="togglePref('residentesPublican')">
+                  <i></i></button>
+              </div>
+
+              <div class="cfg-pref">
+                <div>
+                  <b>Permitir comentarios en publicaciones</b>
+                  <small>Si está desactivado, los residentes no pueden comentar las publicaciones.</small>
+                </div>
+                <button type="button" class="cfg-sw" [class.is-on]="p.comentariosHabilitados"
+                  [disabled]="guardandoPref() === 'comentariosHabilitados'" (click)="togglePref('comentariosHabilitados')">
+                  <i></i></button>
+              </div>
+
+              <div class="cfg-pref">
+                <div>
+                  <b>Enviar siempre por correo</b>
+                  <small>Cada publicación de la administración se manda además por email a todos los residentes.</small>
+                </div>
+                <button type="button" class="cfg-sw" [class.is-on]="p.anunciosSiemprePorCorreo"
+                  [disabled]="guardandoPref() === 'anunciosSiemprePorCorreo'" (click)="togglePref('anunciosSiemprePorCorreo')">
+                  <i></i></button>
+              </div>
+            </div>
+
+            <div class="cfg-card">
+              <div class="cfg-pref__hd">
+                <span>🚧 Más preferencias</span>
+                <small>Recordatorios de pago, acceso financiero, restricciones por morosidad y firma
+                  van a estar disponibles cuando se habilite el módulo de finanzas.</small>
+              </div>
+            </div>
+            }
+          }
+        }
+
         @case ('secciones') {
           <div class="cfg-hd2">
             <div>

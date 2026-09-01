@@ -13,12 +13,14 @@ public class AnuncioService : IAnuncioService
     private readonly CondolioDbContext _db;
     private readonly ITenantContext _tenant;
     private readonly INotificacionService _notificaciones;
+    private readonly IEmailSender _email;
 
-    public AnuncioService(CondolioDbContext db, ITenantContext tenant, INotificacionService notificaciones)
+    public AnuncioService(CondolioDbContext db, ITenantContext tenant, INotificacionService notificaciones, IEmailSender email)
     {
         _db = db;
         _tenant = tenant;
         _notificaciones = notificaciones;
+        _email = email;
     }
 
     public async Task<Result<AnuncioListaDto>> ListarAsync(Guid consorcioId, CancellationToken ct = default)
@@ -92,7 +94,52 @@ public class AnuncioService : IAnuncioService
             a.Cuerpo.Length > 140 ? a.Cuerpo[..140] + "…" : a.Cuerpo,
             "/portal/muro", excluirUsuarioId: _tenant.UsuarioId, ct: ct);
 
+        await NotificarPorCorreoSiCorrespondeAsync(consorcioId, a, ct);
+
         return Result<AnuncioDto>.Ok(Mapear(a, 0, 0, false));
+    }
+
+    /// <summary>Si la preferencia del consorcio lo pide y el autor es de la administración, manda el anuncio por mail.</summary>
+    private async Task NotificarPorCorreoSiCorrespondeAsync(Guid consorcioId, Anuncio a, CancellationToken ct)
+    {
+        try
+        {
+            var siempreMail = await _db.PreferenciasConsorcio.IgnoreQueryFilters()
+                .Where(p => p.ConsorcioId == consorcioId).Select(p => (bool?)p.AnunciosSiemprePorCorreo).FirstOrDefaultAsync(ct);
+            if (siempreMail != true) return;
+
+            // Los anuncios publicados por un residente no se blastean por mail.
+            var autorEsResidente = !string.IsNullOrEmpty(a.AutorUsuarioId)
+                && await _db.UnidadPersonas.IgnoreQueryFilters()
+                    .AnyAsync(p => p.Unidad.ConsorcioId == consorcioId && p.UsuarioId == a.AutorUsuarioId, ct);
+            if (autorEsResidente) return;
+
+            var consorcioNombre = await _db.Consorcios.IgnoreQueryFilters()
+                .Where(c => c.Id == consorcioId).Select(c => c.Nombre).FirstOrDefaultAsync(ct) ?? "tu comunidad";
+
+            var destinos = await _db.UnidadPersonas.IgnoreQueryFilters()
+                .Where(p => p.Unidad.ConsorcioId == consorcioId && p.Email != null && p.Email != "")
+                .Select(p => p.Email!)
+                .Distinct()
+                .ToListAsync(ct);
+
+            var titulo = string.IsNullOrWhiteSpace(a.Titulo) ? "Nuevo anuncio de la administración" : a.Titulo;
+            var cuerpoHtml = $"""
+                <div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;color:#1f2937">
+                  <p style="font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin:0 0 4px">{consorcioNombre}</p>
+                  <h1 style="font-size:20px;margin:0 0 12px">{titulo}</h1>
+                  <p style="white-space:pre-wrap;line-height:1.55">{System.Net.WebUtility.HtmlEncode(a.Cuerpo)}</p>
+                  <p style="font-size:13px;color:#6b7280;margin-top:20px">— {a.AutorNombre}</p>
+                </div>
+                """;
+
+            foreach (var email in destinos)
+                await _email.EnviarAsync(email, $"{consorcioNombre}: {titulo}", cuerpoHtml, ct);
+        }
+        catch
+        {
+            // El envío de mail no debe romper la creación del anuncio.
+        }
     }
 
     public async Task<Result<AnuncioDto>> ActualizarAsync(Guid consorcioId, Guid anuncioId, GuardarAnuncioDto dto, CancellationToken ct = default)

@@ -2,7 +2,9 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ActualizarConsorcio, Consorcio, ConsorcioDetalle, CrearConsorcio } from '../models/consorcio.models';
+import {
+  ActualizarConsorcio, Consorcio, ConsorcioDetalle, CrearConsorcio, PreferenciasConsorcio,
+} from '../models/consorcio.models';
 
 const ACTIVO_KEY = 'condolio.consorcioActivo';
 
@@ -47,6 +49,13 @@ export class ConsorcioService {
 
   eliminar(id: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/${id}`);
+  }
+
+  preferencias(id: string): Observable<PreferenciasConsorcio> {
+    return this.http.get<PreferenciasConsorcio>(`${this.base}/${id}/preferencias`);
+  }
+  guardarPreferencias(id: string, body: PreferenciasConsorcio): Observable<PreferenciasConsorcio> {
+    return this.http.put<PreferenciasConsorcio>(`${this.base}/${id}/preferencias`, body);
   }
 
   setActivo(id: string | null): void {

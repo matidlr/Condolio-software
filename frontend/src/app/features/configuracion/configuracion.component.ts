@@ -7,7 +7,7 @@ import { BillingService, EstadoSuscripcionDto } from '../../core/services/billin
 import { AdminMiembro, AdminMiembroService, AreaAdmin, AREAS_ADMIN, LABEL_AREA } from '../../core/services/admin-miembro.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
-import { ConsorcioDetalle, TIPOS_CONSORCIO, TipoConsorcio, Unidad } from '../../core/models/consorcio.models';
+import { ConsorcioDetalle, PreferenciasConsorcio, TIPOS_CONSORCIO, TipoConsorcio, Unidad } from '../../core/models/consorcio.models';
 
 type Tab =
   | 'general' | 'administradores' | 'secciones' | 'preferencias' | 'suscripcion' | 'avanzado'
@@ -45,7 +45,7 @@ export class ConfiguracionComponent {
         { id: 'general', label: 'General', icon: '🏢', listo: true },
         { id: 'administradores', label: 'Administradores', icon: '👥', listo: true },
         { id: 'secciones', label: 'Secciones', icon: '🗂️', listo: true },
-        { id: 'preferencias', label: 'Preferencias', icon: '🎛️', listo: false },
+        { id: 'preferencias', label: 'Preferencias', icon: '🎛️', listo: true },
         { id: 'suscripcion', label: 'Suscripción', icon: '💳', listo: true },
         { id: 'avanzado', label: 'Avanzado', icon: '🛡️', listo: true },
       ],
@@ -274,6 +274,39 @@ export class ConfiguracionComponent {
     this.tab.set(t);
     if (t === 'suscripcion') this.cargarSuscripcion();
     if (t === 'administradores') this.cargarAdmins();
+    if (t === 'preferencias') this.cargarPrefs();
+  }
+
+  // ---- Preferencias ----
+  prefs = signal<PreferenciasConsorcio | null>(null);
+  cargandoPrefs = signal(false);
+  guardandoPref = signal<keyof PreferenciasConsorcio | null>(null);
+
+  private cargarPrefs(): void {
+    const id = this.consorcios.activoId();
+    if (!id || this.cargandoPrefs()) return;
+    this.cargandoPrefs.set(true);
+    this.consorcios.preferencias(id).subscribe({
+      next: (p) => { this.prefs.set(p); this.cargandoPrefs.set(false); },
+      error: () => this.cargandoPrefs.set(false),
+    });
+  }
+
+  togglePref(k: keyof PreferenciasConsorcio): void {
+    const id = this.consorcios.activoId();
+    const p = this.prefs();
+    if (!id || !p || this.guardandoPref()) return;
+    const nuevo: PreferenciasConsorcio = { ...p, [k]: !p[k] };
+    this.prefs.set(nuevo);
+    this.guardandoPref.set(k);
+    this.consorcios.guardarPreferencias(id, nuevo).subscribe({
+      next: (g) => { this.prefs.set(g); this.guardandoPref.set(null); this.toasts.exito('Preferencia actualizada'); },
+      error: (e) => {
+        this.prefs.set(p);
+        this.guardandoPref.set(null);
+        this.toasts.error(e?.error?.message ?? 'No se pudo guardar.');
+      },
+    });
   }
 
   // ---- Administradores ----
