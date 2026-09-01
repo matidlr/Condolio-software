@@ -28,6 +28,9 @@ export interface Notificacion {
   leida: boolean;
   fijada: boolean;
   creadoUtc: string;
+  /** Solo se completa en el front cuando se listan notificaciones de varias sociedades a la vez. */
+  consorcioId?: string;
+  consorcioNombre?: string;
 }
 
 export interface NotificacionResumen {

@@ -21,6 +21,12 @@
         <option [value]="t.tipo">{{ meta[t.tipo].label }} · {{ t.n }}</option>
       }
     </select>
+    @if (consorcios.consorcios().length > 1) {
+      <select class="nt-select" [ngModel]="filtroConsorcio()" (ngModelChange)="cambiarConsorcio($event)">
+        <option value="todas">Todas las sociedades</option>
+        @for (c of consorcios.consorcios(); track c.id) { <option [value]="c.id">{{ c.nombre }}</option> }
+      </select>
+    }
     <button type="button" class="nt-readall" [disabled]="noLeidas() === 0" (click)="marcarTodas()">
       ✓ Marcar todas como leídas
     </button>
@@ -46,6 +52,7 @@
               <b>{{ n.titulo }}</b>
               <small>{{ hace(n.creadoUtc) }}</small>
             </span>
+            @if (n.consorcioNombre) { <small class="nt-row__cons">{{ n.consorcioNombre }}</small> }
             <span class="nt-row__txt">{{ n.cuerpo }}</span>
           </span>
           <span class="nt-row__acts">

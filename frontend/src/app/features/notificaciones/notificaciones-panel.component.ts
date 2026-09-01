@@ -2,6 +2,8 @@ import { Component, computed, inject, output, signal } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { ConsorcioService } from '../../core/services/consorcio.service';
 import { NotificacionService } from '../../core/services/notificacion.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -15,7 +17,7 @@ import { META_NOTIF, Notificacion, TipoNotificacion } from '../../core/models/no
   styleUrl: './notificaciones-panel.component.scss',
 })
 export class NotificacionesPanelComponent {
-  private consorcios = inject(ConsorcioService);
+  consorcios = inject(ConsorcioService);
   private api = inject(NotificacionService);
   private toasts = inject(ToastService);
   private router = inject(Router);
@@ -30,6 +32,7 @@ export class NotificacionesPanelComponent {
   noLeidas = signal(0);
   busqueda = signal('');
   filtroTipo = signal<TipoNotificacion | 'todas'>('todas');
+  filtroConsorcio = signal<string>(this.consorcios.activoId() ?? 'todas');
 
   tiposConteo = computed(() => {
     const m = new Map<TipoNotificacion, number>();
@@ -52,19 +55,31 @@ export class NotificacionesPanelComponent {
     this.cargar();
   }
 
+  cambiarConsorcio(v: string): void {
+    this.filtroConsorcio.set(v);
+    this.cargar();
+  }
+
   private cargar(): void {
-    const cid = this.consorcios.activoId();
-    if (!cid) { this.cargando.set(false); return; }
+    const filtro = this.filtroConsorcio();
+    const todas = this.consorcios.consorcios();
+    const objetivo = filtro === 'todas' ? todas : todas.filter((c) => c.id === filtro);
+    if (objetivo.length === 0) { this.cargando.set(false); return; }
+
     this.cargando.set(true);
-    this.api.listar(cid).subscribe({
-      next: (l) => {
-        this.items.set(l.notificaciones);
-        this.total.set(l.total);
-        this.noLeidas.set(l.noLeidas);
-        this.api.resumen.set({ total: l.total, noLeidas: l.noLeidas });
-        this.cargando.set(false);
-      },
-      error: () => { this.toasts.error('No pudimos cargar las notificaciones.'); this.cargando.set(false); },
+    forkJoin(objetivo.map((c) =>
+      this.api.listar(c.id).pipe(
+        catchError(() => of({ notificaciones: [] as Notificacion[], total: 0, noLeidas: 0 })),
+      ),
+    )).subscribe((listas) => {
+      const merged = listas.flatMap((l, i) =>
+        l.notificaciones.map((n) => ({ ...n, consorcioId: objetivo[i].id, consorcioNombre: objetivo[i].nombre })));
+      merged.sort((a, b) => b.creadoUtc.localeCompare(a.creadoUtc));
+      this.items.set(merged);
+      this.total.set(listas.reduce((s, l) => s + l.total, 0));
+      this.noLeidas.set(listas.reduce((s, l) => s + l.noLeidas, 0));
+      this.api.resumen.set({ total: this.total(), noLeidas: this.noLeidas() });
+      this.cargando.set(false);
     });
   }
 
@@ -81,13 +96,14 @@ export class NotificacionesPanelComponent {
   }
 
   abrir(n: Notificacion): void {
-    const cid = this.consorcios.activoId();
+    const cid = n.consorcioId ?? this.consorcios.activoId();
     if (cid && !n.leida) {
-      this.api.marcarLeida(cid, n.id).subscribe(() => this.api.refrescarResumen(cid));
+      this.api.marcarLeida(cid, n.id).subscribe(() => this.api.refrescarResumen(this.consorcios.activoId() ?? cid));
       this.items.update((l) => l.map((x) => x.id === n.id ? { ...x, leida: true } : x));
       this.noLeidas.update((v) => Math.max(0, v - 1));
     }
     if (n.enlace) {
+      if (cid && cid !== this.consorcios.activoId()) this.consorcios.setActivo(cid);
       this.cerrar.emit();
       this.router.navigateByUrl(n.enlace);
     }
@@ -95,18 +111,18 @@ export class NotificacionesPanelComponent {
 
   alternarLeida(n: Notificacion, ev: Event): void {
     ev.stopPropagation();
-    const cid = this.consorcios.activoId();
+    const cid = n.consorcioId ?? this.consorcios.activoId();
     if (!cid) return;
     this.api.alternarLeida(cid, n.id).subscribe((leida) => {
       this.items.update((l) => l.map((x) => x.id === n.id ? { ...x, leida } : x));
       this.noLeidas.update((v) => Math.max(0, v + (leida ? -1 : 1)));
-      this.api.refrescarResumen(cid);
+      this.api.refrescarResumen(this.consorcios.activoId() ?? cid);
     });
   }
 
   alternarFijada(n: Notificacion, ev: Event): void {
     ev.stopPropagation();
-    const cid = this.consorcios.activoId();
+    const cid = n.consorcioId ?? this.consorcios.activoId();
     if (!cid) return;
     this.api.alternarFijada(cid, n.id).subscribe((fijada) => {
       this.items.update((l) => l.map((x) => x.id === n.id ? { ...x, fijada } : x));
@@ -114,12 +130,14 @@ export class NotificacionesPanelComponent {
   }
 
   marcarTodas(): void {
-    const cid = this.consorcios.activoId();
-    if (!cid) return;
-    this.api.marcarTodasLeidas(cid).subscribe(() => {
+    const filtro = this.filtroConsorcio();
+    const todas = this.consorcios.consorcios();
+    const objetivo = filtro === 'todas' ? todas : todas.filter((c) => c.id === filtro);
+    if (objetivo.length === 0) return;
+    forkJoin(objetivo.map((c) => this.api.marcarTodasLeidas(c.id).pipe(catchError(() => of(undefined))))).subscribe(() => {
       this.items.update((l) => l.map((x) => ({ ...x, leida: true })));
       this.noLeidas.set(0);
-      this.api.refrescarResumen(cid);
+      this.api.refrescarResumen(this.consorcios.activoId() ?? objetivo[0].id);
       this.toasts.exito('Todas marcadas como leídas');
     });
   }
