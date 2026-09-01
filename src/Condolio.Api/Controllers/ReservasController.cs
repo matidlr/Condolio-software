@@ -1,3 +1,5 @@
+using Condolio.Api.Authorization;
+using Condolio.Domain.Tenancy;
 using Condolio.Application.Amenidades;
 using Condolio.Domain.Amenidades;
 using Condolio.Infrastructure.Identity;
@@ -9,6 +11,7 @@ namespace Condolio.Api.Controllers;
 [ApiController]
 [Route("api/consorcios/{consorcioId:guid}/reservas")]
 [Authorize(Roles = $"{Roles.Administrador},{Roles.SuperAdmin}")]
+[RequiereArea(AreaAdmin.Operacion)]
 public class ReservasController : ApiControllerBase
 {
     private readonly IReservaService _reservas;

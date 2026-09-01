@@ -1,3 +1,5 @@
+using Condolio.Api.Authorization;
+using Condolio.Domain.Tenancy;
 using Condolio.Application.Documentos;
 using Condolio.Domain.Documentos;
 using Condolio.Infrastructure.Identity;
@@ -9,6 +11,7 @@ namespace Condolio.Api.Controllers;
 [ApiController]
 [Route("api/consorcios/{consorcioId:guid}/documentos")]
 [Authorize(Roles = $"{Roles.Administrador},{Roles.SuperAdmin}")]
+[RequiereArea(AreaAdmin.Comunicacion)]
 public class DocumentosController : ApiControllerBase
 {
     private readonly IDocumentoService _docs;

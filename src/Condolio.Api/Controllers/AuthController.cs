@@ -44,7 +44,9 @@ public class AuthController : ControllerBase
     public record LoginRequest(string Email, string Password);
     public record RegistroRequest(string Nombre, string Apellido, string Email, string Password);
     public record GoogleLoginRequest(string IdToken);
-    public record LoginResponse(string Token, DateTime ExpiraUtc, string Email, string Nombre, IEnumerable<string> Roles);
+    public record LoginResponse(
+        string Token, DateTime ExpiraUtc, string Email, string Nombre, IEnumerable<string> Roles,
+        bool AdminGeneral = true, IEnumerable<string>? AdminAreas = null);
     public record RegistroResponse(bool RequiereVerificacion, string Email);
     public record VerificarRequest(string Email, string Codigo);
     public record ReenviarCodigoRequest(string Email);
@@ -325,8 +327,21 @@ public class AuthController : ControllerBase
     private async Task<LoginResponse> ConstruirRespuesta(ApplicationUser user)
     {
         var roles = await _users.GetRolesAsync(user);
+
+        var general = true;
+        string? areasCsv = null;
+        if (roles.Contains(Roles.Administrador) && user.AdministradorId is { } tenantId)
+        {
+            var m = await _db.AdminMiembros
+                .Where(x => x.AdministradorId == tenantId && x.UsuarioId == user.Id)
+                .Select(x => new { x.EsGeneral, x.AreasCsv })
+                .FirstOrDefaultAsync();
+            if (m is not null) { general = m.EsGeneral; areasCsv = m.AreasCsv; }
+        }
+
         var (token, expira) = _tokens.Generar(
-            new TokenRequest(user.Id, user.Email!, roles, user.AdministradorId));
-        return new LoginResponse(token, expira, user.Email!, user.NombreCompleto, roles);
+            new TokenRequest(user.Id, user.Email!, roles, user.AdministradorId, general, areasCsv));
+        return new LoginResponse(token, expira, user.Email!, user.NombreCompleto, roles, general,
+            general ? Array.Empty<string>() : (areasCsv ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
     }
 }

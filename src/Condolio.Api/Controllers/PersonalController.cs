@@ -1,3 +1,5 @@
+using Condolio.Api.Authorization;
+using Condolio.Domain.Tenancy;
 using Condolio.Application.Personal;
 using Condolio.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authorization;
@@ -8,6 +10,7 @@ namespace Condolio.Api.Controllers;
 [ApiController]
 [Route("api/consorcios/{consorcioId:guid}/personal")]
 [Authorize(Roles = $"{Roles.Administrador},{Roles.SuperAdmin}")]
+[RequiereArea(AreaAdmin.Seguridad)]
 public class PersonalController : ApiControllerBase
 {
     private readonly IPersonalService _personal;

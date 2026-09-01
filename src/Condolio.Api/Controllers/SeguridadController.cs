@@ -1,3 +1,5 @@
+using Condolio.Api.Authorization;
+using Condolio.Domain.Tenancy;
 using System.Security.Claims;
 using Condolio.Application.Accesos;
 using Condolio.Infrastructure.Identity;
@@ -9,6 +11,7 @@ namespace Condolio.Api.Controllers;
 [ApiController]
 [Route("api/consorcios/{consorcioId:guid}/seguridad")]
 [Authorize(Roles = $"{Roles.Administrador},{Roles.SuperAdmin}")]
+[RequiereArea(AreaAdmin.Seguridad)]
 public class SeguridadController : ApiControllerBase
 {
     private readonly IAccesoAdminService _accesos;

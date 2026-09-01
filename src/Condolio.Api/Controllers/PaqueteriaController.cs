@@ -1,3 +1,5 @@
+using Condolio.Api.Authorization;
+using Condolio.Domain.Tenancy;
 using Condolio.Application.Paqueteria;
 using Condolio.Domain.Paqueteria;
 using Condolio.Infrastructure.Identity;
@@ -10,6 +12,7 @@ namespace Condolio.Api.Controllers;
 [ApiController]
 [Route("api/consorcios/{consorcioId:guid}/paquetes")]
 [Authorize(Roles = $"{Roles.Administrador},{Roles.SuperAdmin}")]
+[RequiereArea(AreaAdmin.Operacion)]
 public class PaqueteriaController : ApiControllerBase
 {
     private readonly IPaqueteriaService _paquetes;

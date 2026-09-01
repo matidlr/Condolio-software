@@ -1,3 +1,5 @@
+using Condolio.Api.Authorization;
+using Condolio.Domain.Tenancy;
 using Condolio.Application.Unidades;
 using Condolio.Domain.Unidades;
 using Condolio.Infrastructure.Identity;
@@ -10,6 +12,7 @@ namespace Condolio.Api.Controllers;
 [ApiController]
 [Route("api/consorcios/{consorcioId:guid}/unidades")]
 [Authorize(Roles = $"{Roles.Administrador},{Roles.SuperAdmin}")]
+[RequiereArea(AreaAdmin.Operacion)]
 public class UnidadesController : ApiControllerBase
 {
     private readonly IUnidadService _unidades;

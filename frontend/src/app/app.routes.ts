@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, rolGuard } from './core/guards/auth.guard';
+import { authGuard, rolGuard, areaGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   {
@@ -167,7 +167,7 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./layout/admin-shell.component').then((m) => m.AdminShellComponent),
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'unidades' },
+      { path: '', pathMatch: 'full', redirectTo: 'inicio' },
       {
         path: 'inicio',
         loadComponent: () =>
@@ -175,130 +175,180 @@ export const routes: Routes = [
       },
       {
         path: 'unidades',
+        canActivate: [areaGuard],
+        data: { area: 'Operacion' },
         loadComponent: () =>
           import('./features/unidades/unidades.component').then((m) => m.UnidadesComponent),
       },
       {
         path: 'unidades/:id',
+        canActivate: [areaGuard],
+        data: { area: 'Operacion' },
         loadComponent: () =>
           import('./features/unidades/unidad-ficha.component').then((m) => m.UnidadFichaComponent),
       },
       { path: 'residentes', pathMatch: 'full', redirectTo: 'residentes/directorio' },
       {
         path: 'residentes/directorio',
+        canActivate: [areaGuard],
+        data: { area: 'Residentes' },
         loadComponent: () =>
           import('./features/residentes/directorio.component').then((m) => m.DirectorioComponent),
       },
       {
         path: 'residentes/por-asignar',
+        canActivate: [areaGuard],
+        data: { area: 'Residentes' },
         loadComponent: () =>
           import('./features/residentes/por-asignar.component').then((m) => m.PorAsignarComponent),
       },
       {
         path: 'residentes/invitaciones',
+        canActivate: [areaGuard],
+        data: { area: 'Residentes' },
         loadComponent: () =>
           import('./features/residentes/invitaciones.component').then((m) => m.InvitacionesComponent),
       },
       { path: 'tickets', pathMatch: 'full', redirectTo: 'tickets/lista' },
       {
         path: 'tickets/lista',
+        canActivate: [areaGuard],
+        data: { area: 'Operacion' },
         loadComponent: () =>
           import('./features/tickets/tickets-lista.component').then((m) => m.TicketsListaComponent),
       },
       {
         path: 'tickets/panel',
+        canActivate: [areaGuard],
+        data: { area: 'Operacion' },
         loadComponent: () =>
           import('./features/tickets/tickets-panel.component').then((m) => m.TicketsPanelComponent),
       },
       {
         path: 'tickets/metricas',
+        canActivate: [areaGuard],
+        data: { area: 'Operacion' },
         loadComponent: () =>
           import('./features/tickets/tickets-metricas.component').then((m) => m.TicketsMetricasComponent),
       },
       {
         path: 'tickets/:id',
+        canActivate: [areaGuard],
+        data: { area: 'Operacion' },
         loadComponent: () =>
           import('./features/tickets/ticket-detalle.component').then((m) => m.TicketDetalleComponent),
       },
       {
         path: 'anuncios',
+        canActivate: [areaGuard],
+        data: { area: 'Comunicacion' },
         loadComponent: () =>
           import('./features/anuncios/anuncios.component').then((m) => m.AnunciosComponent),
       },
       {
         path: 'paqueteria',
+        canActivate: [areaGuard],
+        data: { area: 'Operacion' },
         loadComponent: () =>
           import('./features/paqueteria/paqueteria.component').then((m) => m.PaqueteriaComponent),
       },
       {
         path: 'configuracion',
+        canActivate: [areaGuard],
+        data: { soloGeneral: true },
         loadComponent: () =>
           import('./features/configuracion/configuracion.component').then((m) => m.ConfiguracionComponent),
       },
       {
         path: 'calendario',
+        canActivate: [areaGuard],
+        data: { area: 'Comunicacion' },
         loadComponent: () =>
           import('./features/calendario/calendario.component').then((m) => m.CalendarioComponent),
       },
       {
         path: 'documentos',
+        canActivate: [areaGuard],
+        data: { area: 'Comunicacion' },
         loadComponent: () =>
           import('./features/documentos/documentos.component').then((m) => m.DocumentosComponent),
       },
       {
         path: 'encuestas',
+        canActivate: [areaGuard],
+        data: { area: 'Comunicacion' },
         loadComponent: () =>
           import('./features/encuestas/encuestas.component').then((m) => m.EncuestasComponent),
       },
       { path: 'seguridad', pathMatch: 'full', redirectTo: 'seguridad/bitacora' },
       {
         path: 'seguridad/bitacora',
+        canActivate: [areaGuard],
+        data: { area: 'Seguridad' },
         loadComponent: () =>
           import('./features/seguridad/bitacora.component').then((m) => m.BitacoraComponent),
       },
       {
         path: 'seguridad/qr',
+        canActivate: [areaGuard],
+        data: { area: 'Seguridad' },
         loadComponent: () =>
           import('./features/seguridad/qr-admin.component').then((m) => m.QrAdminComponent),
       },
       {
         path: 'seguridad/staff',
+        canActivate: [areaGuard],
+        data: { area: 'Seguridad' },
         loadComponent: () =>
           import('./features/seguridad/staff.component').then((m) => m.StaffComponent),
       },
       {
         path: 'seguridad/credenciales',
+        canActivate: [areaGuard],
+        data: { area: 'Seguridad' },
         loadComponent: () =>
           import('./features/seguridad/credenciales.component').then((m) => m.CredencialesCasetaComponent),
       },
       {
         path: 'encuestas/:id',
+        canActivate: [areaGuard],
+        data: { area: 'Comunicacion' },
         loadComponent: () =>
           import('./features/encuestas/encuesta-detalle.component').then((m) => m.EncuestaDetalleComponent),
       },
       { path: 'amenidades', pathMatch: 'full', redirectTo: 'amenidades/directorio' },
       {
         path: 'amenidades/directorio',
+        canActivate: [areaGuard],
+        data: { area: 'Operacion' },
         loadComponent: () =>
           import('./features/amenidades/amenidades-directorio.component').then((m) => m.AmenidadesDirectorioComponent),
       },
       {
         path: 'amenidades/nueva',
+        canActivate: [areaGuard],
+        data: { area: 'Operacion' },
         loadComponent: () =>
           import('./features/amenidades/nueva-amenidad.component').then((m) => m.NuevaAmenidadComponent),
       },
       {
         path: 'amenidades/reservaciones',
+        canActivate: [areaGuard],
+        data: { area: 'Operacion' },
         loadComponent: () =>
           import('./features/amenidades/reservaciones.component').then((m) => m.ReservacionesComponent),
       },
       {
         path: 'amenidades/estadisticas',
+        canActivate: [areaGuard],
+        data: { area: 'Operacion' },
         loadComponent: () =>
           import('./features/amenidades/amenidades-estadisticas.component').then((m) => m.AmenidadesEstadisticasComponent),
       },
       {
         path: 'amenidades/:id',
+        canActivate: [areaGuard],
+        data: { area: 'Operacion' },
         loadComponent: () =>
           import('./features/amenidades/amenidad-detalle.component').then((m) => m.AmenidadDetalleComponent),
       },

@@ -28,6 +28,13 @@ public class JwtTokenGenerator : IJwtTokenGenerator
         if (request.AdministradorId is { } tenantId)
             claims.Add(new Claim(CondolioClaims.TenantId, tenantId.ToString()));
 
+        if (request.Roles.Contains("Administrador"))
+        {
+            claims.Add(new Claim(CondolioClaims.AdminGeneral, request.AdminGeneral ? "true" : "false"));
+            if (!request.AdminGeneral && !string.IsNullOrWhiteSpace(request.AdminAreasCsv))
+                claims.Add(new Claim(CondolioClaims.AdminAreas, request.AdminAreasCsv));
+        }
+
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.SecretKey));
         var token = new JwtSecurityToken(
             issuer: _settings.Issuer,

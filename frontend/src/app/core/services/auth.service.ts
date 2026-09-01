@@ -2,7 +2,7 @@ import { Injectable, computed, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { LoginRequest, LoginResponse, RegistroRequest, RegistroResponse, Rol } from '../models/auth.models';
+import { AreaAdmin, LoginRequest, LoginResponse, RegistroRequest, RegistroResponse, Rol } from '../models/auth.models';
 
 const STORAGE_KEY = 'condolio.auth';
 
@@ -16,6 +16,16 @@ export class AuthService {
   readonly autenticado = computed(() => this._sesion() !== null);
   readonly roles = computed<Rol[]>(() => this._sesion()?.roles ?? []);
   readonly nombre = computed(() => this._sesion()?.nombre ?? '');
+
+  /** true si el admin tiene acceso general (o no es admin limitado). */
+  readonly adminGeneral = computed(() => this._sesion()?.adminGeneral ?? true);
+  /** Áreas permitidas cuando el admin tiene acceso limitado. */
+  readonly adminAreas = computed<AreaAdmin[]>(() => this._sesion()?.adminAreas ?? []);
+
+  /** ¿Puede el admin actual ver/usar esta área? (general y no-admin => sí) */
+  puedeArea(area: AreaAdmin): boolean {
+    return this.adminGeneral() || this.adminAreas().includes(area);
+  }
 
   constructor(private http: HttpClient) {}
 

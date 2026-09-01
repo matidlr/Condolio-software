@@ -8,6 +8,7 @@ import { TicketService } from '../core/services/ticket.service';
 import { EncuestaService } from '../core/services/encuesta.service';
 import { NotificacionService } from '../core/services/notificacion.service';
 import { NotificacionesPanelComponent } from '../features/notificaciones/notificaciones-panel.component';
+import { AreaAdmin } from '../core/models/auth.models';
 
 interface NavHijo {
   label: string;
@@ -23,6 +24,7 @@ interface NavItem {
   disponible: boolean;
   badge?: number;
   hijos?: NavHijo[];
+  area?: AreaAdmin;
 }
 
 const ICONOS = {
@@ -94,11 +96,11 @@ export class AdminShellComponent {
     const pend = this.residentes.pendientes();
     const tks = this.ticketsApi.activos();
     const enc = this.encuestasApi.activas();
-    return [
+    const items: NavItem[] = [
       { label: 'Panel', ruta: '/panel/inicio', icon: 'grid', disponible: true },
-      { label: 'Unidades', ruta: '/panel/unidades', icon: 'building', disponible: true },
+      { label: 'Unidades', ruta: '/panel/unidades', icon: 'building', disponible: true, area: 'Operacion' },
       {
-        label: 'Residentes', icon: 'users', disponible: true,
+        label: 'Residentes', icon: 'users', disponible: true, area: 'Residentes',
         hijos: [
           { label: 'Directorio', ruta: '/panel/residentes/directorio', disponible: true },
           { label: 'Por asignar', ruta: '/panel/residentes/por-asignar', disponible: true },
@@ -106,7 +108,7 @@ export class AdminShellComponent {
         ],
       },
       {
-        label: 'Tickets', icon: 'ticket', disponible: true,
+        label: 'Tickets', icon: 'ticket', disponible: true, area: 'Operacion',
         hijos: [
           { label: 'Lista', ruta: '/panel/tickets/lista', disponible: true, badge: tks || undefined },
           { label: 'Panel', ruta: '/panel/tickets/panel', disponible: true },
@@ -114,7 +116,7 @@ export class AdminShellComponent {
         ],
       },
       {
-        label: 'Amenidades', icon: 'amenity', disponible: true,
+        label: 'Amenidades', icon: 'amenity', disponible: true, area: 'Operacion',
         hijos: [
           { label: 'Directorio', ruta: '/panel/amenidades/directorio', disponible: true },
           { label: 'Reservaciones', ruta: '/panel/amenidades/reservaciones', disponible: true },
@@ -122,7 +124,7 @@ export class AdminShellComponent {
         ],
       },
       {
-        label: 'Seguridad', icon: 'shield', disponible: true,
+        label: 'Seguridad', icon: 'shield', disponible: true, area: 'Seguridad',
         hijos: [
           { label: 'Bitácora de accesos', ruta: '/panel/seguridad/bitacora', disponible: true },
           { label: 'Códigos QR', ruta: '/panel/seguridad/qr', disponible: true },
@@ -130,16 +132,19 @@ export class AdminShellComponent {
           { label: 'Credenciales de caseta', ruta: '/panel/seguridad/credenciales', disponible: true },
         ],
       },
-      { label: 'Paquetería', ruta: '/panel/paqueteria', icon: 'package', disponible: true },
-      { label: 'Anuncios', ruta: '/panel/anuncios', icon: 'megaphone', disponible: true },
-      { label: 'Calendario', ruta: '/panel/calendario', icon: 'calendar', disponible: true },
-      { label: 'Encuestas', ruta: '/panel/encuestas', icon: 'poll', disponible: true, badge: enc || undefined },
-      { label: 'Expensas', ruta: '/panel/expensas', icon: 'receipt', disponible: false },
-      { label: 'Gastos', ruta: '/panel/gastos', icon: 'wallet', disponible: false },
-      { label: 'Reclamos', ruta: '/panel/reclamos', icon: 'chat', disponible: false },
-      { label: 'Documentos', ruta: '/panel/documentos', icon: 'folder', disponible: true },
+      { label: 'Paquetería', ruta: '/panel/paqueteria', icon: 'package', disponible: true, area: 'Operacion' },
+      { label: 'Anuncios', ruta: '/panel/anuncios', icon: 'megaphone', disponible: true, area: 'Comunicacion' },
+      { label: 'Calendario', ruta: '/panel/calendario', icon: 'calendar', disponible: true, area: 'Comunicacion' },
+      { label: 'Encuestas', ruta: '/panel/encuestas', icon: 'poll', disponible: true, badge: enc || undefined, area: 'Comunicacion' },
+      { label: 'Expensas', ruta: '/panel/expensas', icon: 'receipt', disponible: false, area: 'Finanzas' },
+      { label: 'Gastos', ruta: '/panel/gastos', icon: 'wallet', disponible: false, area: 'Finanzas' },
+      { label: 'Reclamos', ruta: '/panel/reclamos', icon: 'chat', disponible: false, area: 'Operacion' },
+      { label: 'Documentos', ruta: '/panel/documentos', icon: 'folder', disponible: true, area: 'Comunicacion' },
     ];
+    return items.filter((it) => !it.area || this.auth.puedeArea(it.area));
   });
+
+  readonly esGeneral = this.auth.adminGeneral;
 
   gruposAbiertos = signal<Set<string>>(new Set());
 

@@ -1,3 +1,5 @@
+using Condolio.Api.Authorization;
+using Condolio.Domain.Tenancy;
 using Condolio.Application.Unidades;
 using Condolio.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authorization;
@@ -8,6 +10,7 @@ namespace Condolio.Api.Controllers;
 [ApiController]
 [Route("api/consorcios/{consorcioId:guid}/unidades/{unidadId:guid}/notas")]
 [Authorize(Roles = $"{Roles.Administrador},{Roles.SuperAdmin}")]
+[RequiereArea(AreaAdmin.Operacion)]
 public class UnidadNotasController : ApiControllerBase
 {
     private readonly INotaUnidadService _notas;

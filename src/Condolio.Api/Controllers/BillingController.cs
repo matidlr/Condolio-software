@@ -3,6 +3,7 @@ using Condolio.Application.Common;
 using Condolio.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Condolio.Api.Authorization;
 
 namespace Condolio.Api.Controllers;
 
@@ -10,6 +11,7 @@ namespace Condolio.Api.Controllers;
 [ApiController]
 [Route("api/billing")]
 [Authorize(Roles = $"{Roles.Administrador},{Roles.SuperAdmin}")]
+[RequiereAdminGeneral]
 public class BillingController : ApiControllerBase
 {
     private readonly ISuscripcionService _suscripciones;

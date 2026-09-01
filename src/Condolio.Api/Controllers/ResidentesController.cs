@@ -1,3 +1,5 @@
+using Condolio.Api.Authorization;
+using Condolio.Domain.Tenancy;
 using Condolio.Application.Residentes;
 using Condolio.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authorization;
@@ -8,6 +10,7 @@ namespace Condolio.Api.Controllers;
 [ApiController]
 [Route("api/consorcios/{consorcioId:guid}/residentes")]
 [Authorize(Roles = $"{Roles.Administrador},{Roles.SuperAdmin}")]
+[RequiereArea(AreaAdmin.Residentes)]
 public class ResidentesController : ApiControllerBase
 {
     private readonly IResidenteService _residentes;

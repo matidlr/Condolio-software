@@ -4,6 +4,7 @@ using Condolio.Application.Tenancy;
 using Condolio.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Condolio.Api.Authorization;
 
 namespace Condolio.Api.Controllers;
 
@@ -11,6 +12,7 @@ namespace Condolio.Api.Controllers;
 [ApiController]
 [Route("api/administradores")]
 [Authorize(Roles = $"{Roles.Administrador},{Roles.SuperAdmin}")]
+[RequiereAdminGeneral]
 public class AdministradoresController : ApiControllerBase
 {
     private readonly IAdminMiembroService _miembros;

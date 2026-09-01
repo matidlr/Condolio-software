@@ -1,3 +1,5 @@
+using Condolio.Api.Authorization;
+using Condolio.Domain.Tenancy;
 using Condolio.Application.Encuestas;
 using Condolio.Domain.Encuestas;
 using Condolio.Infrastructure.Identity;
@@ -9,6 +11,7 @@ namespace Condolio.Api.Controllers;
 [ApiController]
 [Route("api/consorcios/{consorcioId:guid}/encuestas")]
 [Authorize(Roles = $"{Roles.Administrador},{Roles.SuperAdmin}")]
+[RequiereArea(AreaAdmin.Comunicacion)]
 public class EncuestasController : ApiControllerBase
 {
     private readonly IEncuestaService _encuestas;
