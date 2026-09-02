@@ -30,6 +30,16 @@ public enum FondoReservaTipo
     MontoFijo = 2,
 }
 
+public enum EstadoExtraordinaria
+{
+    /// <summary>Todavía tiene cuotas por emitir.</summary>
+    Activa = 0,
+    /// <summary>Se emitieron todas las cuotas.</summary>
+    Finalizada = 1,
+    /// <summary>Se dio de baja antes de terminar.</summary>
+    Cancelada = 2,
+}
+
 // ============ Configuración ============
 
 /// <summary>Parámetros de expensas de un consorcio (una fila por consorcio).</summary>
@@ -166,4 +176,44 @@ public class GastoFijo : Entity, ITenantOwned
 
     public bool Activo { get; set; } = true;
     public string? Notas { get; set; }
+}
+
+// ============ Expensas extraordinarias ============
+
+/// <summary>
+/// Gasto extraordinario aprobado por asamblea (obra, reparación mayor, compra de equipo).
+/// Se prorratea en una o varias cuotas y se cobra siempre al propietario.
+/// </summary>
+public class Extraordinaria : Entity, ITenantOwned
+{
+    public Guid AdministradorId { get; set; }
+    public Guid ConsorcioId { get; set; }
+
+    public string Descripcion { get; set; } = string.Empty;
+    /// <summary>Detalle / motivo (ej. "Impermeabilización de terraza — acta 47").</summary>
+    public string? Motivo { get; set; }
+
+    public decimal MontoTotal { get; set; }
+
+    /// <summary>Cantidad de cuotas en las que se reparte (1 = pago único).</summary>
+    public int CantidadCuotas { get; set; } = 1;
+    /// <summary>Cuotas ya incluidas en una liquidación emitida.</summary>
+    public int CuotasEmitidas { get; set; }
+
+    public CriterioDistribucion CriterioDistribucion { get; set; } = CriterioDistribucion.PorCoeficiente;
+
+    /// <summary>Mes (1-12) de la primera cuota.</summary>
+    public int PeriodoInicioMes { get; set; }
+    /// <summary>Año de la primera cuota.</summary>
+    public int PeriodoInicioAnio { get; set; }
+
+    /// <summary>Fecha del acta de asamblea que la aprobó.</summary>
+    public DateOnly? FechaAprobacion { get; set; }
+
+    public EstadoExtraordinaria Estado { get; set; } = EstadoExtraordinaria.Activa;
+    public string? Notas { get; set; }
+
+    /// <summary>Importe de cada cuota (el remanente por redondeo se ajusta en la última al liquidar).</summary>
+    public decimal MontoPorCuota =>
+        CantidadCuotas <= 1 ? MontoTotal : Math.Round(MontoTotal / CantidadCuotas, 2);
 }

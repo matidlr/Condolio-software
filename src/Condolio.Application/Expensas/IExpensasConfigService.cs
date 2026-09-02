@@ -73,6 +73,23 @@ public record GuardarGastoFijoDto(
     string Descripcion, Guid RubroGastoId, Guid? ProveedorId, decimal MontoEstimado,
     CriterioDistribucion CriterioDistribucion, string? Notas);
 
+// ---------- Expensas extraordinarias ----------
+
+public record ExtraordinariaDto(
+    Guid Id, string Descripcion, string? Motivo, decimal MontoTotal,
+    int CantidadCuotas, int CuotasEmitidas, decimal MontoPorCuota,
+    CriterioDistribucion CriterioDistribucion, int PeriodoInicioMes, int PeriodoInicioAnio,
+    DateOnly? FechaAprobacion, EstadoExtraordinaria Estado, string? Notas);
+
+public record GuardarExtraordinariaDto(
+    string Descripcion, string? Motivo, decimal MontoTotal, int CantidadCuotas,
+    CriterioDistribucion CriterioDistribucion, int PeriodoInicioMes, int PeriodoInicioAnio,
+    DateOnly? FechaAprobacion, string? Notas);
+
+public record ExtraordinariasListaDto(
+    IReadOnlyList<ExtraordinariaDto> Extraordinarias,
+    int Activas, decimal MontoActivasTotal, decimal CuotaMensualActual);
+
 // ---------- Resumen para la pantalla de gastos fijos ----------
 
 public record GastosFijosResumenDto(
@@ -108,4 +125,9 @@ public interface IExpensasConfigService
     Task<Result<GastoFijoDto>> CrearGastoFijoAsync(Guid consorcioId, GuardarGastoFijoDto dto, CancellationToken ct = default);
     Task<Result<GastoFijoDto>> ActualizarGastoFijoAsync(Guid consorcioId, Guid id, GuardarGastoFijoDto dto, CancellationToken ct = default);
     Task<Result> CambiarEstadoGastoFijoAsync(Guid consorcioId, Guid id, bool activo, CancellationToken ct = default);
+
+    Task<Result<ExtraordinariasListaDto>> ListarExtraordinariasAsync(Guid consorcioId, CancellationToken ct = default);
+    Task<Result<ExtraordinariaDto>> CrearExtraordinariaAsync(Guid consorcioId, GuardarExtraordinariaDto dto, CancellationToken ct = default);
+    Task<Result<ExtraordinariaDto>> ActualizarExtraordinariaAsync(Guid consorcioId, Guid id, GuardarExtraordinariaDto dto, CancellationToken ct = default);
+    Task<Result> CambiarEstadoExtraordinariaAsync(Guid consorcioId, Guid id, EstadoExtraordinaria estado, CancellationToken ct = default);
 }

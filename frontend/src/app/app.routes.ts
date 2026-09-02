@@ -275,6 +275,13 @@ export const routes: Routes = [
           import('./features/expensas/gastos-fijos.component').then((m) => m.GastosFijosComponent),
       },
       {
+        path: 'expensas/extraordinarias',
+        canActivate: [areaGuard],
+        data: { area: 'Finanzas' },
+        loadComponent: () =>
+          import('./features/expensas/extraordinarias.component').then((m) => m.ExtraordinariasComponent),
+      },
+      {
         path: 'expensas/configuracion',
         canActivate: [areaGuard],
         data: { area: 'Finanzas' },

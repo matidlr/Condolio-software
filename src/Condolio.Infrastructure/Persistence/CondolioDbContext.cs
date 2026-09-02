@@ -80,6 +80,7 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Condolio.Domain.Expensas.Proveedor> Proveedores => Set<Condolio.Domain.Expensas.Proveedor>();
     public DbSet<Condolio.Domain.Expensas.Empleado> Empleados => Set<Condolio.Domain.Expensas.Empleado>();
     public DbSet<Condolio.Domain.Expensas.GastoFijo> GastosFijos => Set<Condolio.Domain.Expensas.GastoFijo>();
+    public DbSet<Condolio.Domain.Expensas.Extraordinaria> Extraordinarias => Set<Condolio.Domain.Expensas.Extraordinaria>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -519,6 +520,17 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
             e.Property(x => x.Notas).HasMaxLength(1000);
             e.Property(x => x.MontoEstimado).HasPrecision(14, 2);
             e.HasIndex(x => new { x.ConsorcioId, x.Activo });
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
+        });
+
+        builder.Entity<Condolio.Domain.Expensas.Extraordinaria>(e =>
+        {
+            e.Property(x => x.Descripcion).HasMaxLength(240).IsRequired();
+            e.Property(x => x.Motivo).HasMaxLength(1000);
+            e.Property(x => x.Notas).HasMaxLength(1000);
+            e.Property(x => x.MontoTotal).HasPrecision(14, 2);
+            e.Ignore(x => x.MontoPorCuota);
+            e.HasIndex(x => new { x.ConsorcioId, x.Estado });
             e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
         });
 

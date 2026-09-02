@@ -105,4 +105,24 @@ public class ExpensasConfigController : ApiControllerBase
     [HttpPost("gastos-fijos/{id:guid}/estado")]
     public async Task<IActionResult> EstadoGastoFijo(Guid consorcioId, Guid id, EstadoBody body, CancellationToken ct) =>
         ToResult(await _svc.CambiarEstadoGastoFijoAsync(consorcioId, id, body.Activo, ct));
+
+    // ---- Expensas extraordinarias ----
+
+    [HttpGet("extraordinarias")]
+    public async Task<IActionResult> Extraordinarias(Guid consorcioId, CancellationToken ct) =>
+        ToResult(await _svc.ListarExtraordinariasAsync(consorcioId, ct));
+
+    [HttpPost("extraordinarias")]
+    public async Task<IActionResult> CrearExtraordinaria(Guid consorcioId, GuardarExtraordinariaDto dto, CancellationToken ct) =>
+        ToResult(await _svc.CrearExtraordinariaAsync(consorcioId, dto, ct));
+
+    [HttpPut("extraordinarias/{id:guid}")]
+    public async Task<IActionResult> ActualizarExtraordinaria(Guid consorcioId, Guid id, GuardarExtraordinariaDto dto, CancellationToken ct) =>
+        ToResult(await _svc.ActualizarExtraordinariaAsync(consorcioId, id, dto, ct));
+
+    public record EstadoExtraordinariaBody(Condolio.Domain.Expensas.EstadoExtraordinaria Estado);
+
+    [HttpPost("extraordinarias/{id:guid}/estado")]
+    public async Task<IActionResult> EstadoExtraordinaria(Guid consorcioId, Guid id, EstadoExtraordinariaBody body, CancellationToken ct) =>
+        ToResult(await _svc.CambiarEstadoExtraordinariaAsync(consorcioId, id, body.Estado, ct));
 }

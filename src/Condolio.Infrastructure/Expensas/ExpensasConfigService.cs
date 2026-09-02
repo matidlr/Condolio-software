@@ -362,6 +362,99 @@ public class ExpensasConfigService : IExpensasConfigService
             g.MontoEstimado, g.CriterioDistribucion, g.Activo, g.Notas));
     }
 
+    // ============ Expensas extraordinarias ============
+
+    public async Task<Result<ExtraordinariasListaDto>> ListarExtraordinariasAsync(Guid consorcioId, CancellationToken ct = default)
+    {
+        var lista = await _db.Extraordinarias.Where(x => x.ConsorcioId == consorcioId)
+            .OrderBy(x => x.Estado)
+            .ThenByDescending(x => x.PeriodoInicioAnio).ThenByDescending(x => x.PeriodoInicioMes)
+            .ToListAsync(ct);
+
+        var hoy = DateOnly.FromDateTime(DateTime.Now);
+        var periodoActual = hoy.Year * 12 + (hoy.Month - 1);
+
+        decimal cuotaMensual = 0m;
+        foreach (var x in lista.Where(x => x.Estado == EstadoExtraordinaria.Activa))
+        {
+            var inicio = x.PeriodoInicioAnio * 12 + (x.PeriodoInicioMes - 1);
+            var idxCuota = periodoActual - inicio;
+            if (idxCuota >= 0 && idxCuota < x.CantidadCuotas)
+                cuotaMensual += x.MontoPorCuota;
+        }
+
+        var activas = lista.Where(x => x.Estado == EstadoExtraordinaria.Activa).ToList();
+        return Result<ExtraordinariasListaDto>.Ok(new ExtraordinariasListaDto(
+            lista.Select(MapExtraordinaria).ToList(),
+            activas.Count,
+            activas.Sum(x => x.MontoTotal),
+            cuotaMensual));
+    }
+
+    public async Task<Result<ExtraordinariaDto>> CrearExtraordinariaAsync(Guid consorcioId, GuardarExtraordinariaDto dto, CancellationToken ct = default)
+    {
+        var err = ValidarExtraordinaria(dto);
+        if (err is not null) return Result<ExtraordinariaDto>.Fail(err);
+
+        var adminId = await AdminIdAsync(consorcioId, ct);
+        var x = new Extraordinaria { AdministradorId = adminId, ConsorcioId = consorcioId };
+        AplicarExtraordinaria(x, dto);
+        _db.Extraordinarias.Add(x);
+        await _db.SaveChangesAsync(ct);
+        return Result<ExtraordinariaDto>.Ok(MapExtraordinaria(x));
+    }
+
+    public async Task<Result<ExtraordinariaDto>> ActualizarExtraordinariaAsync(Guid consorcioId, Guid id, GuardarExtraordinariaDto dto, CancellationToken ct = default)
+    {
+        var x = await _db.Extraordinarias.FirstOrDefaultAsync(e => e.Id == id && e.ConsorcioId == consorcioId, ct);
+        if (x is null) return Result<ExtraordinariaDto>.Fail("Expensa extraordinaria no encontrada.");
+        if (x.CuotasEmitidas > 0) return Result<ExtraordinariaDto>.Fail("Ya tiene cuotas emitidas: no se puede editar.");
+
+        var err = ValidarExtraordinaria(dto);
+        if (err is not null) return Result<ExtraordinariaDto>.Fail(err);
+
+        AplicarExtraordinaria(x, dto);
+        await _db.SaveChangesAsync(ct);
+        return Result<ExtraordinariaDto>.Ok(MapExtraordinaria(x));
+    }
+
+    public async Task<Result> CambiarEstadoExtraordinariaAsync(Guid consorcioId, Guid id, EstadoExtraordinaria estado, CancellationToken ct = default)
+    {
+        var x = await _db.Extraordinarias.FirstOrDefaultAsync(e => e.Id == id && e.ConsorcioId == consorcioId, ct);
+        if (x is null) return Result.Fail("Expensa extraordinaria no encontrada.");
+        x.Estado = estado;
+        await _db.SaveChangesAsync(ct);
+        return Result.Ok();
+    }
+
+    private static string? ValidarExtraordinaria(GuardarExtraordinariaDto d)
+    {
+        if (string.IsNullOrWhiteSpace(d.Descripcion)) return "La descripción es obligatoria.";
+        if (d.MontoTotal <= 0) return "El monto total tiene que ser mayor a cero.";
+        if (d.CantidadCuotas is < 1 or > 120) return "La cantidad de cuotas tiene que estar entre 1 y 120.";
+        if (d.PeriodoInicioMes is < 1 or > 12) return "El mes de inicio no es válido.";
+        if (d.PeriodoInicioAnio is < 2020 or > 2100) return "El año de inicio no es válido.";
+        return null;
+    }
+
+    private static void AplicarExtraordinaria(Extraordinaria x, GuardarExtraordinariaDto d)
+    {
+        x.Descripcion = d.Descripcion.Trim();
+        x.Motivo = Limpiar(d.Motivo);
+        x.MontoTotal = d.MontoTotal;
+        x.CantidadCuotas = d.CantidadCuotas;
+        x.CriterioDistribucion = d.CriterioDistribucion;
+        x.PeriodoInicioMes = d.PeriodoInicioMes;
+        x.PeriodoInicioAnio = d.PeriodoInicioAnio;
+        x.FechaAprobacion = d.FechaAprobacion;
+        x.Notas = Limpiar(d.Notas);
+    }
+
+    private static ExtraordinariaDto MapExtraordinaria(Extraordinaria x) => new(
+        x.Id, x.Descripcion, x.Motivo, x.MontoTotal, x.CantidadCuotas, x.CuotasEmitidas,
+        x.MontoPorCuota, x.CriterioDistribucion, x.PeriodoInicioMes, x.PeriodoInicioAnio,
+        x.FechaAprobacion, x.Estado, x.Notas);
+
     // ============ helpers ============
 
     private async Task<Guid> AdminIdAsync(Guid consorcioId, CancellationToken ct) =>

@@ -91,6 +91,35 @@ export interface GastosFijosResumen {
   totalMensual: number;
 }
 
+export type EstadoExtraordinaria = 'Activa' | 'Finalizada' | 'Cancelada';
+
+export interface Extraordinaria {
+  id: string;
+  descripcion: string;
+  motivo?: string | null;
+  montoTotal: number;
+  cantidadCuotas: number;
+  cuotasEmitidas: number;
+  montoPorCuota: number;
+  criterioDistribucion: CriterioDistribucion;
+  periodoInicioMes: number;
+  periodoInicioAnio: number;
+  fechaAprobacion?: string | null;
+  estado: EstadoExtraordinaria;
+  notas?: string | null;
+}
+export type GuardarExtraordinaria = Pick<
+  Extraordinaria,
+  'descripcion' | 'motivo' | 'montoTotal' | 'cantidadCuotas' | 'criterioDistribucion'
+  | 'periodoInicioMes' | 'periodoInicioAnio' | 'fechaAprobacion' | 'notas'
+>;
+export interface ExtraordinariasLista {
+  extraordinarias: Extraordinaria[];
+  activas: number;
+  montoActivasTotal: number;
+  cuotaMensualActual: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ExpensasService {
   private http = inject(HttpClient);
@@ -153,5 +182,19 @@ export class ExpensasService {
   }
   estadoGastoFijo(cid: string, id: string, activo: boolean): Observable<void> {
     return this.http.post<void>(`${this.base(cid)}/gastos-fijos/${id}/estado`, { activo });
+  }
+
+  // ---- expensas extraordinarias ----
+  extraordinarias(cid: string): Observable<ExtraordinariasLista> {
+    return this.http.get<ExtraordinariasLista>(`${this.base(cid)}/extraordinarias`);
+  }
+  crearExtraordinaria(cid: string, dto: GuardarExtraordinaria): Observable<Extraordinaria> {
+    return this.http.post<Extraordinaria>(`${this.base(cid)}/extraordinarias`, dto);
+  }
+  actualizarExtraordinaria(cid: string, id: string, dto: GuardarExtraordinaria): Observable<Extraordinaria> {
+    return this.http.put<Extraordinaria>(`${this.base(cid)}/extraordinarias/${id}`, dto);
+  }
+  estadoExtraordinaria(cid: string, id: string, estado: EstadoExtraordinaria): Observable<void> {
+    return this.http.post<void>(`${this.base(cid)}/extraordinarias/${id}/estado`, { estado });
   }
 }
