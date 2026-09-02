@@ -32,12 +32,34 @@ public enum FondoReservaTipo
 
 public enum EstadoExtraordinaria
 {
-    /// <summary>Todavía tiene cuotas por emitir.</summary>
+    /// <summary>Todavía tiene meses por emitir.</summary>
     Activa = 0,
-    /// <summary>Se emitieron todas las cuotas.</summary>
+    /// <summary>Se emitieron todas las cuotas mensuales.</summary>
     Finalizada = 1,
     /// <summary>Se dio de baja antes de terminar.</summary>
     Cancelada = 2,
+}
+
+/// <summary>Rubro de una expensa extraordinaria (para agrupar y reportar).</summary>
+public enum CategoriaExtraordinaria
+{
+    MejorasCapital = 0,
+    ReparacionEmergencia = 1,
+    ProyectoEspecial = 2,
+    Legales = 3,
+    Equipamiento = 4,
+    Otro = 5,
+}
+
+/// <summary>Cómo se calcula el cargo de cada unidad alcanzada por una extraordinaria.</summary>
+public enum MetodoReparto
+{
+    /// <summary>Todas las unidades pagan lo mismo.</summary>
+    Igual = 0,
+    /// <summary>En proporción al coeficiente de cada unidad.</summary>
+    ProporcionalPorCoeficiente = 1,
+    /// <summary>El administrador carga el monto de cada unidad a mano.</summary>
+    Personalizado = 2,
 }
 
 // ============ Configuración ============
@@ -181,39 +203,106 @@ public class GastoFijo : Entity, ITenantOwned
 // ============ Expensas extraordinarias ============
 
 /// <summary>
-/// Gasto extraordinario aprobado por asamblea (obra, reparación mayor, compra de equipo).
-/// Se prorratea en una o varias cuotas y se cobra siempre al propietario.
+/// Cuota extraordinaria aprobada por asamblea (obra, reparación mayor, compra de equipo).
+/// Aplica a un subconjunto de unidades, con un método de reparto y un prorrateo opcional en meses.
+/// Siempre se cobra al propietario.
 /// </summary>
 public class Extraordinaria : Entity, ITenantOwned
 {
     public Guid AdministradorId { get; set; }
     public Guid ConsorcioId { get; set; }
 
-    public string Descripcion { get; set; } = string.Empty;
-    /// <summary>Detalle / motivo (ej. "Impermeabilización de terraza — acta 47").</summary>
-    public string? Motivo { get; set; }
+    public string Titulo { get; set; } = string.Empty;
+    public string? Descripcion { get; set; }
+    public CategoriaExtraordinaria Categoria { get; set; } = CategoriaExtraordinaria.Otro;
 
+    /// <summary>Fecha desde la que corre el cargo (y primer vencimiento si no hay uno explícito).</summary>
+    public DateOnly FechaInicio { get; set; }
+    /// <summary>Vencimiento del cargo (o de la primera cuota si se prorratea).</summary>
+    public DateOnly? FechaVencimiento { get; set; }
+
+    public MetodoReparto MetodoReparto { get; set; } = MetodoReparto.Igual;
+
+    /// <summary>Cantidad de meses en los que se divide el cargo de cada unidad (1 = pago único).</summary>
+    public int CantidadMeses { get; set; } = 1;
+    /// <summary>Meses ya incluidos en una liquidación emitida.</summary>
+    public int MesesEmitidos { get; set; }
+
+    /// <summary>Suma de los cargos de todas las unidades alcanzadas.</summary>
     public decimal MontoTotal { get; set; }
-
-    /// <summary>Cantidad de cuotas en las que se reparte (1 = pago único).</summary>
-    public int CantidadCuotas { get; set; } = 1;
-    /// <summary>Cuotas ya incluidas en una liquidación emitida.</summary>
-    public int CuotasEmitidas { get; set; }
-
-    public CriterioDistribucion CriterioDistribucion { get; set; } = CriterioDistribucion.PorCoeficiente;
-
-    /// <summary>Mes (1-12) de la primera cuota.</summary>
-    public int PeriodoInicioMes { get; set; }
-    /// <summary>Año de la primera cuota.</summary>
-    public int PeriodoInicioAnio { get; set; }
-
-    /// <summary>Fecha del acta de asamblea que la aprobó.</summary>
-    public DateOnly? FechaAprobacion { get; set; }
 
     public EstadoExtraordinaria Estado { get; set; } = EstadoExtraordinaria.Activa;
     public string? Notas { get; set; }
 
-    /// <summary>Importe de cada cuota (el remanente por redondeo se ajusta en la última al liquidar).</summary>
-    public decimal MontoPorCuota =>
-        CantidadCuotas <= 1 ? MontoTotal : Math.Round(MontoTotal / CantidadCuotas, 2);
+    public List<ExtraordinariaUnidad> Unidades { get; set; } = new();
+
+    /// <summary>Importe mensual promedio (el remanente por redondeo se ajusta en la última cuota).</summary>
+    public decimal MontoPorMes =>
+        CantidadMeses <= 1 ? MontoTotal : Math.Round(MontoTotal / CantidadMeses, 2);
+}
+
+/// <summary>Monto que le toca a una unidad puntual dentro de una expensa extraordinaria.</summary>
+public class ExtraordinariaUnidad : Entity, ITenantOwned
+{
+    public Guid AdministradorId { get; set; }
+    public Guid ConsorcioId { get; set; }
+
+    public Guid ExtraordinariaId { get; set; }
+    public Guid UnidadId { get; set; }
+    /// <summary>Nombre de la unidad al momento de crear el cargo.</summary>
+    public string UnidadNombre { get; set; } = string.Empty;
+
+    /// <summary>Cargo total para esta unidad (se divide por CantidadMeses al liquidar).</summary>
+    public decimal MontoAsignado { get; set; }
+}
+
+// ============ Cargos y cobranzas ============
+
+public enum OrigenCargo
+{
+    ExpensaOrdinaria = 0,
+    Extraordinaria = 1,
+    Interes = 2,
+    Ajuste = 3,
+}
+
+public enum EstadoCargo
+{
+    Pendiente = 0,
+    PagadoParcial = 1,
+    Pagado = 2,
+    Anulado = 3,
+}
+
+/// <summary>
+/// Cargo individual contra una unidad (una cuota de una extraordinaria, una expensa del mes, un interés).
+/// La morosidad se calcula sumando los cargos pendientes con vencimiento pasado.
+/// </summary>
+public class CargoUnidad : Entity, ITenantOwned
+{
+    public Guid AdministradorId { get; set; }
+    public Guid ConsorcioId { get; set; }
+
+    public Guid UnidadId { get; set; }
+    public string UnidadNombre { get; set; } = string.Empty;
+
+    public OrigenCargo Origen { get; set; }
+    /// <summary>Extraordinaria que lo generó (si aplica).</summary>
+    public Guid? ExtraordinariaId { get; set; }
+
+    public string Concepto { get; set; } = string.Empty;
+    public decimal Monto { get; set; }
+    public decimal MontoPagado { get; set; }
+
+    public DateOnly FechaEmision { get; set; }
+    public DateOnly FechaVencimiento { get; set; }
+
+    public EstadoCargo Estado { get; set; } = EstadoCargo.Pendiente;
+    public DateOnly? FechaPago { get; set; }
+
+    /// <summary>Nº de cuota dentro de la extraordinaria (1..N).</summary>
+    public int Cuota { get; set; } = 1;
+    public int TotalCuotas { get; set; } = 1;
+
+    public decimal Saldo => Monto - MontoPagado;
 }

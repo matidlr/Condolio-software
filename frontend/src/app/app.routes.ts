@@ -282,6 +282,13 @@ export const routes: Routes = [
           import('./features/expensas/extraordinarias.component').then((m) => m.ExtraordinariasComponent),
       },
       {
+        path: 'expensas/morosidad',
+        canActivate: [areaGuard],
+        data: { area: 'Finanzas' },
+        loadComponent: () =>
+          import('./features/expensas/morosidad.component').then((m) => m.MorosidadComponent),
+      },
+      {
         path: 'expensas/configuracion',
         canActivate: [areaGuard],
         data: { area: 'Finanzas' },

@@ -367,93 +367,225 @@ public class ExpensasConfigService : IExpensasConfigService
     public async Task<Result<ExtraordinariasListaDto>> ListarExtraordinariasAsync(Guid consorcioId, CancellationToken ct = default)
     {
         var lista = await _db.Extraordinarias.Where(x => x.ConsorcioId == consorcioId)
-            .OrderBy(x => x.Estado)
-            .ThenByDescending(x => x.PeriodoInicioAnio).ThenByDescending(x => x.PeriodoInicioMes)
+            .Include(x => x.Unidades)
+            .OrderBy(x => x.Estado).ThenByDescending(x => x.FechaInicio)
             .ToListAsync(ct);
 
-        var hoy = DateOnly.FromDateTime(DateTime.Now);
-        var periodoActual = hoy.Year * 12 + (hoy.Month - 1);
-
-        decimal cuotaMensual = 0m;
-        foreach (var x in lista.Where(x => x.Estado == EstadoExtraordinaria.Activa))
-        {
-            var inicio = x.PeriodoInicioAnio * 12 + (x.PeriodoInicioMes - 1);
-            var idxCuota = periodoActual - inicio;
-            if (idxCuota >= 0 && idxCuota < x.CantidadCuotas)
-                cuotaMensual += x.MontoPorCuota;
-        }
+        var ids = lista.Select(x => x.Id).ToList();
+        var recaudadoPorExtra = await _db.CargosUnidad
+            .Where(c => c.ExtraordinariaId != null && ids.Contains(c.ExtraordinariaId!.Value))
+            .GroupBy(c => c.ExtraordinariaId!.Value)
+            .Select(g => new { Id = g.Key, Pagado = g.Sum(c => c.MontoPagado) })
+            .ToDictionaryAsync(g => g.Id, g => g.Pagado, ct);
 
         var activas = lista.Where(x => x.Estado == EstadoExtraordinaria.Activa).ToList();
+        var totalRecaudado = recaudadoPorExtra.Values.Sum();
+
         return Result<ExtraordinariasListaDto>.Ok(new ExtraordinariasListaDto(
             lista.Select(MapExtraordinaria).ToList(),
             activas.Count,
             activas.Sum(x => x.MontoTotal),
-            cuotaMensual));
+            totalRecaudado));
     }
 
     public async Task<Result<ExtraordinariaDto>> CrearExtraordinariaAsync(Guid consorcioId, GuardarExtraordinariaDto dto, CancellationToken ct = default)
     {
-        var err = ValidarExtraordinaria(dto);
+        var (err, cargos) = await ValidarExtraordinariaAsync(consorcioId, dto, ct);
         if (err is not null) return Result<ExtraordinariaDto>.Fail(err);
 
         var adminId = await AdminIdAsync(consorcioId, ct);
         var x = new Extraordinaria { AdministradorId = adminId, ConsorcioId = consorcioId };
         AplicarExtraordinaria(x, dto);
+        x.MontoTotal = cargos!.Sum(c => c.Monto);
         _db.Extraordinarias.Add(x);
         await _db.SaveChangesAsync(ct);
-        return Result<ExtraordinariaDto>.Ok(MapExtraordinaria(x));
+
+        await GenerarCargosAsync(x, cargos, ct);
+
+        var creada = await _db.Extraordinarias.Include(e => e.Unidades)
+            .FirstAsync(e => e.Id == x.Id, ct);
+        return Result<ExtraordinariaDto>.Ok(MapExtraordinaria(creada));
     }
 
     public async Task<Result<ExtraordinariaDto>> ActualizarExtraordinariaAsync(Guid consorcioId, Guid id, GuardarExtraordinariaDto dto, CancellationToken ct = default)
     {
         var x = await _db.Extraordinarias.FirstOrDefaultAsync(e => e.Id == id && e.ConsorcioId == consorcioId, ct);
-        if (x is null) return Result<ExtraordinariaDto>.Fail("Expensa extraordinaria no encontrada.");
-        if (x.CuotasEmitidas > 0) return Result<ExtraordinariaDto>.Fail("Ya tiene cuotas emitidas: no se puede editar.");
+        if (x is null) return Result<ExtraordinariaDto>.Fail("Cuota extraordinaria no encontrada.");
+        if (await _db.CargosUnidad.AnyAsync(c => c.ExtraordinariaId == id && c.MontoPagado > 0, ct))
+            return Result<ExtraordinariaDto>.Fail("Ya tiene pagos registrados: no se puede editar.");
 
-        var err = ValidarExtraordinaria(dto);
+        var (err, cargos) = await ValidarExtraordinariaAsync(consorcioId, dto, ct);
         if (err is not null) return Result<ExtraordinariaDto>.Fail(err);
 
+        await _db.CargosUnidad.Where(c => c.ExtraordinariaId == id).ExecuteDeleteAsync(ct);
+        await _db.ExtraordinariaUnidades.Where(u => u.ExtraordinariaId == id).ExecuteDeleteAsync(ct);
+
         AplicarExtraordinaria(x, dto);
+        x.MontoTotal = cargos!.Sum(c => c.Monto);
         await _db.SaveChangesAsync(ct);
-        return Result<ExtraordinariaDto>.Ok(MapExtraordinaria(x));
+
+        await GenerarCargosAsync(x, cargos, ct);
+
+        var actualizada = await _db.Extraordinarias.Include(e => e.Unidades)
+            .FirstAsync(e => e.Id == id, ct);
+        return Result<ExtraordinariaDto>.Ok(MapExtraordinaria(actualizada));
     }
 
     public async Task<Result> CambiarEstadoExtraordinariaAsync(Guid consorcioId, Guid id, EstadoExtraordinaria estado, CancellationToken ct = default)
     {
         var x = await _db.Extraordinarias.FirstOrDefaultAsync(e => e.Id == id && e.ConsorcioId == consorcioId, ct);
-        if (x is null) return Result.Fail("Expensa extraordinaria no encontrada.");
+        if (x is null) return Result.Fail("Cuota extraordinaria no encontrada.");
         x.Estado = estado;
         await _db.SaveChangesAsync(ct);
+
+        if (estado == EstadoExtraordinaria.Cancelada)
+            await _db.CargosUnidad.Where(c => c.ExtraordinariaId == id && c.MontoPagado == 0m)
+                .ExecuteUpdateAsync(s => s.SetProperty(c => c.Estado, EstadoCargo.Anulado), ct);
+        else
+            await _db.CargosUnidad.Where(c => c.ExtraordinariaId == id && c.Estado == EstadoCargo.Anulado)
+                .ExecuteUpdateAsync(s => s.SetProperty(c => c.Estado, EstadoCargo.Pendiente), ct);
+
         return Result.Ok();
     }
 
-    private static string? ValidarExtraordinaria(GuardarExtraordinariaDto d)
+    /// <summary>Valida el DTO y devuelve los cargos por unidad ya prorrateados en meses.</summary>
+    private async Task<(string? Error, List<CargoUnidad>? Cargos)> ValidarExtraordinariaAsync(
+        Guid consorcioId, GuardarExtraordinariaDto d, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(d.Descripcion)) return "La descripción es obligatoria.";
-        if (d.MontoTotal <= 0) return "El monto total tiene que ser mayor a cero.";
-        if (d.CantidadCuotas is < 1 or > 120) return "La cantidad de cuotas tiene que estar entre 1 y 120.";
-        if (d.PeriodoInicioMes is < 1 or > 12) return "El mes de inicio no es válido.";
-        if (d.PeriodoInicioAnio is < 2020 or > 2100) return "El año de inicio no es válido.";
-        return null;
+        if (string.IsNullOrWhiteSpace(d.Titulo)) return ("El título es obligatorio.", null);
+        if (d.CantidadMeses is < 1 or > 120) return ("El prorrateo tiene que estar entre 1 y 120 meses.", null);
+        if (d.Cargos is null || d.Cargos.Count == 0) return ("Elegí al menos una unidad.", null);
+        if (d.Cargos.Any(c => c.MontoAsignado < 0)) return ("Los montos no pueden ser negativos.", null);
+        if (d.Cargos.Sum(c => c.MontoAsignado) <= 0) return ("El total a cobrar tiene que ser mayor a cero.", null);
+
+        var unidadIds = d.Cargos.Select(c => c.UnidadId).Distinct().ToList();
+        var unidades = await _db.Unidades.Where(u => u.ConsorcioId == consorcioId && unidadIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.Nombre }).ToDictionaryAsync(u => u.Id, u => u.Nombre, ct);
+        if (unidades.Count != unidadIds.Count) return ("Alguna de las unidades no pertenece al consorcio.", null);
+
+        var adminId = await AdminIdAsync(consorcioId, ct);
+        var meses = d.CantidadMeses;
+        var venc0 = d.FechaVencimiento ?? d.FechaInicio;
+        var cargos = new List<CargoUnidad>();
+
+        foreach (var c in d.Cargos.Where(c => c.MontoAsignado > 0))
+        {
+            var cuota = meses <= 1 ? c.MontoAsignado : Math.Round(c.MontoAsignado / meses, 2);
+            decimal acumulado = 0m;
+            for (var k = 0; k < meses; k++)
+            {
+                var monto = k == meses - 1 ? c.MontoAsignado - acumulado : cuota;
+                acumulado += monto;
+                cargos.Add(new CargoUnidad
+                {
+                    AdministradorId = adminId,
+                    ConsorcioId = consorcioId,
+                    UnidadId = c.UnidadId,
+                    UnidadNombre = unidades[c.UnidadId],
+                    Origen = OrigenCargo.Extraordinaria,
+                    Concepto = meses <= 1 ? d.Titulo.Trim() : $"{d.Titulo.Trim()} (cuota {k + 1}/{meses})",
+                    Monto = monto,
+                    FechaEmision = d.FechaInicio,
+                    FechaVencimiento = venc0.AddMonths(k),
+                    Cuota = k + 1,
+                    TotalCuotas = meses,
+                });
+            }
+        }
+        return (null, cargos);
+    }
+
+    private async Task GenerarCargosAsync(Extraordinaria x, List<CargoUnidad> cargos, CancellationToken ct)
+    {
+        // Un ExtraordinariaUnidad por unidad (monto total asignado).
+        var porUnidad = cargos.GroupBy(c => c.UnidadId)
+            .Select(g => new ExtraordinariaUnidad
+            {
+                AdministradorId = x.AdministradorId,
+                ConsorcioId = x.ConsorcioId,
+                ExtraordinariaId = x.Id,
+                UnidadId = g.Key,
+                UnidadNombre = g.First().UnidadNombre,
+                MontoAsignado = g.Sum(c => c.Monto),
+            });
+        _db.ExtraordinariaUnidades.AddRange(porUnidad);
+
+        foreach (var c in cargos) c.ExtraordinariaId = x.Id;
+        _db.CargosUnidad.AddRange(cargos);
+
+        await _db.SaveChangesAsync(ct);
     }
 
     private static void AplicarExtraordinaria(Extraordinaria x, GuardarExtraordinariaDto d)
     {
-        x.Descripcion = d.Descripcion.Trim();
-        x.Motivo = Limpiar(d.Motivo);
-        x.MontoTotal = d.MontoTotal;
-        x.CantidadCuotas = d.CantidadCuotas;
-        x.CriterioDistribucion = d.CriterioDistribucion;
-        x.PeriodoInicioMes = d.PeriodoInicioMes;
-        x.PeriodoInicioAnio = d.PeriodoInicioAnio;
-        x.FechaAprobacion = d.FechaAprobacion;
+        x.Titulo = d.Titulo.Trim();
+        x.Descripcion = Limpiar(d.Descripcion);
+        x.Categoria = d.Categoria;
+        x.FechaInicio = d.FechaInicio;
+        x.FechaVencimiento = d.FechaVencimiento;
+        x.MetodoReparto = d.MetodoReparto;
+        x.CantidadMeses = d.CantidadMeses;
         x.Notas = Limpiar(d.Notas);
     }
 
     private static ExtraordinariaDto MapExtraordinaria(Extraordinaria x) => new(
-        x.Id, x.Descripcion, x.Motivo, x.MontoTotal, x.CantidadCuotas, x.CuotasEmitidas,
-        x.MontoPorCuota, x.CriterioDistribucion, x.PeriodoInicioMes, x.PeriodoInicioAnio,
-        x.FechaAprobacion, x.Estado, x.Notas);
+        x.Id, x.Titulo, x.Descripcion, x.Categoria, x.FechaInicio, x.FechaVencimiento,
+        x.MetodoReparto, x.CantidadMeses, x.MesesEmitidos, x.MontoTotal, x.MontoPorMes,
+        x.Estado, x.Notas,
+        x.Unidades.OrderBy(u => u.UnidadNombre)
+            .Select(u => new ExtraordinariaUnidadDto(u.UnidadId, u.UnidadNombre, u.MontoAsignado)).ToList());
+
+    // ============ Morosidad ============
+
+    public async Task<Result<MorosidadDto>> MorosidadAsync(Guid consorcioId, CancellationToken ct = default)
+    {
+        var unidades = await _db.Unidades.Where(u => u.ConsorcioId == consorcioId)
+            .OrderBy(u => u.Piso).ThenBy(u => u.Nombre)
+            .Select(u => new { u.Id, u.Nombre, u.Piso, u.Seccion })
+            .ToListAsync(ct);
+
+        var cargos = await _db.CargosUnidad
+            .Where(c => c.ConsorcioId == consorcioId
+                && (c.Estado == EstadoCargo.Pendiente || c.Estado == EstadoCargo.PagadoParcial))
+            .Select(c => new { c.UnidadId, c.Monto, c.MontoPagado, c.FechaVencimiento })
+            .ToListAsync(ct);
+
+        var hoy = DateOnly.FromDateTime(DateTime.Now);
+        var porUnidad = cargos.ToLookup(c => c.UnidadId);
+
+        var filas = new List<MorosidadUnidadDto>();
+        foreach (var u in unidades)
+        {
+            var cs = porUnidad[u.Id].ToList();
+            decimal vencido = 0m, porVencer = 0m;
+            int cargosVencidos = 0, diasAtraso = 0;
+            DateOnly? masAntiguo = null;
+
+            foreach (var c in cs)
+            {
+                var saldo = c.Monto - c.MontoPagado;
+                if (saldo <= 0) continue;
+                if (c.FechaVencimiento < hoy)
+                {
+                    vencido += saldo;
+                    cargosVencidos++;
+                    var d = hoy.DayNumber - c.FechaVencimiento.DayNumber;
+                    if (d > diasAtraso) diasAtraso = d;
+                    if (masAntiguo is null || c.FechaVencimiento < masAntiguo) masAntiguo = c.FechaVencimiento;
+                }
+                else porVencer += saldo;
+            }
+
+            filas.Add(new MorosidadUnidadDto(
+                u.Id, u.Nombre, u.Piso, u.Seccion, vencido, porVencer, diasAtraso, masAntiguo, cargosVencidos));
+        }
+
+        var morosas = filas.Count(f => f.SaldoVencido > 0);
+        var conPorVencer = filas.Count(f => f.SaldoPorVencer > 0);
+        return Result<MorosidadDto>.Ok(new MorosidadDto(
+            filas, filas.Count - morosas, morosas, conPorVencer,
+            filas.Sum(f => f.SaldoVencido), filas.Sum(f => f.SaldoPorVencer)));
+    }
 
     // ============ helpers ============
 

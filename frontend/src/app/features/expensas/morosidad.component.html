@@ -1,0 +1,88 @@
+<section class="ex">
+  <header class="ex-head">
+    <div>
+      <h1>Morosidad</h1>
+      <p>Unidades con pagos vencidos después de su fecha de vencimiento.</p>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button type="button" class="ex-icon" (click)="refrescar()" aria-label="Refrescar">⟳</button>
+      <button type="button" class="btn btn--ghost u-btn" (click)="exportarCsv()" [disabled]="!data()">⭳ Exportar</button>
+    </div>
+  </header>
+
+  @if (cargando()) {
+    <p class="ex-loading">Cargando…</p>
+  } @else if (data()) {
+    @if (data()!; as d) {
+      <div class="ex-stats" style="grid-template-columns:repeat(3,1fr)">
+        <div class="ex-stat">
+          <span>Unidades al corriente</span>
+          <b class="is-ok">{{ d.alCorriente }}</b>
+          <small class="ex-muted">Al día · {{ d.porVencer }} con saldo por vencer</small>
+        </div>
+        <div class="ex-stat">
+          <span>Unidades morosas</span>
+          <b [class.is-danger]="d.morosas > 0">{{ d.morosas }}</b>
+          <small class="ex-muted">Con pagos vencidos</small>
+        </div>
+        <div class="ex-stat">
+          <span>Monto total moroso</span>
+          <b [class.is-danger]="d.montoTotalMoroso > 0">{{ fmt(d.montoTotalMoroso) }}</b>
+          <small class="ex-muted">Solo saldo vencido; excluye cargos por vencer</small>
+        </div>
+      </div>
+
+      <div class="mor-legend">
+        <span><i class="mor-dot mor-dot--sin"></i> Sin adeudos</span>
+        <span><i class="mor-dot mor-dot--porVencer"></i> Por vencer</span>
+        <span><i class="mor-dot mor-dot--v1"></i> 1-30 días</span>
+        <span><i class="mor-dot mor-dot--v2"></i> 31-60 días</span>
+        <span><i class="mor-dot mor-dot--v3"></i> +60 días</span>
+      </div>
+
+      @if (d.unidades.length === 0) {
+        <div class="ex-empty"><div class="ex-empty__ic">🏢</div><h2>No hay unidades cargadas</h2></div>
+      } @else {
+        <div class="mor-toggle">
+          <button type="button" [class.is-on]="vista() === 'tarjetas'" (click)="vista.set('tarjetas')">Tarjetas</button>
+          <button type="button" [class.is-on]="vista() === 'tabla'" (click)="vista.set('tabla')">Tabla</button>
+        </div>
+
+        @if (vista() === 'tarjetas') {
+          @for (grupo of pisos(); track grupo.piso) {
+            <h3 class="ex-sec">Piso {{ grupo.piso }} · {{ grupo.unidades.length }} unidad(es)</h3>
+            <div class="mor-grid">
+              @for (u of grupo.unidades; track u.unidadId) {
+                <div class="mor-card mor-card--{{ semaforo(u) }}">
+                  <div class="mor-card__top"><b>{{ u.nombre }}</b><span class="ex-muted">Piso {{ u.piso }}</span></div>
+                  <small>{{ estadoTxt(u) }}</small>
+                </div>
+              }
+            </div>
+          }
+        } @else {
+          <div class="mor-tablewrap">
+            <table class="mor-table">
+              <thead><tr>
+                <th>Unidad</th><th>Piso</th><th>Estado</th>
+                <th class="ta-r">Saldo vencido</th><th class="ta-r">Por vencer</th><th class="ta-r">Días</th>
+              </tr></thead>
+              <tbody>
+                @for (u of d.unidades; track u.unidadId) {
+                  <tr>
+                    <td>{{ u.nombre }}</td>
+                    <td>{{ u.piso }}</td>
+                    <td><i class="mor-dot mor-dot--{{ semaforo(u) }}"></i> {{ estadoTxt(u) }}</td>
+                    <td class="ta-r" [class.is-danger]="u.saldoVencido > 0">{{ fmt(u.saldoVencido) }}</td>
+                    <td class="ta-r">{{ fmt(u.saldoPorVencer) }}</td>
+                    <td class="ta-r">{{ u.diasAtraso || '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+    }
+  }
+</section>

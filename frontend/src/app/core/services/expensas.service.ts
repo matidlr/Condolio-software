@@ -92,32 +92,80 @@ export interface GastosFijosResumen {
 }
 
 export type EstadoExtraordinaria = 'Activa' | 'Finalizada' | 'Cancelada';
+export type CategoriaExtraordinaria =
+  | 'MejorasCapital' | 'ReparacionEmergencia' | 'ProyectoEspecial' | 'Legales' | 'Equipamiento' | 'Otro';
+export type MetodoReparto = 'Igual' | 'ProporcionalPorCoeficiente' | 'Personalizado';
 
+export const CATEGORIAS_EXTRAORDINARIA: { v: CategoriaExtraordinaria; t: string }[] = [
+  { v: 'MejorasCapital', t: 'Mejoras de capital y renovaciones' },
+  { v: 'ReparacionEmergencia', t: 'Reparación de emergencia y mantenimiento' },
+  { v: 'ProyectoEspecial', t: 'Proyecto especial' },
+  { v: 'Legales', t: 'Legales' },
+  { v: 'Equipamiento', t: 'Equipamiento' },
+  { v: 'Otro', t: 'Otro' },
+];
+
+export interface ExtraordinariaUnidad {
+  unidadId: string;
+  unidadNombre: string;
+  montoAsignado: number;
+}
 export interface Extraordinaria {
   id: string;
-  descripcion: string;
-  motivo?: string | null;
+  titulo: string;
+  descripcion?: string | null;
+  categoria: CategoriaExtraordinaria;
+  fechaInicio: string;
+  fechaVencimiento?: string | null;
+  metodoReparto: MetodoReparto;
+  cantidadMeses: number;
+  mesesEmitidos: number;
   montoTotal: number;
-  cantidadCuotas: number;
-  cuotasEmitidas: number;
-  montoPorCuota: number;
-  criterioDistribucion: CriterioDistribucion;
-  periodoInicioMes: number;
-  periodoInicioAnio: number;
-  fechaAprobacion?: string | null;
+  montoPorMes: number;
   estado: EstadoExtraordinaria;
   notas?: string | null;
+  unidades: ExtraordinariaUnidad[];
 }
-export type GuardarExtraordinaria = Pick<
-  Extraordinaria,
-  'descripcion' | 'motivo' | 'montoTotal' | 'cantidadCuotas' | 'criterioDistribucion'
-  | 'periodoInicioMes' | 'periodoInicioAnio' | 'fechaAprobacion' | 'notas'
->;
+export interface CargoUnidadInput {
+  unidadId: string;
+  montoAsignado: number;
+}
+export interface GuardarExtraordinaria {
+  titulo: string;
+  descripcion?: string | null;
+  categoria: CategoriaExtraordinaria;
+  fechaInicio: string;
+  fechaVencimiento?: string | null;
+  metodoReparto: MetodoReparto;
+  cantidadMeses: number;
+  notas?: string | null;
+  cargos: CargoUnidadInput[];
+}
 export interface ExtraordinariasLista {
   extraordinarias: Extraordinaria[];
   activas: number;
-  montoActivasTotal: number;
-  cuotaMensualActual: number;
+  totalEsperado: number;
+  totalRecaudado: number;
+}
+
+export interface MorosidadUnidad {
+  unidadId: string;
+  nombre: string;
+  piso: number;
+  seccion?: string | null;
+  saldoVencido: number;
+  saldoPorVencer: number;
+  diasAtraso: number;
+  vencimientoMasAntiguo?: string | null;
+  cargosVencidos: number;
+}
+export interface Morosidad {
+  unidades: MorosidadUnidad[];
+  alCorriente: number;
+  morosas: number;
+  porVencer: number;
+  montoTotalMoroso: number;
+  montoPorVencer: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -196,5 +244,10 @@ export class ExpensasService {
   }
   estadoExtraordinaria(cid: string, id: string, estado: EstadoExtraordinaria): Observable<void> {
     return this.http.post<void>(`${this.base(cid)}/extraordinarias/${id}/estado`, { estado });
+  }
+
+  // ---- morosidad ----
+  morosidad(cid: string): Observable<Morosidad> {
+    return this.http.get<Morosidad>(`${this.base(cid)}/morosidad`);
   }
 }

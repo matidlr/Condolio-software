@@ -1,0 +1,175 @@
+<div class="ex-ov" (click)="cerrar.emit()">
+  <div class="ex-modal ex-modal--wide" (click)="$event.stopPropagation()">
+    <header>
+      <b>Crear cuota extraordinaria</b>
+      <button type="button" (click)="cerrar.emit()">✕</button>
+    </header>
+
+    <div class="wz-steps">
+      @for (n of [1,2,3,4,5]; track n) {
+        <span class="wz-dot" [class.is-on]="paso() >= n" [class.is-cur]="paso() === n"></span>
+      }
+    </div>
+
+    <div class="ex-modal__b">
+      <!-- ============ Paso 1 ============ -->
+      @if (paso() === 1) {
+        <div class="ex-grid">
+          <label class="ex-field ex-field--full"><span>Título de la cuota *</span>
+            <input [ngModel]="titulo()" (ngModelChange)="titulo.set($event)" placeholder="Impermeabilización de terraza" /></label>
+          <label class="ex-field ex-field--full"><span>Descripción</span>
+            <textarea rows="3" maxlength="300" [ngModel]="descripcion()" (ngModelChange)="descripcion.set($event)"></textarea>
+            <small class="wz-count">{{ descripcion().length }}/300</small></label>
+          <label class="ex-field ex-field--full"><span>Categoría</span>
+            <select [ngModel]="categoria()" (ngModelChange)="categoria.set($event)">
+              @for (c of categorias; track c.v) { <option [ngValue]="c.v">{{ c.t }}</option> }
+            </select></label>
+          <label class="ex-field"><span>Fecha inicio *</span>
+            <input type="date" [ngModel]="fechaInicio()" (ngModelChange)="fechaInicio.set($event)" /></label>
+          <label class="ex-field"><span>Fecha de vencimiento (opcional)</span>
+            <input type="date" [ngModel]="fechaVencimiento()" (ngModelChange)="fechaVencimiento.set($event)" /></label>
+        </div>
+      }
+
+      <!-- ============ Paso 2 ============ -->
+      @if (paso() === 2) {
+        <div class="wz-selhead">
+          <span>{{ seleccion().size }} de {{ unidades().length }} unidades seleccionadas</span>
+          <span class="wz-selhead__btns">
+            <button type="button" class="btn btn--ghost u-btn" (click)="seleccionarTodas()">Seleccionar todas</button>
+            <button type="button" class="btn btn--ghost u-btn" (click)="limpiarSeleccion()">Limpiar</button>
+          </span>
+        </div>
+        <div class="ex-search" style="margin-bottom:10px">
+          <span>⌕</span>
+          <input type="search" placeholder="Buscar…" [ngModel]="busqueda()" (ngModelChange)="busqueda.set($event)" />
+        </div>
+        @if (cargandoUnidades()) {
+          <p class="ex-loading">Cargando unidades…</p>
+        } @else {
+          <ul class="wz-unidades">
+            @for (u of unidadesFiltradas(); track u.id) {
+              <li class="wz-unidad" (click)="toggleUnidad(u.id)">
+                <input type="checkbox" [checked]="seleccion().has(u.id)" (click)="$event.preventDefault()" />
+                <b>{{ u.nombre }}</b>
+                <small>{{ residentes(u) }} residente(s)</small>
+              </li>
+            }
+          </ul>
+        }
+      }
+
+      <!-- ============ Paso 3 ============ -->
+      @if (paso() === 3) {
+        <div class="wz-metodos">
+          <button type="button" class="wz-metodo" [class.is-on]="metodo() === 'Igual'" (click)="metodo.set('Igual')">
+            <b>= Igual</b><small>Todas pagan igual</small>
+          </button>
+          <button type="button" class="wz-metodo" [class.is-on]="metodo() === 'ProporcionalPorCoeficiente'"
+            (click)="metodo.set('ProporcionalPorCoeficiente')">
+            <b>⚖ Proporcional</b><small>Según el coeficiente</small>
+          </button>
+          <button type="button" class="wz-metodo" [class.is-on]="metodo() === 'Personalizado'" (click)="metodo.set('Personalizado')">
+            <b>≔ Personalizado</b><small>Cargás cada monto</small>
+          </button>
+        </div>
+
+        @if (metodo() === 'Igual') {
+          <div class="ex-grid" style="margin-bottom:12px">
+            <label class="ex-field"><span>Capturar</span>
+              <select [ngModel]="capturar()" (ngModelChange)="capturar.set($event)">
+                <option value="porUnidad">Monto por unidad</option>
+                <option value="total">Monto total</option>
+              </select></label>
+            <label class="ex-field"><span>{{ capturar() === 'porUnidad' ? 'Monto por unidad *' : 'Monto total *' }}</span>
+              <input type="number" min="0" [ngModel]="montoBase()" (ngModelChange)="montoBase.set(+$event)" /></label>
+          </div>
+        } @else if (metodo() === 'ProporcionalPorCoeficiente') {
+          <label class="ex-field ex-field--full" style="margin-bottom:12px"><span>Monto total *</span>
+            <input type="number" min="0" [ngModel]="montoBase()" (ngModelChange)="montoBase.set(+$event)" />
+            <small class="wz-count">Cada unidad paga en proporción a su coeficiente.</small></label>
+        }
+
+        <div class="wz-tabla">
+          <div class="wz-tabla__head">
+            <span>Unidad</span>
+            @if (metodo() === 'ProporcionalPorCoeficiente') { <span>Coef.</span> }
+            <span>Monto</span>
+          </div>
+          @for (u of seleccionadas(); track u.id) {
+            <div class="wz-tabla__row" [class.is-err]="faltaMonto(u)">
+              <span>{{ u.nombre }}</span>
+              @if (metodo() === 'ProporcionalPorCoeficiente') { <span class="ex-muted">{{ u.coeficiente ?? 0 }}</span> }
+              <span class="wz-tabla__monto">
+                <input type="number" min="0" [ngModel]="montoUnidad(u)" (ngModelChange)="setMontoUnidad(u.id, +$event)" />
+                @if (faltaMonto(u)) { <em class="wz-falta">Falta monto</em> }
+              </span>
+            </div>
+          }
+        </div>
+        <div class="ex-total" style="margin-top:12px">
+          <span>{{ seleccionadas().length }} unidad(es)</span>
+          <b>Total a cobrar: {{ fmt(totalACobrar()) }}</b>
+        </div>
+      }
+
+      <!-- ============ Paso 4 ============ -->
+      @if (paso() === 4) {
+        <div class="ex-grid">
+          <label class="ex-field"><span>¿Cómo se cobra?</span>
+            <select [ngModel]="prorratea" (ngModelChange)="setProrrateo($event === 'true' || $event === true)">
+              <option [ngValue]="false">En un solo pago</option>
+              <option [ngValue]="true">Prorratear en varios meses</option>
+            </select></label>
+          @if (prorratea) {
+            <label class="ex-field"><span>Dividir en (meses) *</span>
+              <input type="number" min="2" max="120" [ngModel]="cantidadMeses()" (ngModelChange)="cantidadMeses.set(+$event)" /></label>
+          }
+        </div>
+        <div class="ex-total" style="margin-top:16px">
+          <span>{{ prorratea ? cantidadMeses() + ' cuotas mensuales' : 'Pago único' }}</span>
+          <b>{{ fmt(montoPorMes()) }}{{ prorratea ? ' /mes' : '' }}</b>
+        </div>
+        <p class="wz-count" style="margin-top:8px">
+          Total a cobrar entre todas las unidades: <b>{{ fmt(totalACobrar()) }}</b>
+        </p>
+      }
+
+      <!-- ============ Paso 5 ============ -->
+      @if (paso() === 5) {
+        <div class="wz-resumen">
+          <div class="wz-resumen__grid">
+            <div><span>Método</span><b>{{ nombreMetodo(metodo()) }}</b></div>
+            <div><span>Unidades</span><b>{{ seleccionadas().length }}</b></div>
+            <div><span>Rango por unidad</span><b>{{ fmt(rangoPorUnidad().min) }} – {{ fmt(rangoPorUnidad().max) }}</b></div>
+            <div><span>Montos editados</span><b>{{ montosEditados() }}</b></div>
+            @if (prorratea) { <div><span>Prorrateo</span><b>{{ cantidadMeses() }} meses · {{ fmt(montoPorMes()) }}/mes</b></div> }
+            <div class="wz-resumen__total"><span>Total a cobrar</span><b>{{ fmt(totalACobrar()) }}</b></div>
+          </div>
+        </div>
+        <dl class="wz-detalle">
+          <div><dt>Título</dt><dd>{{ titulo() }}</dd></div>
+          @if (descripcion()) { <div><dt>Descripción</dt><dd>{{ descripcion() }}</dd></div> }
+          <div><dt>Categoría</dt><dd>{{ nombreCategoria(categoria()) }}</dd></div>
+          <div><dt>Fecha inicio</dt><dd>{{ fechaInicio() }}</dd></div>
+          @if (fechaVencimiento()) { <div><dt>Vencimiento</dt><dd>{{ fechaVencimiento() }}</dd></div> }
+        </dl>
+        <label class="wz-confirmar">
+          <input type="checkbox" [checked]="confirmado()" (change)="confirmado.set(!confirmado())" />
+          Confirmo crear {{ seleccionadas().length }} cargo(s) por un total de {{ fmt(totalACobrar()) }}.
+        </label>
+      }
+    </div>
+
+    <footer>
+      <button type="button" class="btn btn--ghost u-btn" [disabled]="paso() === 1" (click)="atras()">Atrás</button>
+      @if (paso() < 5) {
+        <button type="button" class="btn btn--primary u-btn" [disabled]="!puedeSiguiente()" (click)="siguiente()">Siguiente ›</button>
+      } @else {
+        <button type="button" class="btn btn--primary u-btn" [disabled]="!confirmado() || guardando()" (click)="crear()">
+          {{ guardando() ? 'Creando…' : 'Crear cuota' }}
+        </button>
+      }
+    </footer>
+  </div>
+</div>

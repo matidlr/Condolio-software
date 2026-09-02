@@ -75,20 +75,39 @@ public record GuardarGastoFijoDto(
 
 // ---------- Expensas extraordinarias ----------
 
+public record ExtraordinariaUnidadDto(Guid UnidadId, string UnidadNombre, decimal MontoAsignado);
+
 public record ExtraordinariaDto(
-    Guid Id, string Descripcion, string? Motivo, decimal MontoTotal,
-    int CantidadCuotas, int CuotasEmitidas, decimal MontoPorCuota,
-    CriterioDistribucion CriterioDistribucion, int PeriodoInicioMes, int PeriodoInicioAnio,
-    DateOnly? FechaAprobacion, EstadoExtraordinaria Estado, string? Notas);
+    Guid Id, string Titulo, string? Descripcion, CategoriaExtraordinaria Categoria,
+    DateOnly FechaInicio, DateOnly? FechaVencimiento, MetodoReparto MetodoReparto,
+    int CantidadMeses, int MesesEmitidos, decimal MontoTotal, decimal MontoPorMes,
+    EstadoExtraordinaria Estado, string? Notas,
+    IReadOnlyList<ExtraordinariaUnidadDto> Unidades);
+
+public record CargoUnidadInputDto(Guid UnidadId, decimal MontoAsignado);
 
 public record GuardarExtraordinariaDto(
-    string Descripcion, string? Motivo, decimal MontoTotal, int CantidadCuotas,
-    CriterioDistribucion CriterioDistribucion, int PeriodoInicioMes, int PeriodoInicioAnio,
-    DateOnly? FechaAprobacion, string? Notas);
+    string Titulo, string? Descripcion, CategoriaExtraordinaria Categoria,
+    DateOnly FechaInicio, DateOnly? FechaVencimiento, MetodoReparto MetodoReparto,
+    int CantidadMeses, string? Notas,
+    IReadOnlyList<CargoUnidadInputDto> Cargos);
 
 public record ExtraordinariasListaDto(
     IReadOnlyList<ExtraordinariaDto> Extraordinarias,
-    int Activas, decimal MontoActivasTotal, decimal CuotaMensualActual);
+    int Activas, decimal TotalEsperado, decimal TotalRecaudado);
+
+// ---------- Morosidad ----------
+
+/// <summary>Estado de pago de una unidad para el semáforo de morosidad.</summary>
+public record MorosidadUnidadDto(
+    Guid UnidadId, string Nombre, int Piso, string? Seccion,
+    decimal SaldoVencido, decimal SaldoPorVencer,
+    int DiasAtraso, DateOnly? VencimientoMasAntiguo, int CargosVencidos);
+
+public record MorosidadDto(
+    IReadOnlyList<MorosidadUnidadDto> Unidades,
+    int AlCorriente, int Morosas, int PorVencer,
+    decimal MontoTotalMoroso, decimal MontoPorVencer);
 
 // ---------- Resumen para la pantalla de gastos fijos ----------
 
@@ -130,4 +149,6 @@ public interface IExpensasConfigService
     Task<Result<ExtraordinariaDto>> CrearExtraordinariaAsync(Guid consorcioId, GuardarExtraordinariaDto dto, CancellationToken ct = default);
     Task<Result<ExtraordinariaDto>> ActualizarExtraordinariaAsync(Guid consorcioId, Guid id, GuardarExtraordinariaDto dto, CancellationToken ct = default);
     Task<Result> CambiarEstadoExtraordinariaAsync(Guid consorcioId, Guid id, EstadoExtraordinaria estado, CancellationToken ct = default);
+
+    Task<Result<MorosidadDto>> MorosidadAsync(Guid consorcioId, CancellationToken ct = default);
 }

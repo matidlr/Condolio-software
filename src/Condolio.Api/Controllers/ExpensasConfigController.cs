@@ -125,4 +125,10 @@ public class ExpensasConfigController : ApiControllerBase
     [HttpPost("extraordinarias/{id:guid}/estado")]
     public async Task<IActionResult> EstadoExtraordinaria(Guid consorcioId, Guid id, EstadoExtraordinariaBody body, CancellationToken ct) =>
         ToResult(await _svc.CambiarEstadoExtraordinariaAsync(consorcioId, id, body.Estado, ct));
+
+    // ---- Morosidad ----
+
+    [HttpGet("morosidad")]
+    public async Task<IActionResult> Morosidad(Guid consorcioId, CancellationToken ct) =>
+        ToResult(await _svc.MorosidadAsync(consorcioId, ct));
 }

@@ -81,6 +81,8 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Condolio.Domain.Expensas.Empleado> Empleados => Set<Condolio.Domain.Expensas.Empleado>();
     public DbSet<Condolio.Domain.Expensas.GastoFijo> GastosFijos => Set<Condolio.Domain.Expensas.GastoFijo>();
     public DbSet<Condolio.Domain.Expensas.Extraordinaria> Extraordinarias => Set<Condolio.Domain.Expensas.Extraordinaria>();
+    public DbSet<Condolio.Domain.Expensas.ExtraordinariaUnidad> ExtraordinariaUnidades => Set<Condolio.Domain.Expensas.ExtraordinariaUnidad>();
+    public DbSet<Condolio.Domain.Expensas.CargoUnidad> CargosUnidad => Set<Condolio.Domain.Expensas.CargoUnidad>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -525,12 +527,34 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
 
         builder.Entity<Condolio.Domain.Expensas.Extraordinaria>(e =>
         {
-            e.Property(x => x.Descripcion).HasMaxLength(240).IsRequired();
-            e.Property(x => x.Motivo).HasMaxLength(1000);
+            e.Property(x => x.Titulo).HasMaxLength(160).IsRequired();
+            e.Property(x => x.Descripcion).HasMaxLength(1000);
             e.Property(x => x.Notas).HasMaxLength(1000);
             e.Property(x => x.MontoTotal).HasPrecision(14, 2);
-            e.Ignore(x => x.MontoPorCuota);
+            e.Ignore(x => x.MontoPorMes);
+            e.HasMany(x => x.Unidades).WithOne().HasForeignKey(u => u.ExtraordinariaId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(x => new { x.ConsorcioId, x.Estado });
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
+        });
+
+        builder.Entity<Condolio.Domain.Expensas.ExtraordinariaUnidad>(e =>
+        {
+            e.Property(x => x.UnidadNombre).HasMaxLength(120).IsRequired();
+            e.Property(x => x.MontoAsignado).HasPrecision(14, 2);
+            e.HasIndex(x => x.ExtraordinariaId);
+            e.HasIndex(x => new { x.ConsorcioId, x.UnidadId });
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
+        });
+
+        builder.Entity<Condolio.Domain.Expensas.CargoUnidad>(e =>
+        {
+            e.Property(x => x.UnidadNombre).HasMaxLength(120).IsRequired();
+            e.Property(x => x.Concepto).HasMaxLength(240).IsRequired();
+            e.Property(x => x.Monto).HasPrecision(14, 2);
+            e.Property(x => x.MontoPagado).HasPrecision(14, 2);
+            e.Ignore(x => x.Saldo);
+            e.HasIndex(x => new { x.ConsorcioId, x.UnidadId, x.Estado });
+            e.HasIndex(x => x.ExtraordinariaId);
             e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
         });
 

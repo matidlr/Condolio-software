@@ -1,11 +1,11 @@
 <section class="ex">
   <header class="ex-head">
     <div>
-      <h1>Expensas extraordinarias</h1>
-      <p>Obras y gastos aprobados por asamblea que se cobran aparte del gasto ordinario. Podés
-        prorratearlos en varios meses. Siempre se cobran al propietario.</p>
+      <h1>Cuotas extraordinarias</h1>
+      <p>Administra cuotas extraordinarias para proyectos especiales: obras, reparaciones de
+        emergencia y mejoras. Se cobran a las unidades que elijas, siempre al propietario.</p>
     </div>
-    <button type="button" class="btn btn--primary u-btn" (click)="abrirNuevo()">＋ Nueva extraordinaria</button>
+    <button type="button" class="btn btn--primary u-btn" (click)="wizard.set(true)">＋ Crear cuota extraordinaria</button>
   </header>
 
   @if (cargando()) {
@@ -13,47 +13,43 @@
   } @else if (data()) {
     @if (data()!; as d) {
       <div class="ex-stats">
-        <div class="ex-stat"><span>Activas</span><b>{{ d.activas }}</b></div>
-        <div class="ex-stat"><span>Monto total en curso</span><b>{{ fmt(d.montoActivasTotal) }}</b></div>
-        <div class="ex-stat"><span>Cuota de este mes</span><b class="is-ok">{{ fmt(d.cuotaMensualActual) }}</b></div>
+        <div class="ex-stat"><span>Cuotas activas</span><b>{{ d.activas }}</b></div>
+        <div class="ex-stat"><span>Total esperado</span><b>{{ fmt(d.totalEsperado) }}</b></div>
+        <div class="ex-stat"><span>Total recaudado</span><b class="is-ok">{{ fmt(d.totalRecaudado) }}</b></div>
       </div>
 
       @if (d.extraordinarias.length === 0) {
         <div class="ex-empty">
-          <div class="ex-empty__ic">🏗️</div>
-          <h2>Sin expensas extraordinarias</h2>
-          <p>Cargá acá las obras aprobadas en asamblea (impermeabilización, cambio de bombas,
-            modernización de ascensores…). Se prorratean en cuotas y entran en la liquidación
-            del período correspondiente.</p>
+          <div class="ex-empty__ic">🧾</div>
+          <h2>Aún no hay cuotas extraordinarias</h2>
+          <p>Creá tu primera cuota extraordinaria para cobrar a las unidades por proyectos especiales.</p>
+          <ul class="ex-empty__usos">
+            <li>Mejoras de capital y renovaciones</li>
+            <li>Reparaciones de emergencia y mantenimiento</li>
+            <li>Proyectos especiales y evaluaciones</li>
+          </ul>
         </div>
       } @else {
+        <h2 class="ex-sec">Todas las cuotas</h2>
         <ul class="ex-list">
           @for (x of d.extraordinarias; track x.id) {
             <li class="ex-card" [class.is-off]="x.estado !== 'Activa'">
               <div class="ex-card__b">
-                <b>{{ x.descripcion }}
-                  <span class="ex-chip">{{ estadoTxt(x.estado) }}</span></b>
+                <b>{{ x.titulo }} <span class="ex-chip">{{ estadoTxt(x.estado) }}</span></b>
                 <small>
-                  {{ fmt(x.montoTotal) }}
-                  @if (x.cantidadCuotas > 1) {
-                    · prorrateada en {{ x.cantidadCuotas }} meses ({{ fmt(x.montoPorCuota) }}/mes)
-                    · {{ rango(x.periodoInicioMes, x.periodoInicioAnio, x.cantidadCuotas) }}
-                  } @else {
-                    · pago único · {{ periodo(x.periodoInicioMes, x.periodoInicioAnio) }}
-                  }
-                  · {{ x.criterioDistribucion === 'PorCoeficiente' ? 'por coeficiente' : 'partes iguales' }}
-                  @if (x.cuotasEmitidas > 0) { · emitidas {{ x.cuotasEmitidas }}/{{ x.cantidadCuotas }} }
+                  <span class="ex-chip">{{ nombreCategoria(x.categoria) }}</span>
+                  · {{ fmt(x.montoTotal) }} · {{ x.unidades.length }} unidad(es)
+                  @if (x.cantidadMeses > 1) { · prorrateada en {{ x.cantidadMeses }} meses ({{ fmt(x.montoPorMes) }}/mes) }
+                  @else { · pago único }
+                  · desde {{ fmtFecha(x.fechaInicio) }}
+                  @if (x.fechaVencimiento) { · vence {{ fmtFecha(x.fechaVencimiento) }} }
                 </small>
               </div>
               @if (x.estado === 'Activa') {
-                <button type="button" class="ex-icon" (click)="abrirEditar(x)" aria-label="Editar">✎</button>
-                <button type="button" class="ex-icon" title="Marcar como finalizada"
-                  (click)="cambiarEstado(x, 'Finalizada')">✓</button>
-                <button type="button" class="ex-icon" title="Cancelar"
-                  (click)="cambiarEstado(x, 'Cancelada')">✕</button>
+                <button type="button" class="ex-icon" title="Marcar finalizada" (click)="cambiarEstado(x, 'Finalizada')">✓</button>
+                <button type="button" class="ex-icon" title="Cancelar" (click)="cambiarEstado(x, 'Cancelada')">✕</button>
               } @else {
-                <button type="button" class="ex-icon" title="Reactivar"
-                  (click)="cambiarEstado(x, 'Activa')">↺</button>
+                <button type="button" class="ex-icon" title="Reactivar" (click)="cambiarEstado(x, 'Activa')">↺</button>
               }
             </li>
           }
@@ -63,67 +59,6 @@
   }
 </section>
 
-@if (modal()) {
-  <div class="ex-ov" (click)="modal.set(false)">
-    <div class="ex-modal" (click)="$event.stopPropagation()">
-      <header>
-        <b>{{ editId() ? 'Editar expensa extraordinaria' : 'Nueva expensa extraordinaria' }}</b>
-        <button type="button" (click)="modal.set(false)">✕</button>
-      </header>
-      <div class="ex-modal__b">
-        <div class="ex-grid">
-          <label class="ex-field ex-field--full"><span>Descripción *</span>
-            <input [ngModel]="form().descripcion" (ngModelChange)="set('descripcion', $event)"
-              placeholder="Impermeabilización de terraza" /></label>
-          <label class="ex-field ex-field--full"><span>Motivo / acta</span>
-            <input [ngModel]="form().motivo" (ngModelChange)="set('motivo', $event)"
-              placeholder="Aprobada en asamblea del 12/08 — acta 47" /></label>
-          <label class="ex-field"><span>Monto total *</span>
-            <input type="number" min="0" [ngModel]="form().montoTotal" (ngModelChange)="set('montoTotal', +$event)" /></label>
-          <label class="ex-field"><span>¿Cómo se cobra?</span>
-            <select [ngModel]="prorratea()" (ngModelChange)="setModoProrrateo($event === 'true' || $event === true)">
-              <option [ngValue]="false">En un solo pago</option>
-              <option [ngValue]="true">Prorratear en varios meses</option>
-            </select></label>
-          @if (prorratea()) {
-            <label class="ex-field"><span>Prorratear en (meses) *</span>
-              <input type="number" min="2" max="120" [ngModel]="form().cantidadCuotas" (ngModelChange)="set('cantidadCuotas', +$event)" /></label>
-          }
-          <label class="ex-field"><span>{{ prorratea() ? 'Primer mes' : 'Mes de cobro' }}</span>
-            <select [ngModel]="form().periodoInicioMes" (ngModelChange)="set('periodoInicioMes', +$event)">
-              @for (m of meses; track m.v) { <option [ngValue]="m.v">{{ m.t }}</option> }
-            </select></label>
-          <label class="ex-field"><span>Año de inicio</span>
-            <select [ngModel]="form().periodoInicioAnio" (ngModelChange)="set('periodoInicioAnio', +$event)">
-              @for (a of anios; track a) { <option [ngValue]="a">{{ a }}</option> }
-            </select></label>
-          <label class="ex-field"><span>Criterio de distribución</span>
-            <select [ngModel]="form().criterioDistribucion" (ngModelChange)="set('criterioDistribucion', $event)">
-              @for (c of criterios; track c.v) { <option [ngValue]="c.v">{{ c.t }}</option> }
-            </select></label>
-          <label class="ex-field"><span>Fecha de aprobación</span>
-            <input type="date" [ngModel]="form().fechaAprobacion" (ngModelChange)="set('fechaAprobacion', $event || null)" /></label>
-          <label class="ex-field ex-field--full"><span>Notas</span>
-            <input [ngModel]="form().notas" (ngModelChange)="set('notas', $event)" /></label>
-        </div>
-        <div class="ex-total" style="margin-top:16px">
-          <span>
-            @if (prorratea()) {
-              {{ form().cantidadCuotas }} meses · {{ rangoPreview() }}
-            } @else {
-              Se cobra en un solo pago
-            }
-          </span>
-          <b>{{ fmt(montoCuotaPreview()) }}{{ prorratea() ? ' /mes' : '' }}</b>
-        </div>
-      </div>
-      <footer>
-        <button type="button" class="btn btn--ghost u-btn" (click)="modal.set(false)">Cancelar</button>
-        <button type="button" class="btn btn--primary u-btn"
-          [disabled]="!form().descripcion.trim() || form().montoTotal <= 0 || guardando()" (click)="guardar()">
-          {{ guardando() ? 'Guardando…' : (editId() ? 'Guardar' : 'Crear') }}
-        </button>
-      </footer>
-    </div>
-  </div>
+@if (wizard()) {
+  <app-cuota-extra-wizard (cerrar)="wizard.set(false)" (creada)="onCreada()" />
 }
