@@ -1,0 +1,195 @@
+<section class="ex">
+  <header class="ex-head">
+    <div>
+      <h1>Gastos fijos</h1>
+      <p>Sueldos del personal y gastos recurrentes que se repiten todos los meses en la liquidación.</p>
+    </div>
+    <button type="button" class="ex-icon" (click)="refrescar()" aria-label="Refrescar">⟳</button>
+  </header>
+
+  @if (cargando()) {
+    <p class="ex-loading">Cargando…</p>
+  } @else if (data()) {
+    @if (data()!; as d) {
+    <div class="ex-total">
+      <span>Total fijo mensual estimado</span>
+      <b>{{ fmt(d.totalMensual) }}</b>
+    </div>
+
+    <div class="ex-stats">
+      <div class="ex-stat"><span>Personal activo</span><b>{{ d.empleados.length }}</b></div>
+      <div class="ex-stat"><span>Costo personal</span><b>{{ fmt(d.totalEmpleados) }}</b></div>
+      <div class="ex-stat"><span>Otros gastos</span><b>{{ d.gastos.length }}</b></div>
+      <div class="ex-stat"><span>Costo otros</span><b>{{ fmt(d.totalGastos) }}</b></div>
+    </div>
+
+    <!-- ===================== Empleados ===================== -->
+    <div class="ex-sec-head" style="display:flex;justify-content:space-between;align-items:center;margin-top:24px">
+      <h3 style="margin:0">Personal en relación de dependencia</h3>
+      <button type="button" class="btn btn--primary u-btn" (click)="abrirNuevoEmp()">＋ Agregar empleado</button>
+    </div>
+
+    @if (d.empleados.length === 0) {
+      <div class="ex-empty">
+        <div class="ex-empty__ic">👷</div>
+        <h2>Sin personal cargado</h2>
+        <p>Agregá encargados, suplentes o personal de limpieza con su CUIL y sueldo para
+          que su costo mensual entre automáticamente en las expensas.</p>
+      </div>
+    } @else {
+      <ul class="ex-list">
+        @for (e of d.empleados; track e.id) {
+          <li class="ex-card" [class.is-off]="!e.activo">
+            <div class="ex-card__b">
+              <b>{{ e.nombre }} {{ e.apellido }}
+                @if (e.categoria) { <span class="ex-muted">· {{ e.categoria }}</span> }</b>
+              <small>
+                @if (e.cuil) { CUIL {{ e.cuil }} · }
+                Básico {{ fmt(e.sueldoBasico) }}
+                @if (e.cargasSocialesPct) { · cargas {{ e.cargasSocialesPct }}% }
+                @if (e.provisionaAguinaldo) { · aguinaldo }
+              </small>
+            </div>
+            <b class="ex-card__monto">{{ fmt(e.costoMensualTotal) }}</b>
+            <button type="button" class="ex-icon" (click)="abrirEditarEmp(e)" aria-label="Editar">✎</button>
+            <button type="button" class="ex-icon" (click)="toggleEmp(e)"
+              [title]="e.activo ? 'Desactivar' : 'Activar'">{{ e.activo ? '⏻' : '▶' }}</button>
+          </li>
+        }
+      </ul>
+    }
+
+    <!-- ===================== Otros gastos ===================== -->
+    <div class="ex-sec-head" style="display:flex;justify-content:space-between;align-items:center;margin-top:28px">
+      <h3 style="margin:0">Otros gastos fijos</h3>
+      <button type="button" class="btn btn--primary u-btn" (click)="abrirNuevoGasto()">＋ Agregar gasto</button>
+    </div>
+
+    @if (d.gastos.length === 0) {
+      <div class="ex-empty">
+        <div class="ex-empty__ic">🧾</div>
+        <h2>Sin gastos fijos</h2>
+        <p>Cargá acá abonos mensuales: ascensores, seguro del edificio, honorarios de
+          administración, servicio de limpieza tercerizado, etc.</p>
+      </div>
+    } @else {
+      <ul class="ex-list">
+        @for (g of d.gastos; track g.id) {
+          <li class="ex-card" [class.is-off]="!g.activo">
+            <div class="ex-card__b">
+              <b>{{ g.descripcion }}</b>
+              <small>
+                <span class="ex-chip">{{ g.rubroNombre }}</span>
+                @if (g.proveedorNombre) { · {{ g.proveedorNombre }} }
+                · {{ g.criterioDistribucion === 'PorCoeficiente' ? 'por coeficiente' : 'partes iguales' }}
+              </small>
+            </div>
+            <b class="ex-card__monto">{{ fmt(g.montoEstimado) }}</b>
+            <button type="button" class="ex-icon" (click)="abrirEditarGasto(g)" aria-label="Editar">✎</button>
+            <button type="button" class="ex-icon" (click)="toggleGasto(g)"
+              [title]="g.activo ? 'Desactivar' : 'Activar'">{{ g.activo ? '⏻' : '▶' }}</button>
+          </li>
+        }
+      </ul>
+    }
+    }
+  }
+</section>
+
+<!-- ===================== Modal empleado ===================== -->
+@if (modalEmp()) {
+  <div class="ex-ov" (click)="modalEmp.set(false)">
+    <div class="ex-modal" (click)="$event.stopPropagation()">
+      <header>
+        <b>{{ editEmpId() ? 'Editar empleado' : 'Agregar empleado' }}</b>
+        <button type="button" (click)="modalEmp.set(false)">✕</button>
+      </header>
+      <div class="ex-modal__b">
+        <div class="ex-grid">
+          <label class="ex-field"><span>Nombre *</span>
+            <input [ngModel]="formEmp().nombre" (ngModelChange)="setEmp('nombre', $event)" /></label>
+          <label class="ex-field"><span>Apellido *</span>
+            <input [ngModel]="formEmp().apellido" (ngModelChange)="setEmp('apellido', $event)" /></label>
+          <label class="ex-field"><span>CUIL</span>
+            <input [ngModel]="formEmp().cuil" (ngModelChange)="setEmp('cuil', $event)" placeholder="20-12345678-3" /></label>
+          <label class="ex-field"><span>Categoría</span>
+            <input [ngModel]="formEmp().categoria" (ngModelChange)="setEmp('categoria', $event)" placeholder="Encargado permanente" /></label>
+          <label class="ex-field"><span>Sueldo básico</span>
+            <input type="number" min="0" [ngModel]="formEmp().sueldoBasico" (ngModelChange)="setEmp('sueldoBasico', +$event)" /></label>
+          <label class="ex-field"><span>Cargas sociales (%)</span>
+            <input type="number" min="0" [ngModel]="formEmp().cargasSocialesPct" (ngModelChange)="setEmp('cargasSocialesPct', +$event)" /></label>
+          <label class="ex-field"><span>Otros conceptos mensuales</span>
+            <input type="number" min="0" [ngModel]="formEmp().otrosConceptosMensuales" (ngModelChange)="setEmp('otrosConceptosMensuales', +$event)" /></label>
+          <label class="ex-field"><span>Fecha de ingreso</span>
+            <input type="date" [ngModel]="formEmp().fechaIngreso" (ngModelChange)="setEmp('fechaIngreso', $event || null)" /></label>
+          <label class="ex-field"><span>Rubro de gasto</span>
+            <select [ngModel]="formEmp().rubroGastoId" (ngModelChange)="setEmp('rubroGastoId', $event || null)">
+              <option [ngValue]="null">— Sueldos y jornales —</option>
+              @for (r of rubros(); track r.id) { <option [ngValue]="r.id">{{ r.nombre }}</option> }
+            </select></label>
+          <label class="ex-check ex-field--full">
+            <input type="checkbox" [checked]="formEmp().provisionaAguinaldo"
+              (change)="setEmp('provisionaAguinaldo', !formEmp().provisionaAguinaldo)" />
+            Provisionar aguinaldo (SAC) — suma 1/12 del básico por mes
+          </label>
+          <label class="ex-field ex-field--full"><span>Notas</span>
+            <input [ngModel]="formEmp().notas" (ngModelChange)="setEmp('notas', $event)" /></label>
+        </div>
+        <div class="ex-total" style="margin-top:16px">
+          <span>Costo mensual estimado</span>
+          <b>{{ fmt(previewCostoEmp()) }}</b>
+        </div>
+      </div>
+      <footer>
+        <button type="button" class="btn btn--ghost u-btn" (click)="modalEmp.set(false)">Cancelar</button>
+        <button type="button" class="btn btn--primary u-btn"
+          [disabled]="!formEmp().nombre.trim() || !formEmp().apellido.trim() || guardandoEmp()" (click)="guardarEmp()">
+          {{ guardandoEmp() ? 'Guardando…' : (editEmpId() ? 'Guardar' : 'Agregar') }}
+        </button>
+      </footer>
+    </div>
+  </div>
+}
+
+<!-- ===================== Modal gasto ===================== -->
+@if (modalGasto()) {
+  <div class="ex-ov" (click)="modalGasto.set(false)">
+    <div class="ex-modal" (click)="$event.stopPropagation()">
+      <header>
+        <b>{{ editGastoId() ? 'Editar gasto fijo' : 'Agregar gasto fijo' }}</b>
+        <button type="button" (click)="modalGasto.set(false)">✕</button>
+      </header>
+      <div class="ex-modal__b">
+        <div class="ex-grid">
+          <label class="ex-field ex-field--full"><span>Descripción *</span>
+            <input [ngModel]="formGasto().descripcion" (ngModelChange)="setGasto('descripcion', $event)"
+              placeholder="Abono mantenimiento ascensores" /></label>
+          <label class="ex-field"><span>Rubro *</span>
+            <select [ngModel]="formGasto().rubroGastoId" (ngModelChange)="setGasto('rubroGastoId', $event)">
+              @for (r of rubros(); track r.id) { <option [ngValue]="r.id">{{ r.nombre }}</option> }
+            </select></label>
+          <label class="ex-field"><span>Proveedor</span>
+            <select [ngModel]="formGasto().proveedorId" (ngModelChange)="setGasto('proveedorId', $event || null)">
+              <option [ngValue]="null">— Sin proveedor —</option>
+              @for (p of proveedores(); track p.id) { <option [ngValue]="p.id">{{ p.nombre }}</option> }
+            </select></label>
+          <label class="ex-field"><span>Monto estimado</span>
+            <input type="number" min="0" [ngModel]="formGasto().montoEstimado" (ngModelChange)="setGasto('montoEstimado', +$event)" /></label>
+          <label class="ex-field"><span>Criterio de distribución</span>
+            <select [ngModel]="formGasto().criterioDistribucion" (ngModelChange)="setGasto('criterioDistribucion', $event)">
+              @for (c of criterios; track c.v) { <option [ngValue]="c.v">{{ c.t }}</option> }
+            </select></label>
+          <label class="ex-field ex-field--full"><span>Notas</span>
+            <input [ngModel]="formGasto().notas" (ngModelChange)="setGasto('notas', $event)" /></label>
+        </div>
+      </div>
+      <footer>
+        <button type="button" class="btn btn--ghost u-btn" (click)="modalGasto.set(false)">Cancelar</button>
+        <button type="button" class="btn btn--primary u-btn"
+          [disabled]="!formGasto().descripcion.trim() || !formGasto().rubroGastoId || guardandoGasto()" (click)="guardarGasto()">
+          {{ guardandoGasto() ? 'Guardando…' : (editGastoId() ? 'Guardar' : 'Agregar') }}
+        </button>
+      </footer>
+    </div>
+  </div>
+}

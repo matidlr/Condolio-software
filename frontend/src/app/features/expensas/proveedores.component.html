@@ -1,0 +1,123 @@
+<section class="ex">
+  <header class="ex-head">
+    <div>
+      <h1>Directorio de proveedores</h1>
+      <p>Los proveedores que registrás acá se pueden asociar a los gastos del consorcio.</p>
+    </div>
+    <button type="button" class="btn btn--primary u-btn" (click)="abrirNuevo()">＋ Agregar proveedor</button>
+  </header>
+
+  @if (data(); as d) {
+    <div class="ex-stats">
+      <div class="ex-stat"><span>Total</span><b>{{ d.total }}</b></div>
+      <div class="ex-stat"><span>Activos</span><b class="is-ok">{{ d.activos }}</b></div>
+      <div class="ex-stat"><span>Inactivos</span><b>{{ d.inactivos }}</b></div>
+      <div class="ex-stat"><span>Recomendados</span><b class="is-star">{{ d.recomendados }}</b></div>
+    </div>
+  }
+
+  <div class="ex-toolbar">
+    <div class="ex-search">
+      <span>⌕</span>
+      <input type="search" placeholder="Buscar por nombre, empresa o categoría…"
+        [ngModel]="busqueda()" (ngModelChange)="busqueda.set($event)" />
+    </div>
+    <select [ngModel]="fCategoria()" (ngModelChange)="fCategoria.set($event)">
+      <option value="">Todas las categorías</option>
+      @for (c of categorias; track c) { <option [value]="c">{{ c }}</option> }
+    </select>
+    <select [ngModel]="fEstado()" (ngModelChange)="fEstado.set($event)">
+      <option value="todos">Todos los estados</option>
+      <option value="activo">Activo</option>
+      <option value="inactivo">Inactivo</option>
+    </select>
+    <button type="button" class="ex-icon" (click)="refrescar()" aria-label="Refrescar">⟳</button>
+  </div>
+
+  @if (cargando()) {
+    <p class="ex-loading">Cargando…</p>
+  } @else if (visibles().length === 0) {
+    <div class="ex-empty">
+      <div class="ex-empty__ic">🧰</div>
+      <h2>No hay proveedores</h2>
+      <p>Agregá tus proveedores habituales (ascensores, seguro, limpieza, plomero…) para poder cargar
+        los gastos más rápido.</p>
+    </div>
+  } @else {
+    <ul class="ex-list">
+      @for (p of visibles(); track p.id) {
+        <li class="ex-card" [class.is-off]="!p.activo">
+          <button type="button" class="ex-card__star" [class.is-on]="p.recomendado"
+            (click)="toggleRecomendado(p)" [title]="p.recomendado ? 'Quitar recomendado' : 'Marcar recomendado'">★</button>
+          <div class="ex-card__b">
+            <b>{{ p.nombre }} @if (p.empresa) { <span class="ex-muted">· {{ p.empresa }}</span> }</b>
+            <small>
+              @if (p.rubro) { <span class="ex-chip">{{ p.rubro }}</span> }
+              @if (p.telefono) { · ☎ {{ p.telefono }} }
+              @if (p.email) { · ✉ {{ p.email }} }
+              @if (p.cuit) { · CUIT {{ p.cuit }} }
+            </small>
+          </div>
+          <span class="ex-estado" [class.is-ok]="p.activo">{{ p.activo ? 'Activo' : 'Inactivo' }}</span>
+          <button type="button" class="ex-icon" (click)="abrirEditar(p)" aria-label="Editar">✎</button>
+          <button type="button" class="ex-icon" (click)="toggleActivo(p)"
+            [title]="p.activo ? 'Desactivar' : 'Activar'">{{ p.activo ? '⏻' : '▶' }}</button>
+        </li>
+      }
+    </ul>
+  }
+</section>
+
+@if (modal()) {
+  <div class="ex-ov" (click)="modal.set(false)">
+    <div class="ex-modal" (click)="$event.stopPropagation()">
+      <header>
+        <b>{{ editId() ? 'Editar proveedor' : 'Agregar proveedor' }}</b>
+        <button type="button" (click)="modal.set(false)">✕</button>
+      </header>
+      <div class="ex-modal__b">
+        <div class="ex-grid">
+          <label class="ex-field"><span>Nombre *</span>
+            <input [ngModel]="form().nombre" (ngModelChange)="set('nombre', $event)" /></label>
+          <label class="ex-field"><span>Empresa</span>
+            <input [ngModel]="form().empresa" (ngModelChange)="set('empresa', $event)" /></label>
+          <label class="ex-field"><span>Categoría *</span>
+            <select [ngModel]="form().rubro" (ngModelChange)="set('rubro', $event)">
+              @for (c of categorias; track c) { <option [value]="c">{{ c }}</option> }
+            </select></label>
+          <label class="ex-field"><span>CUIT</span>
+            <input [ngModel]="form().cuit" (ngModelChange)="set('cuit', $event)" placeholder="30-12345678-9" /></label>
+          <label class="ex-field"><span>Teléfono *</span>
+            <input [ngModel]="form().telefono" (ngModelChange)="set('telefono', $event)" /></label>
+          <label class="ex-field"><span>Tel. alternativo</span>
+            <input [ngModel]="form().telefonoAlt" (ngModelChange)="set('telefonoAlt', $event)" /></label>
+          <label class="ex-field ex-field--full"><span>Email</span>
+            <input type="email" [ngModel]="form().email" (ngModelChange)="set('email', $event)" /></label>
+          <label class="ex-field"><span>CBU</span>
+            <input [ngModel]="form().cbu" (ngModelChange)="set('cbu', $event)" /></label>
+          <label class="ex-field"><span>Alias</span>
+            <input [ngModel]="form().alias" (ngModelChange)="set('alias', $event)" /></label>
+          <label class="ex-field"><span>Dirección</span>
+            <input [ngModel]="form().direccion" (ngModelChange)="set('direccion', $event)" /></label>
+          <label class="ex-field"><span>Sitio web</span>
+            <input [ngModel]="form().sitioWeb" (ngModelChange)="set('sitioWeb', $event)" placeholder="https://" /></label>
+          <label class="ex-field"><span>Horario de atención</span>
+            <input [ngModel]="form().horario" (ngModelChange)="set('horario', $event)" placeholder="Lun a Vie 9-18" /></label>
+          <label class="ex-field ex-field--full"><span>Notas</span>
+            <input [ngModel]="form().notas" (ngModelChange)="set('notas', $event)" /></label>
+          <label class="ex-check ex-field--full">
+            <input type="checkbox" [checked]="form().recomendado" (change)="set('recomendado', !form().recomendado)" />
+            Marcar como proveedor recomendado
+          </label>
+        </div>
+      </div>
+      <footer>
+        <button type="button" class="btn btn--ghost u-btn" (click)="modal.set(false)">Cancelar</button>
+        <button type="button" class="btn btn--primary u-btn"
+          [disabled]="!form().nombre.trim() || !form().telefono?.trim() || guardando()" (click)="guardar()">
+          {{ guardando() ? 'Guardando…' : (editId() ? 'Guardar' : 'Agregar') }}
+        </button>
+      </footer>
+    </div>
+  </div>
+}

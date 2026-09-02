@@ -1,0 +1,152 @@
+<section class="ex">
+  <header class="ex-head">
+    <div>
+      <h1>Configuración de expensas</h1>
+      <p>Vencimientos, intereses, fondo de reserva y la cuenta de Mercado Pago que recibe los pagos.</p>
+    </div>
+  </header>
+
+  @if (cargando()) {
+    <p class="ex-loading">Cargando…</p>
+  } @else if (cfg()) {
+    @if (cfg()!; as c) {
+
+    <!-- ===================== Vencimientos ===================== -->
+    <div class="ex-card2">
+      <h3>Vencimientos</h3>
+      <p>Días del mes en que vencen la primera y la segunda cuota de cada expensa.</p>
+
+      <div class="ex-row">
+        <div class="ex-row__b">
+          <b>Primer vencimiento</b>
+          <small>Día del mes (1 a 28).</small>
+        </div>
+        <input class="ex-num" type="number" min="1" max="28"
+          [ngModel]="c.diaPrimerVencimiento" (ngModelChange)="set('diaPrimerVencimiento', +$event)" />
+      </div>
+
+      <div class="ex-row">
+        <div class="ex-row__b">
+          <b>Segundo vencimiento</b>
+          <small>Dejalo vacío si cobrás con un solo vencimiento.</small>
+        </div>
+        <input class="ex-num" type="number" min="1" max="28" placeholder="—"
+          [ngModel]="c.diaSegundoVencimiento"
+          (ngModelChange)="set('diaSegundoVencimiento', $event === null || $event === '' ? null : +$event)" />
+      </div>
+
+      <div class="ex-row">
+        <div class="ex-row__b">
+          <b>Recargo por segundo vencimiento</b>
+          <small>Porcentaje que se suma si paga después del primer vencimiento.</small>
+        </div>
+        <input class="ex-num" type="number" min="0" step="0.5"
+          [ngModel]="c.recargoSegundoVencimientoPct" (ngModelChange)="set('recargoSegundoVencimientoPct', +$event)" />
+      </div>
+    </div>
+
+    <!-- ===================== Mora ===================== -->
+    <div class="ex-card2">
+      <h3>Intereses por mora</h3>
+      <p>Se aplican a la deuda vencida al generar la expensa del mes siguiente.</p>
+      <div class="ex-row">
+        <div class="ex-row__b">
+          <b>Tasa de interés mensual</b>
+          <small>Porcentaje mensual sobre el saldo impago.</small>
+        </div>
+        <input class="ex-num" type="number" min="0" step="0.5"
+          [ngModel]="c.tasaInteresMoraMensualPct" (ngModelChange)="set('tasaInteresMoraMensualPct', +$event)" />
+      </div>
+    </div>
+
+    <!-- ===================== Fondo de reserva ===================== -->
+    <div class="ex-card2">
+      <h3>Fondo de reserva</h3>
+      <p>Monto extra que se cobra en cada expensa y se acumula para imprevistos.</p>
+      <div class="ex-row">
+        <div class="ex-row__b">
+          <b>Modo de cálculo</b>
+        </div>
+        <select class="ex-num" style="width:220px;text-align:left"
+          [ngModel]="c.fondoReservaTipo" (ngModelChange)="set('fondoReservaTipo', $event)">
+          @for (f of fondoTipos; track f.v) { <option [ngValue]="f.v">{{ f.t }}</option> }
+        </select>
+      </div>
+      @if (c.fondoReservaTipo !== 'Ninguno') {
+        <div class="ex-row">
+          <div class="ex-row__b">
+            <b>{{ c.fondoReservaTipo === 'PorcentajeDeGastos' ? 'Porcentaje' : 'Monto mensual' }}</b>
+            <small>{{ c.fondoReservaTipo === 'PorcentajeDeGastos'
+              ? '% sobre el total de gastos del período.' : 'Importe fijo en pesos por mes.' }}</small>
+          </div>
+          <input class="ex-num" type="number" min="0"
+            [ngModel]="c.fondoReservaValor" (ngModelChange)="set('fondoReservaValor', +$event)" />
+        </div>
+      }
+    </div>
+
+    <!-- ===================== Reglas ===================== -->
+    <div class="ex-card2">
+      <h3>Reglas de liquidación</h3>
+      <div class="ex-row">
+        <div class="ex-row__b">
+          <b>El inquilino paga las expensas ordinarias</b>
+          <small>Si está activo, las ordinarias se le cobran al inquilino y las extraordinarias al propietario.</small>
+        </div>
+        <button type="button" class="ex-sw" [class.is-on]="c.inquilinoPagaOrdinarias"
+          (click)="set('inquilinoPagaOrdinarias', !c.inquilinoPagaOrdinarias)"><i></i></button>
+      </div>
+      <div class="ex-row">
+        <div class="ex-row__b">
+          <b>Redondear al peso</b>
+          <small>Evita centavos en el importe final de cada unidad.</small>
+        </div>
+        <button type="button" class="ex-sw" [class.is-on]="c.redondearAlPeso"
+          (click)="set('redondearAlPeso', !c.redondearAlPeso)"><i></i></button>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;margin-bottom:28px">
+      <button type="button" class="btn btn--primary u-btn" [disabled]="guardando()" (click)="guardar()">
+        {{ guardando() ? 'Guardando…' : 'Guardar configuración' }}
+      </button>
+    </div>
+
+    <!-- ===================== Mercado Pago ===================== -->
+    <div class="ex-card2">
+      <h3>Cobro con Mercado Pago</h3>
+      <p>Pegá el <b>Access Token</b> de la cuenta de Mercado Pago del consorcio. Los pagos de las
+        expensas se acreditan directamente en esa cuenta.</p>
+
+      @if (c.mercadoPagoActivo) {
+        <div class="ex-row">
+          <div class="ex-row__b">
+            <b><span class="ex-estado is-ok">● Conectado</span></b>
+            <small>Token: {{ c.mercadoPagoTokenPreview }}</small>
+          </div>
+          <button type="button" class="btn btn--ghost u-btn" [disabled]="guardandoMp()" (click)="desconectarMp()">
+            Desconectar
+          </button>
+        </div>
+        <p style="margin:12px 0 0;font-size:.85rem;color:var(--c-text-muted)">
+          Para reemplazar el token, desconectá y volvé a conectar.
+        </p>
+      } @else {
+        <div class="ex-grid" style="margin-top:6px">
+          <label class="ex-field ex-field--full"><span>Access Token *</span>
+            <input type="password" autocomplete="off" placeholder="APP_USR-..."
+              [ngModel]="mpToken()" (ngModelChange)="mpToken.set($event)" /></label>
+          <label class="ex-field ex-field--full"><span>Public Key (opcional)</span>
+            <input type="text" autocomplete="off" placeholder="APP_USR-..."
+              [ngModel]="mpPublicKey()" (ngModelChange)="mpPublicKey.set($event)" /></label>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:14px">
+          <button type="button" class="btn btn--primary u-btn" [disabled]="guardandoMp() || !mpToken().trim()" (click)="guardarMp()">
+            {{ guardandoMp() ? 'Conectando…' : 'Conectar Mercado Pago' }}
+          </button>
+        </div>
+      }
+    </div>
+    }
+  }
+</section>

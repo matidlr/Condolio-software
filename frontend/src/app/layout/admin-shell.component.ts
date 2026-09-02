@@ -136,8 +136,14 @@ export class AdminShellComponent {
       { label: 'Anuncios', ruta: '/panel/anuncios', icon: 'megaphone', disponible: true, area: 'Comunicacion' },
       { label: 'Calendario', ruta: '/panel/calendario', icon: 'calendar', disponible: true, area: 'Comunicacion' },
       { label: 'Encuestas', ruta: '/panel/encuestas', icon: 'poll', disponible: true, badge: enc || undefined, area: 'Comunicacion' },
-      { label: 'Expensas', ruta: '/panel/expensas', icon: 'receipt', disponible: false, area: 'Finanzas' },
-      { label: 'Gastos', ruta: '/panel/gastos', icon: 'wallet', disponible: false, area: 'Finanzas' },
+      {
+        label: 'Expensas', icon: 'receipt', disponible: true, area: 'Finanzas',
+        hijos: [
+          { label: 'Proveedores', ruta: '/panel/expensas/proveedores', disponible: true },
+          { label: 'Gastos fijos', ruta: '/panel/expensas/gastos-fijos', disponible: true },
+          { label: 'Configuración', ruta: '/panel/expensas/configuracion', disponible: true },
+        ],
+      },
       { label: 'Reclamos', ruta: '/panel/reclamos', icon: 'chat', disponible: false, area: 'Operacion' },
       { label: 'Documentos', ruta: '/panel/documentos', icon: 'folder', disponible: true, area: 'Comunicacion' },
     ];

@@ -4,6 +4,7 @@ using Condolio.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Condolio.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(CondolioDbContext))]
-    partial class CondolioDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260902162907_ExpensasSetup")]
+    partial class ExpensasSetup
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1366,21 +1369,9 @@ namespace Condolio.Infrastructure.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("varchar(20)");
 
-                    b.Property<string>("Direccion")
-                        .HasMaxLength(240)
-                        .HasColumnType("varchar(240)");
-
                     b.Property<string>("Email")
                         .HasMaxLength(200)
                         .HasColumnType("varchar(200)");
-
-                    b.Property<string>("Empresa")
-                        .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
-
-                    b.Property<string>("Horario")
-                        .HasMaxLength(120)
-                        .HasColumnType("varchar(120)");
 
                     b.Property<string>("Nombre")
                         .IsRequired()
@@ -1391,22 +1382,11 @@ namespace Condolio.Infrastructure.Persistence.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("varchar(1000)");
 
-                    b.Property<bool>("Recomendado")
-                        .HasColumnType("tinyint(1)");
-
                     b.Property<string>("Rubro")
                         .HasMaxLength(120)
                         .HasColumnType("varchar(120)");
 
-                    b.Property<string>("SitioWeb")
-                        .HasMaxLength(240)
-                        .HasColumnType("varchar(240)");
-
                     b.Property<string>("Telefono")
-                        .HasMaxLength(40)
-                        .HasColumnType("varchar(40)");
-
-                    b.Property<string>("TelefonoAlt")
                         .HasMaxLength(40)
                         .HasColumnType("varchar(40)");
 

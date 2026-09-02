@@ -75,6 +75,11 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Condolio.Domain.Tenancy.AdminMiembro> AdminMiembros => Set<Condolio.Domain.Tenancy.AdminMiembro>();
     public DbSet<Condolio.Domain.Tenancy.InvitacionAdmin> InvitacionesAdmin => Set<Condolio.Domain.Tenancy.InvitacionAdmin>();
     public DbSet<Condolio.Domain.Consorcios.PreferenciasConsorcio> PreferenciasConsorcio => Set<Condolio.Domain.Consorcios.PreferenciasConsorcio>();
+    public DbSet<Condolio.Domain.Expensas.ConfiguracionExpensas> ConfiguracionExpensas => Set<Condolio.Domain.Expensas.ConfiguracionExpensas>();
+    public DbSet<Condolio.Domain.Expensas.RubroGasto> RubrosGasto => Set<Condolio.Domain.Expensas.RubroGasto>();
+    public DbSet<Condolio.Domain.Expensas.Proveedor> Proveedores => Set<Condolio.Domain.Expensas.Proveedor>();
+    public DbSet<Condolio.Domain.Expensas.Empleado> Empleados => Set<Condolio.Domain.Expensas.Empleado>();
+    public DbSet<Condolio.Domain.Expensas.GastoFijo> GastosFijos => Set<Condolio.Domain.Expensas.GastoFijo>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -453,6 +458,67 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<Condolio.Domain.Consorcios.PreferenciasConsorcio>(e =>
         {
             e.HasIndex(x => x.ConsorcioId).IsUnique();
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
+        });
+
+        builder.Entity<Condolio.Domain.Expensas.ConfiguracionExpensas>(e =>
+        {
+            e.Property(x => x.RecargoSegundoVencimientoPct).HasPrecision(6, 2);
+            e.Property(x => x.TasaInteresMoraMensualPct).HasPrecision(6, 2);
+            e.Property(x => x.FondoReservaValor).HasPrecision(14, 2);
+            e.Property(x => x.MercadoPagoAccessToken).HasMaxLength(400);
+            e.Property(x => x.MercadoPagoPublicKey).HasMaxLength(200);
+            e.HasIndex(x => x.ConsorcioId).IsUnique();
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
+        });
+
+        builder.Entity<Condolio.Domain.Expensas.RubroGasto>(e =>
+        {
+            e.Property(x => x.Nombre).HasMaxLength(120).IsRequired();
+            e.HasIndex(x => new { x.ConsorcioId, x.Tipo, x.Orden });
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
+        });
+
+        builder.Entity<Condolio.Domain.Expensas.Proveedor>(e =>
+        {
+            e.Property(x => x.Nombre).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Empresa).HasMaxLength(200);
+            e.Property(x => x.Cuit).HasMaxLength(20);
+            e.Property(x => x.Rubro).HasMaxLength(120);
+            e.Property(x => x.Email).HasMaxLength(200);
+            e.Property(x => x.Telefono).HasMaxLength(40);
+            e.Property(x => x.TelefonoAlt).HasMaxLength(40);
+            e.Property(x => x.Direccion).HasMaxLength(240);
+            e.Property(x => x.SitioWeb).HasMaxLength(240);
+            e.Property(x => x.Cbu).HasMaxLength(30);
+            e.Property(x => x.Alias).HasMaxLength(60);
+            e.Property(x => x.Horario).HasMaxLength(120);
+            e.Property(x => x.Notas).HasMaxLength(1000);
+            e.HasIndex(x => new { x.ConsorcioId, x.Activo });
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
+        });
+
+        builder.Entity<Condolio.Domain.Expensas.Empleado>(e =>
+        {
+            e.Property(x => x.Nombre).HasMaxLength(120).IsRequired();
+            e.Property(x => x.Apellido).HasMaxLength(120).IsRequired();
+            e.Property(x => x.Cuil).HasMaxLength(20);
+            e.Property(x => x.Categoria).HasMaxLength(160);
+            e.Property(x => x.Notas).HasMaxLength(1000);
+            e.Property(x => x.SueldoBasico).HasPrecision(14, 2);
+            e.Property(x => x.CargasSocialesPct).HasPrecision(6, 2);
+            e.Property(x => x.OtrosConceptosMensuales).HasPrecision(14, 2);
+            e.Ignore(x => x.CostoMensualTotal);
+            e.HasIndex(x => new { x.ConsorcioId, x.Activo });
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
+        });
+
+        builder.Entity<Condolio.Domain.Expensas.GastoFijo>(e =>
+        {
+            e.Property(x => x.Descripcion).HasMaxLength(240).IsRequired();
+            e.Property(x => x.Notas).HasMaxLength(1000);
+            e.Property(x => x.MontoEstimado).HasPrecision(14, 2);
+            e.HasIndex(x => new { x.ConsorcioId, x.Activo });
             e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
         });
 

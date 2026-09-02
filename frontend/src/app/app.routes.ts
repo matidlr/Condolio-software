@@ -259,6 +259,28 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/configuracion/configuracion.component').then((m) => m.ConfiguracionComponent),
       },
+      { path: 'expensas', pathMatch: 'full', redirectTo: 'expensas/proveedores' },
+      {
+        path: 'expensas/proveedores',
+        canActivate: [areaGuard],
+        data: { area: 'Finanzas' },
+        loadComponent: () =>
+          import('./features/expensas/proveedores.component').then((m) => m.ProveedoresComponent),
+      },
+      {
+        path: 'expensas/gastos-fijos',
+        canActivate: [areaGuard],
+        data: { area: 'Finanzas' },
+        loadComponent: () =>
+          import('./features/expensas/gastos-fijos.component').then((m) => m.GastosFijosComponent),
+      },
+      {
+        path: 'expensas/configuracion',
+        canActivate: [areaGuard],
+        data: { area: 'Finanzas' },
+        loadComponent: () =>
+          import('./features/expensas/expensas-config.component').then((m) => m.ExpensasConfigComponent),
+      },
       {
         path: 'calendario',
         canActivate: [areaGuard],
