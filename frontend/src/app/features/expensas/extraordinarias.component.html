@@ -2,7 +2,8 @@
   <header class="ex-head">
     <div>
       <h1>Expensas extraordinarias</h1>
-      <p>Obras y gastos aprobados por asamblea que se cobran aparte, en una o varias cuotas, siempre al propietario.</p>
+      <p>Obras y gastos aprobados por asamblea que se cobran aparte del gasto ordinario. Podés
+        prorratearlos en varios meses. Siempre se cobran al propietario.</p>
     </div>
     <button type="button" class="btn btn--primary u-btn" (click)="abrirNuevo()">＋ Nueva extraordinaria</button>
   </header>
@@ -34,8 +35,12 @@
                   <span class="ex-chip">{{ estadoTxt(x.estado) }}</span></b>
                 <small>
                   {{ fmt(x.montoTotal) }}
-                  @if (x.cantidadCuotas > 1) { · {{ x.cantidadCuotas }} cuotas de {{ fmt(x.montoPorCuota) }} } @else { · pago único }
-                  · desde {{ periodo(x.periodoInicioMes, x.periodoInicioAnio) }}
+                  @if (x.cantidadCuotas > 1) {
+                    · prorrateada en {{ x.cantidadCuotas }} meses ({{ fmt(x.montoPorCuota) }}/mes)
+                    · {{ rango(x.periodoInicioMes, x.periodoInicioAnio, x.cantidadCuotas) }}
+                  } @else {
+                    · pago único · {{ periodo(x.periodoInicioMes, x.periodoInicioAnio) }}
+                  }
                   · {{ x.criterioDistribucion === 'PorCoeficiente' ? 'por coeficiente' : 'partes iguales' }}
                   @if (x.cuotasEmitidas > 0) { · emitidas {{ x.cuotasEmitidas }}/{{ x.cantidadCuotas }} }
                 </small>
@@ -75,9 +80,16 @@
               placeholder="Aprobada en asamblea del 12/08 — acta 47" /></label>
           <label class="ex-field"><span>Monto total *</span>
             <input type="number" min="0" [ngModel]="form().montoTotal" (ngModelChange)="set('montoTotal', +$event)" /></label>
-          <label class="ex-field"><span>Cantidad de cuotas *</span>
-            <input type="number" min="1" max="120" [ngModel]="form().cantidadCuotas" (ngModelChange)="set('cantidadCuotas', +$event)" /></label>
-          <label class="ex-field"><span>Mes de inicio</span>
+          <label class="ex-field"><span>¿Cómo se cobra?</span>
+            <select [ngModel]="prorratea()" (ngModelChange)="setModoProrrateo($event === 'true' || $event === true)">
+              <option [ngValue]="false">En un solo pago</option>
+              <option [ngValue]="true">Prorratear en varios meses</option>
+            </select></label>
+          @if (prorratea()) {
+            <label class="ex-field"><span>Prorratear en (meses) *</span>
+              <input type="number" min="2" max="120" [ngModel]="form().cantidadCuotas" (ngModelChange)="set('cantidadCuotas', +$event)" /></label>
+          }
+          <label class="ex-field"><span>{{ prorratea() ? 'Primer mes' : 'Mes de cobro' }}</span>
             <select [ngModel]="form().periodoInicioMes" (ngModelChange)="set('periodoInicioMes', +$event)">
               @for (m of meses; track m.v) { <option [ngValue]="m.v">{{ m.t }}</option> }
             </select></label>
@@ -95,8 +107,14 @@
             <input [ngModel]="form().notas" (ngModelChange)="set('notas', $event)" /></label>
         </div>
         <div class="ex-total" style="margin-top:16px">
-          <span>{{ form().cantidadCuotas > 1 ? 'Importe de cada cuota' : 'Se cobra en un solo pago' }}</span>
-          <b>{{ fmt(montoCuotaPreview()) }}</b>
+          <span>
+            @if (prorratea()) {
+              {{ form().cantidadCuotas }} meses · {{ rangoPreview() }}
+            } @else {
+              Se cobra en un solo pago
+            }
+          </span>
+          <b>{{ fmt(montoCuotaPreview()) }}{{ prorratea() ? ' /mes' : '' }}</b>
         </div>
       </div>
       <footer>

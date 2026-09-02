@@ -46,6 +46,16 @@ export class ExtraordinariasComponent {
     return '$' + (n ?? 0).toLocaleString('es-AR', { maximumFractionDigits: 0 });
   }
   periodo(m: number, a: number): string { return `${MESES[m - 1]} ${a}`; }
+  /** Período de la última cuota, dado el inicio y la cantidad de meses de prorrateo. */
+  finPeriodo(m: number, a: number, meses: number): { m: number; a: number } {
+    const idx = (a * 12 + (m - 1)) + Math.max(1, meses) - 1;
+    return { m: (idx % 12) + 1, a: Math.floor(idx / 12) };
+  }
+  rango(m: number, a: number, meses: number): string {
+    if (meses <= 1) return this.periodo(m, a);
+    const f = this.finPeriodo(m, a, meses);
+    return `${this.periodo(m, a)} → ${this.periodo(f.m, f.a)}`;
+  }
   estadoTxt(e: EstadoExtraordinaria): string {
     return e === 'Activa' ? 'Activa' : e === 'Finalizada' ? 'Finalizada' : 'Cancelada';
   }
@@ -75,6 +85,15 @@ export class ExtraordinariasComponent {
     const f = this.form();
     return f.cantidadCuotas <= 1 ? f.montoTotal : Math.round(f.montoTotal / f.cantidadCuotas);
   });
+  prorratea = computed(() => this.form().cantidadCuotas > 1);
+  rangoPreview = computed(() => {
+    const f = this.form();
+    return this.rango(f.periodoInicioMes, f.periodoInicioAnio, f.cantidadCuotas);
+  });
+
+  setModoProrrateo(prorratear: boolean): void {
+    this.set('cantidadCuotas', prorratear ? Math.max(2, this.form().cantidadCuotas) : 1);
+  }
 
   abrirNuevo(): void { this.editId.set(null); this.form.set(this.vacio()); this.modal.set(true); }
   abrirEditar(x: Extraordinaria): void {
