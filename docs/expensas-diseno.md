@@ -25,14 +25,18 @@ liquidación, pagos y Mercado Pago.
 - Todo lo del mes cuelga de acá.
 
 ### GastoPeriodo
-Al abrir un período se **precargan automáticamente**:
-- Costo de cada **empleado activo** (foto del sueldo + cargas + aguinaldo del catálogo).
-- Cada **gasto fijo activo** (foto del monto estimado).
+Al abrir un período se **precargan automáticamente** (cada línea guarda su propia foto):
+- Costo de cada **empleado activo** (sueldo + cargas + aguinaldo del catálogo).
+- Cada **gasto fijo activo** (monto estimado del catálogo).
 
-El admin:
-- Edita esos montos precargados para el mes (inflación) — no toca el catálogo, el período guarda su propia foto.
-- Agrega **gastos variables reales**: descripción, rubro, proveedor, monto real, fecha, **comprobante** (foto o PDF).
-- Alcance por gasto: **todas** las unidades (default) o **subconjunto seleccionado** (mismo patrón que extraordinarias). Reparto por coeficiente, renormalizado a la suma de coeficientes del subconjunto.
+El admin, en la pantalla del período:
+- **Edita** los montos precargados para el mes (inflación) — no toca el catálogo.
+- **＋ Gasto fijo**: nuevo `GastoFijo` en el catálogo → se precarga este mes y los siguientes.
+- **＋ Gasto único**: `GastoPeriodo` suelto, solo este período, no toca el catálogo.
+- Cada línea: rubro, monto, proveedor, fecha, **comprobante**, alcance (todas / subconjunto),
+  extraordinaria relacionada (opcional).
+- Alcance por gasto: **todas** (default) o **subconjunto** (patrón de las extraordinarias). Reparto por
+  coeficiente, renormalizado a la suma de coeficientes del subconjunto.
 - Tipo por rubro: ordinario (A) / extraordinario o fondo de obras (B).
 
 ## Chunk 3 — Liquidación
@@ -48,6 +52,28 @@ Botón "Liquidar período":
 
 ### Estado de cuenta por unidad
 Ledger de `CargoUnidad` + `Pago` aplicados. Saldo capital + intereses devengados.
+
+## Registros Financieros (pantalla del admin)
+
+Cuatro solapas (Reembolsos e "Importar Gastos con IA" descartadas):
+
+- **Crear Cargos**: cargo manual a una o varias unidades (multi-select). Categorías: cuota de
+  mantenimiento manual, cargo por mora / intereses, multa (estacionamiento / mascota / amenidad /
+  infracción), reserva/uso de amenidad, ajuste, otro. Campos: monto, fecha del cargo, descripción,
+  fecha de vencimiento (en "más opciones"), adjuntos. Genera `CargoUnidad` (origen `Multa` / `Amenidad` /
+  `Manual` / `Interes` / `Ajuste`).
+- **Registrar Pagos**: ver chunk 4. Asignación Automática (FIFO) / Manual (el admin imputa por cargo) /
+  Acreditar a unidad (saldo a favor). Tabla de cargos pendientes de la unidad con barra de progreso y
+  columna "Se aplicará"; header "Asignado: $X / $Y".
+- **Otros Ingresos**: plata que entra al consorcio y no es pago de expensas. `IngresoConsorcio`
+  (categoría: intereses bancarios / multa estacionamiento / multa mascota / recuperación de seguro /
+  renta / reserva de amenidad / pago no identificado / otro; monto, método, cuenta, fecha, descripción,
+  comprobante, unidadId? opcional). Reducen el monto a prorratear en la liquidación. **Pendiente de
+  confirmar con el usuario**: si algunos van a un fondo en vez de bajar la expensa; si las multas se
+  cargan acá o como cargo a la unidad.
+- **Gastos**: egreso ya pagado. Rubro, monto, método de pago, cuenta, fecha, descripción, comprobante,
+  **extraordinaria relacionada (opcional)**. Si está imputado a una extraordinaria → descuenta de su
+  presupuesto y no entra al prorrateo del mes.
 
 ## Chunk 4 — Pagos
 

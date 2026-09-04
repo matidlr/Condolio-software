@@ -83,6 +83,9 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Condolio.Domain.Expensas.Extraordinaria> Extraordinarias => Set<Condolio.Domain.Expensas.Extraordinaria>();
     public DbSet<Condolio.Domain.Expensas.ExtraordinariaUnidad> ExtraordinariaUnidades => Set<Condolio.Domain.Expensas.ExtraordinariaUnidad>();
     public DbSet<Condolio.Domain.Expensas.CargoUnidad> CargosUnidad => Set<Condolio.Domain.Expensas.CargoUnidad>();
+    public DbSet<Condolio.Domain.Expensas.PeriodoExpensas> PeriodosExpensas => Set<Condolio.Domain.Expensas.PeriodoExpensas>();
+    public DbSet<Condolio.Domain.Expensas.GastoPeriodo> GastosPeriodo => Set<Condolio.Domain.Expensas.GastoPeriodo>();
+    public DbSet<Condolio.Domain.Expensas.GastoPeriodoUnidad> GastoPeriodoUnidades => Set<Condolio.Domain.Expensas.GastoPeriodoUnidad>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -555,6 +558,33 @@ public class CondolioDbContext : IdentityDbContext<ApplicationUser>
             e.Ignore(x => x.Saldo);
             e.HasIndex(x => new { x.ConsorcioId, x.UnidadId, x.Estado });
             e.HasIndex(x => x.ExtraordinariaId);
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
+        });
+
+        builder.Entity<Condolio.Domain.Expensas.PeriodoExpensas>(e =>
+        {
+            e.Property(x => x.Notas).HasMaxLength(1000);
+            e.Property(x => x.LiquidadoPorUsuarioId).HasMaxLength(450);
+            e.HasMany(x => x.Gastos).WithOne().HasForeignKey(g => g.PeriodoExpensasId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.ConsorcioId, x.Anio, x.Mes }).IsUnique();
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
+        });
+
+        builder.Entity<Condolio.Domain.Expensas.GastoPeriodo>(e =>
+        {
+            e.Property(x => x.Descripcion).HasMaxLength(240).IsRequired();
+            e.Property(x => x.Monto).HasPrecision(14, 2);
+            e.Property(x => x.MetodoPago).HasMaxLength(60);
+            e.Property(x => x.CuentaPago).HasMaxLength(120);
+            e.Property(x => x.ComprobanteRuta).HasMaxLength(300);
+            e.HasMany(x => x.Unidades).WithOne().HasForeignKey(u => u.GastoPeriodoId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => x.PeriodoExpensasId);
+            e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
+        });
+
+        builder.Entity<Condolio.Domain.Expensas.GastoPeriodoUnidad>(e =>
+        {
+            e.HasIndex(x => x.GastoPeriodoId);
             e.HasQueryFilter(x => TenantIdActual == null || x.AdministradorId == TenantIdActual);
         });
 

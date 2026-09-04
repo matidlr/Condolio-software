@@ -148,6 +148,74 @@ export interface ExtraordinariasLista {
   totalRecaudado: number;
 }
 
+export type EstadoPeriodo = 'Abierto' | 'Liquidado' | 'Cerrado';
+export type OrigenGasto = 'Empleado' | 'GastoFijo' | 'Unico';
+export type AlcanceGasto = 'Todas' | 'Subconjunto';
+
+export interface PeriodoResumen {
+  id: string;
+  anio: number;
+  mes: number;
+  estado: EstadoPeriodo;
+  fechaLiquidacion?: string | null;
+  cantidadGastos: number;
+  totalGastos: number;
+}
+export interface TotalRubro {
+  rubroGastoId: string;
+  rubro: string;
+  tipo: TipoRubro;
+  total: number;
+}
+export interface GastoPeriodo {
+  id: string;
+  rubroGastoId: string;
+  rubroNombre: string;
+  tipoRubro: TipoRubro;
+  proveedorId?: string | null;
+  proveedorNombre?: string | null;
+  descripcion: string;
+  monto: number;
+  fecha: string;
+  metodoPago?: string | null;
+  cuentaPago?: string | null;
+  tieneComprobante: boolean;
+  origen: OrigenGasto;
+  alcance: AlcanceGasto;
+  criterioDistribucion: CriterioDistribucion;
+  extraordinariaId?: string | null;
+  extraordinariaTitulo?: string | null;
+  unidadIds: string[];
+}
+export interface PeriodoDetalle {
+  id: string;
+  anio: number;
+  mes: number;
+  estado: EstadoPeriodo;
+  fechaLiquidacion?: string | null;
+  notas?: string | null;
+  gastos: GastoPeriodo[];
+  porRubro: TotalRubro[];
+  totalOrdinario: number;
+  totalExtraordinario: number;
+  totalFondoReserva: number;
+  totalImputadoAExtraordinarias: number;
+  totalAPrratear: number;
+}
+export interface GuardarGastoPeriodo {
+  rubroGastoId: string;
+  proveedorId?: string | null;
+  descripcion: string;
+  monto: number;
+  fecha: string;
+  metodoPago?: string | null;
+  cuentaPago?: string | null;
+  alcance: AlcanceGasto;
+  criterioDistribucion: CriterioDistribucion;
+  extraordinariaId?: string | null;
+  unidadIds?: string[] | null;
+}
+
 export interface MorosidadUnidad {
   unidadId: string;
   nombre: string;
@@ -249,5 +317,36 @@ export class ExpensasService {
   // ---- morosidad ----
   morosidad(cid: string): Observable<Morosidad> {
     return this.http.get<Morosidad>(`${this.base(cid)}/morosidad`);
+  }
+
+  // ---- períodos + gastos del período ----
+  periodos(cid: string): Observable<PeriodoResumen[]> {
+    return this.http.get<PeriodoResumen[]>(`${this.base(cid)}/periodos`);
+  }
+  abrirPeriodo(cid: string, anio: number, mes: number): Observable<PeriodoDetalle> {
+    return this.http.post<PeriodoDetalle>(`${this.base(cid)}/periodos`, { anio, mes });
+  }
+  periodo(cid: string, pid: string): Observable<PeriodoDetalle> {
+    return this.http.get<PeriodoDetalle>(`${this.base(cid)}/periodos/${pid}`);
+  }
+  reabrirPeriodo(cid: string, pid: string): Observable<void> {
+    return this.http.post<void>(`${this.base(cid)}/periodos/${pid}/reabrir`, {});
+  }
+  crearGasto(cid: string, pid: string, dto: GuardarGastoPeriodo): Observable<GastoPeriodo> {
+    return this.http.post<GastoPeriodo>(`${this.base(cid)}/periodos/${pid}/gastos`, dto);
+  }
+  actualizarGasto(cid: string, pid: string, gid: string, dto: GuardarGastoPeriodo): Observable<GastoPeriodo> {
+    return this.http.put<GastoPeriodo>(`${this.base(cid)}/periodos/${pid}/gastos/${gid}`, dto);
+  }
+  eliminarGasto(cid: string, pid: string, gid: string): Observable<void> {
+    return this.http.delete<void>(`${this.base(cid)}/periodos/${pid}/gastos/${gid}`);
+  }
+  subirComprobanteGasto(cid: string, pid: string, gid: string, archivo: File): Observable<void> {
+    const fd = new FormData();
+    fd.append('archivo', archivo);
+    return this.http.post<void>(`${this.base(cid)}/periodos/${pid}/gastos/${gid}/comprobante`, fd);
+  }
+  comprobanteGastoUrl(cid: string, pid: string, gid: string): string {
+    return `${this.base(cid)}/periodos/${pid}/gastos/${gid}/comprobante`;
   }
 }

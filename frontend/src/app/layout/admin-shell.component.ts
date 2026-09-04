@@ -139,6 +139,7 @@ export class AdminShellComponent {
       {
         label: 'Expensas', icon: 'receipt', disponible: true, area: 'Finanzas',
         hijos: [
+          { label: 'Períodos y gastos', ruta: '/panel/expensas/gastos', disponible: true },
           { label: 'Proveedores', ruta: '/panel/expensas/proveedores', disponible: true },
           { label: 'Gastos fijos', ruta: '/panel/expensas/gastos-fijos', disponible: true },
           { label: 'Extraordinarias', ruta: '/panel/expensas/extraordinarias', disponible: true },

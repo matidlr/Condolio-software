@@ -76,6 +76,7 @@ public static class DependencyInjection
         services.AddScoped<IConsorcioService, ConsorcioService>();
         services.AddScoped<Condolio.Application.Consorcios.IPreferenciasConsorcioService, Condolio.Infrastructure.Consorcios.PreferenciasConsorcioService>();
         services.AddScoped<Condolio.Application.Expensas.IExpensasConfigService, Condolio.Infrastructure.Expensas.ExpensasConfigService>();
+        services.AddScoped<Condolio.Application.Expensas.IPeriodosExpensasService, Condolio.Infrastructure.Expensas.PeriodosExpensasService>();
         services.AddScoped<IActividadUnidadService, ActividadUnidadService>();
         services.AddScoped<IUnidadService, UnidadService>();
         services.AddScoped<INotaUnidadService, NotaUnidadService>();

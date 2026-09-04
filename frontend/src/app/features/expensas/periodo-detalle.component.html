@@ -1,0 +1,162 @@
+<section class="ex">
+  <header class="ex-head">
+    <div>
+      <button type="button" class="ex-link" (click)="volver()">‹ Períodos</button>
+      <h1>Gastos · {{ titulo() }}</h1>
+      @if (data(); as d) {
+        <p>Estado: <b>{{ d.estado }}</b>
+          @if (d.estado !== 'Abierto' && d.fechaLiquidacion) { · liquidado el {{ d.fechaLiquidacion.slice(0,10) }} }</p>
+      }
+    </div>
+    <div style="display:flex;gap:8px">
+      <button type="button" class="ex-icon" (click)="refrescar()" aria-label="Refrescar">⟳</button>
+      @if (abierto()) {
+        <button type="button" class="btn btn--primary u-btn" (click)="abrirNuevo()">＋ Agregar gasto</button>
+      } @else {
+        <button type="button" class="btn btn--ghost u-btn" (click)="reabrir()">Reabrir período</button>
+      }
+    </div>
+  </header>
+
+  @if (cargando()) {
+    <p class="ex-loading">Cargando…</p>
+  } @else if (data()) {
+    @if (data()!; as d) {
+    <div class="ex-total">
+      <span>Total a prorratear entre las unidades</span>
+      <b>{{ fmt(d.totalAPrratear) }}</b>
+    </div>
+    <div class="ex-stats">
+      <div class="ex-stat"><span>Ordinarias (A)</span><b>{{ fmt(d.totalOrdinario) }}</b></div>
+      <div class="ex-stat"><span>Extraordinarias (B)</span><b>{{ fmt(d.totalExtraordinario) }}</b></div>
+      <div class="ex-stat"><span>Fondo de reserva</span><b>{{ fmt(d.totalFondoReserva) }}</b></div>
+      <div class="ex-stat"><span>Imputado a extraord.</span><b>{{ fmt(d.totalImputadoAExtraordinarias) }}</b></div>
+    </div>
+
+    @if (d.porRubro.length > 0) {
+      <h2 class="ex-sec">Por rubro</h2>
+      <ul class="ex-list">
+        @for (r of d.porRubro; track r.rubroGastoId) {
+          <li class="ex-card">
+            <div class="ex-card__b">
+              <b>{{ r.rubro }}</b>
+              <small><span class="ex-chip">{{ tipoLabel(r.tipo) }}</span></small>
+            </div>
+            <span class="ex-card__monto">{{ fmt(r.total) }}</span>
+          </li>
+        }
+      </ul>
+    }
+
+    <h2 class="ex-sec">Gastos del mes</h2>
+    @if (d.gastos.length === 0) {
+      <div class="ex-empty"><div class="ex-empty__ic">🧾</div><h2>Sin gastos cargados</h2>
+        <p>Los sueldos y gastos fijos activos se precargan al abrir el período. Agregá acá los
+          gastos variables del mes (servicios, reparaciones, compras).</p></div>
+    } @else {
+      <ul class="ex-list">
+        @for (g of d.gastos; track g.id) {
+          <li class="ex-card">
+            <div class="ex-card__b">
+              <b>{{ g.descripcion }}
+                @if (g.origen === 'Empleado') { <span class="ex-chip">sueldo</span> }
+                @else if (g.origen === 'GastoFijo') { <span class="ex-chip">fijo</span> }
+              </b>
+              <small>
+                <span class="ex-chip">{{ g.rubroNombre }}</span>
+                @if (g.proveedorNombre) { · {{ g.proveedorNombre }} }
+                @if (g.alcance === 'Subconjunto') { · {{ g.unidadIds.length }} unidad(es) }
+                @if (g.extraordinariaTitulo) { · → {{ g.extraordinariaTitulo }} }
+                · {{ g.fecha.slice(8,10) }}/{{ g.fecha.slice(5,7) }}
+              </small>
+            </div>
+            <span class="ex-card__monto">{{ fmt(g.monto) }}</span>
+            @if (g.tieneComprobante) {
+              <button type="button" class="ex-icon" title="Ver comprobante" (click)="verComprobante(g)">📎</button>
+            } @else if (abierto()) {
+              <label class="ex-icon" title="Subir comprobante" style="display:grid;place-items:center;cursor:pointer">
+                ⭱<input type="file" accept="image/*,application/pdf" hidden (change)="subirComprobante(g, $event)" />
+              </label>
+            }
+            @if (abierto()) {
+              <button type="button" class="ex-icon" (click)="abrirEditar(g)" aria-label="Editar">✎</button>
+              <button type="button" class="ex-icon" (click)="eliminar(g)" aria-label="Eliminar">🗑</button>
+            }
+          </li>
+        }
+      </ul>
+    }
+    }
+  }
+</section>
+
+@if (modal()) {
+  <div class="ex-ov" (click)="modal.set(false)">
+    <div class="ex-modal" (click)="$event.stopPropagation()">
+      <header>
+        <b>{{ editId() ? 'Editar gasto' : 'Agregar gasto' }}</b>
+        <button type="button" (click)="modal.set(false)">✕</button>
+      </header>
+      <div class="ex-modal__b">
+        <div class="ex-grid">
+          <label class="ex-field ex-field--full"><span>Descripción *</span>
+            <input [ngModel]="form().descripcion" (ngModelChange)="set('descripcion', $event)"
+              placeholder="Recibo de agua, reparación de bomba…" /></label>
+          <label class="ex-field"><span>Rubro *</span>
+            <select [ngModel]="form().rubroGastoId" (ngModelChange)="set('rubroGastoId', $event)">
+              @for (r of rubros(); track r.id) { <option [ngValue]="r.id">{{ r.nombre }}</option> }
+            </select></label>
+          <label class="ex-field"><span>Proveedor</span>
+            <select [ngModel]="form().proveedorId" (ngModelChange)="set('proveedorId', $event || null)">
+              <option [ngValue]="null">— Sin proveedor —</option>
+              @for (p of proveedores(); track p.id) { <option [ngValue]="p.id">{{ p.nombre }}</option> }
+            </select></label>
+          <label class="ex-field"><span>Monto *</span>
+            <input type="number" min="0" [ngModel]="form().monto" (ngModelChange)="set('monto', +$event)" /></label>
+          <label class="ex-field"><span>Fecha</span>
+            <input type="date" [ngModel]="form().fecha" (ngModelChange)="set('fecha', $event)" /></label>
+          <label class="ex-field"><span>Método de pago</span>
+            <input [ngModel]="form().metodoPago" (ngModelChange)="set('metodoPago', $event || null)"
+              placeholder="Transferencia, efectivo…" /></label>
+          <label class="ex-field"><span>Cuenta</span>
+            <input [ngModel]="form().cuentaPago" (ngModelChange)="set('cuentaPago', $event || null)" placeholder="Cuenta principal" /></label>
+          <label class="ex-field"><span>Criterio de distribución</span>
+            <select [ngModel]="form().criterioDistribucion" (ngModelChange)="set('criterioDistribucion', $event)">
+              @for (c of criterios; track c.v) { <option [ngValue]="c.v">{{ c.t }}</option> }
+            </select></label>
+          <label class="ex-field"><span>Imputar a extraordinaria</span>
+            <select [ngModel]="form().extraordinariaId" (ngModelChange)="set('extraordinariaId', $event || null)">
+              <option [ngValue]="null">— No, gasto del mes —</option>
+              @for (x of extraordinarias(); track x.id) { <option [ngValue]="x.id">{{ x.titulo }}</option> }
+            </select></label>
+          <label class="ex-field"><span>Alcance</span>
+            <select [ngModel]="form().alcance" (ngModelChange)="set('alcance', $event)">
+              <option value="Todas">Todas las unidades</option>
+              <option value="Subconjunto">Unidades seleccionadas</option>
+            </select></label>
+          @if (form().alcance === 'Subconjunto') {
+            <div class="ex-field ex-field--full">
+              <span>Unidades ({{ (form().unidadIds ?? []).length }})</span>
+              <div class="wz-unidades" style="max-height:180px">
+                @for (u of unidades(); track u.id) {
+                  <label class="wz-unidad">
+                    <input type="checkbox" [checked]="(form().unidadIds ?? []).includes(u.id)"
+                      (change)="toggleUnidad(u.id)" />
+                    <b>{{ u.nombre }}</b>
+                  </label>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+      <footer>
+        <button type="button" class="btn btn--ghost u-btn" (click)="modal.set(false)">Cancelar</button>
+        <button type="button" class="btn btn--primary u-btn"
+          [disabled]="!form().descripcion.trim() || !form().rubroGastoId || guardando()" (click)="guardar()">
+          {{ guardando() ? 'Guardando…' : (editId() ? 'Guardar' : 'Agregar') }}
+        </button>
+      </footer>
+    </div>
+  </div>
+}

@@ -1,0 +1,54 @@
+<section class="ex">
+  <header class="ex-head">
+    <div>
+      <h1>Gastos y períodos</h1>
+      <p>Cada mes es un período: cargás los gastos del consorcio y después liquidás para
+        generar la expensa de cada unidad.</p>
+    </div>
+  </header>
+
+  <div class="ex-card2">
+    <h3>Abrir un período nuevo</h3>
+    <p>Al abrirlo se precargan automáticamente los sueldos del personal y los gastos fijos activos.</p>
+    <div class="ex-grid" style="grid-template-columns:1fr 1fr auto; align-items:end">
+      <label class="ex-field"><span>Mes</span>
+        <select [value]="nvMes()" (change)="nvMes.set(+$any($event.target).value)">
+          @for (m of meses; track m.v) { <option [value]="m.v">{{ m.t }}</option> }
+        </select></label>
+      <label class="ex-field"><span>Año</span>
+        <select [value]="nvAnio()" (change)="nvAnio.set(+$any($event.target).value)">
+          @for (a of anios; track a) { <option [value]="a">{{ a }}</option> }
+        </select></label>
+      <button type="button" class="btn btn--primary u-btn" style="width:auto"
+        [disabled]="abriendo() || yaExiste()" (click)="abrir()">
+        {{ abriendo() ? 'Abriendo…' : (yaExiste() ? 'Ya existe' : 'Abrir período') }}
+      </button>
+    </div>
+  </div>
+
+  @if (cargando()) {
+    <p class="ex-loading">Cargando…</p>
+  } @else if (data().length === 0) {
+    <div class="ex-empty">
+      <div class="ex-empty__ic">📅</div>
+      <h2>Todavía no abriste ningún período</h2>
+      <p>Abrí el mes en curso para empezar a cargar los gastos del consorcio.</p>
+    </div>
+  } @else {
+    <h2 class="ex-sec">Períodos</h2>
+    <ul class="ex-list">
+      @for (p of data(); track p.id) {
+        <li class="ex-card" (click)="ir(p)" style="cursor:pointer">
+          <div class="ex-card__b">
+            <b>{{ nombreMes(p.mes) }} {{ p.anio }}
+              <span class="ex-chip">{{ p.estado }}</span></b>
+            <small>{{ p.cantidadGastos }} gasto(s) · total {{ fmt(p.totalGastos) }}
+              @if (p.fechaLiquidacion) { · liquidado }</small>
+          </div>
+          <span class="ex-card__monto">{{ fmt(p.totalGastos) }}</span>
+          <span aria-hidden="true">›</span>
+        </li>
+      }
+    </ul>
+  }
+</section>

@@ -264,6 +264,9 @@ public enum OrigenCargo
     Extraordinaria = 1,
     Interes = 2,
     Ajuste = 3,
+    Multa = 4,
+    Amenidad = 5,
+    Manual = 6,
 }
 
 public enum EstadoCargo
@@ -305,4 +308,97 @@ public class CargoUnidad : Entity, ITenantOwned
     public int TotalCuotas { get; set; } = 1;
 
     public decimal Saldo => Monto - MontoPagado;
+}
+
+// ============ Período y gastos del mes ============
+
+public enum EstadoPeriodo
+{
+    /// <summary>Se cargan gastos.</summary>
+    Abierto = 0,
+    /// <summary>Ya se generaron las expensas por unidad.</summary>
+    Liquidado = 1,
+    /// <summary>Cerrado contablemente, no se toca más.</summary>
+    Cerrado = 2,
+}
+
+/// <summary>De dónde salió una línea de gasto del período.</summary>
+public enum OrigenGasto
+{
+    /// <summary>Precargado desde un empleado activo.</summary>
+    Empleado = 0,
+    /// <summary>Precargado desde un gasto fijo activo.</summary>
+    GastoFijo = 1,
+    /// <summary>Cargado a mano solo para este período.</summary>
+    Unico = 2,
+}
+
+public enum AlcanceGasto
+{
+    /// <summary>Se reparte entre todas las unidades.</summary>
+    Todas = 0,
+    /// <summary>Se reparte solo entre las unidades seleccionadas.</summary>
+    Subconjunto = 1,
+}
+
+/// <summary>Mes contable de expensas de un consorcio.</summary>
+public class PeriodoExpensas : Entity, ITenantOwned
+{
+    public Guid AdministradorId { get; set; }
+    public Guid ConsorcioId { get; set; }
+
+    public int Anio { get; set; }
+    public int Mes { get; set; }
+
+    public EstadoPeriodo Estado { get; set; } = EstadoPeriodo.Abierto;
+
+    public DateOnly? FechaLiquidacion { get; set; }
+    public string? LiquidadoPorUsuarioId { get; set; }
+    public string? Notas { get; set; }
+
+    public List<GastoPeriodo> Gastos { get; set; } = new();
+}
+
+/// <summary>Una línea de gasto dentro de un período (sueldo, abono fijo, gasto puntual).</summary>
+public class GastoPeriodo : Entity, ITenantOwned
+{
+    public Guid AdministradorId { get; set; }
+    public Guid ConsorcioId { get; set; }
+
+    public Guid PeriodoExpensasId { get; set; }
+
+    public Guid RubroGastoId { get; set; }
+    public Guid? ProveedorId { get; set; }
+
+    public string Descripcion { get; set; } = string.Empty;
+    public decimal Monto { get; set; }
+    public DateOnly Fecha { get; set; }
+
+    public string? MetodoPago { get; set; }
+    public string? CuentaPago { get; set; }
+    public string? ComprobanteRuta { get; set; }
+
+    public OrigenGasto Origen { get; set; } = OrigenGasto.Unico;
+    /// <summary>Empleado del catálogo del que se precargó (si Origen = Empleado).</summary>
+    public Guid? EmpleadoId { get; set; }
+    /// <summary>Gasto fijo del catálogo del que se precargó (si Origen = GastoFijo).</summary>
+    public Guid? GastoFijoId { get; set; }
+
+    public AlcanceGasto Alcance { get; set; } = AlcanceGasto.Todas;
+    public CriterioDistribucion CriterioDistribucion { get; set; } = CriterioDistribucion.PorCoeficiente;
+
+    /// <summary>Si está imputado a una extraordinaria, no entra al prorrateo ordinario del mes.</summary>
+    public Guid? ExtraordinariaId { get; set; }
+
+    /// <summary>Unidades alcanzadas cuando Alcance = Subconjunto.</summary>
+    public List<GastoPeriodoUnidad> Unidades { get; set; } = new();
+}
+
+public class GastoPeriodoUnidad : Entity, ITenantOwned
+{
+    public Guid AdministradorId { get; set; }
+    public Guid ConsorcioId { get; set; }
+
+    public Guid GastoPeriodoId { get; set; }
+    public Guid UnidadId { get; set; }
 }
